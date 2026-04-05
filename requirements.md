@@ -38,14 +38,3 @@ A compliance logbook SaaS for pest control businesses. Helps prove technician ce
 npm install
 npx prisma migrate dev --name init
 npm run dev
-
-
----
-
-## 📦 For dependencies, `package.json` is enough.
-
-When you run `npx create-next-app`, it generates `package.json` automatically. You'll later install extra packages (Prisma, Stripe, etc.), and they will be saved there.
-
-So **no separate requirements file is needed** – but a `README.md` or `REQUIREMENTS.md` is good for documentation.
-
-Would you like me to provide a `.env.example` file template for your environment variables instead?

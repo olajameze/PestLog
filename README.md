@@ -1,22 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PestLog
+
+A compliance logbook SaaS for pest control businesses.
+
+## Features
+
+- User authentication with Supabase
+- Business management
+- Pest control log entries
+- PDF export for compliance
+- Subscription payments with Stripe
+- PWA support
+- Deployed on Vercel at jgdev.org
+
+## Tech Stack
+
+- Next.js 14 (Pages Router)
+- TypeScript
+- Tailwind CSS
+- Supabase (Auth, Database)
+- Prisma ORM
+- Stripe (Payments)
+- Resend (Emails)
+- jsPDF (PDF generation)
+- next-pwa (PWA)
 
 ## Getting Started
 
-First, run the development server:
+1. Clone the repo
+2. Install dependencies: `npm install`
+3. Set up environment variables (see .env)
+4. Run Prisma migrations: `npx prisma migrate dev`
+5. Run the development server: `npm run dev`
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Deployment
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Deployed on Vercel with custom domain jgdev.org.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
+
+Set the following in your .env or Vercel environment:
+
+- DATABASE_URL
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+- STRIPE_SECRET_KEY
+- STRIPE_PUBLISHABLE_KEY
+- STRIPE_WEBHOOK_SECRET
+- RESEND_API_KEY
+- NEXTAUTH_SECRET
+- NEXTAUTH_URL
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
