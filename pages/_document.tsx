@@ -8,7 +8,7 @@ export default function Document() {
         <meta name="theme-color" content="#2563EB" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1e1e1e" media="(prefers-color-scheme: dark)" />
         <meta name="description" content="Digital compliance logbook for pest control businesses" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         
         {/* Web App Manifest - MUST be in head for PWA */}
         <link rel="manifest" href="/manifest.json" />
