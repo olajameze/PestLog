@@ -1,7 +1,5 @@
-/* All @imports must be at the very top */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* Tailwind directives */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,13 +10,7 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-family-sans: 'Inter', sans-serif;
-  --color-offwhite: #F8F9FA;
-  --color-navy: #1E293B;
-}
+
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -30,7 +22,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-family-sans);
+  font-family: var(--font-inter, Inter, sans-serif);
 }
 
 html {
@@ -91,12 +83,12 @@ html {
 }
 
 .btn-primary {
-  background-color: rgb(37, 99, 235);
+  background-color: rgb(var(--color-primary-500));
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: rgb(29, 78, 216);
+  background-color: rgb(var(--color-primary-600));
 }
 
 .btn-primary:disabled {
@@ -173,8 +165,14 @@ html {
 .form-select:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: rgb(37, 99, 235);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: rgb(var(--color-primary-500));
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-500), 0.1);
+}
+
+.form-input:focus-visible,
+.form-select:focus-visible,
+.form-textarea:focus-visible {
+  ring-2 ring-primary-500;
 }
 
 .form-input::placeholder,

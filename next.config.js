@@ -36,7 +36,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self'",
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.supabase.co; connect-src 'self' https://api.stripe.com https://*.supabase.co wss://*.supabase.co; frame-src https://js.stripe.com;",
           },
         ],
       },
@@ -63,3 +63,4 @@ const nextConfig = {
 };
 
 export default withPWA(nextConfig);
+
