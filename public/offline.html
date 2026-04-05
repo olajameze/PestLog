@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PestLog - Offline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .offline-container {
+      background: white;
+      border-radius: 12px;
+      padding: 40px 20px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .offline-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      color: #1f2937;
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    
+    p {
+      color: #6b7280;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    
+    .offline-features {
+      text-align: left;
+      background: #f3f4f6;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    
+    .offline-features h3 {
+      color: #1f2937;
+      font-size: 14px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .offline-features ul {
+      list-style: none;
+    }
+    
+    .offline-features li {
+      color: #4b5563;
+      font-size: 14px;
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .offline-features li:before {
+      content: '✓';
+      color: #10b981;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+    
+    .offline-button {
+      display: inline-block;
+      background: #2563eb;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 10px;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.2s;
+    }
+    
+    .offline-button:hover {
+      background: #1d4ed8;
+    }
+    
+    .offline-button:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>
+      PestLog is designed to work offline. You can continue logging entries and they'll 
+      sync automatically when your connection returns.
+    </p>
+    
+    <div class="offline-features">
+      <h3>What you can do offline:</h3>
+      <ul>
+        <li>Create new logbook entries</li>
+        <li>Add photos and signatures</li>
+        <li>Update technician information</li>
+        <li>View cached company data</li>
+      </ul>
+    </div>
+    
+    <p style="font-size: 14px; color: #9ca3af; margin-top: 20px;">
+      Your work will auto-sync when you regain connection.
+    </p>
+    
+    <button 
+      class="offline-button" 
+      onclick="window.location.href = '/';"
+    >
+      Try Again
+    </button>
+  </div>
+
+  <script>
+    // Periodically check for connection
+    window.addEventListener('online', () => {
+      console.log('[PWA] Connection restored!');
+      // Optionally redirect back to app
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    });
+  </script>
+</body>
+</html>
