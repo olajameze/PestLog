@@ -1,0 +1,127 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+'use client';
+import { useState, useEffect } from 'react';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent;
+    appinstalled: Event;
+  }
+}
+
+export default function PWAInstallPrompt() {
+  const [deviceInfo, setDeviceInfo] = useState({ isIOS: false, isAndroid: false });
+  const [isVisible, setIsVisible] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const alreadyInstalled = window.matchMedia('(display-mode: standalone)').matches;
+    if (alreadyInstalled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsInstalled(true);
+      return;
+    }
+
+    const userAgent = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+    const isAndroid = /Android/.test(userAgent);
+    setDeviceInfo({ isIOS, isAndroid });
+
+    if (isIOS || isAndroid) {
+      setIsVisible(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      const promptEvent = e as unknown as BeforeInstallPromptEvent;
+      setDeferredPrompt(promptEvent);
+      setIsVisible(true);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      console.log('[PWA] App installed successfully');
+      setIsVisible(false);
+      setIsInstalled(true);
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deviceInfo.isAndroid && deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          console.log('[PWA] Installation accepted');
+          setIsVisible(false);
+        } else {
+          console.log('[PWA] Installation dismissed');
+        }
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('[PWA] Installation error:', error);
+      }
+    } else if (deviceInfo.isIOS) {
+      alert(
+        "To install PestLog on your iPhone:\n\n" +
+        "1. Tap the Share button (box with arrow)\n" +
+        "2. Scroll down and tap 'Add to Home Screen'\n" +
+        "3. Tap 'Add' to confirm\n\n" +
+        "The app will now appear on your home screen!"
+      );
+    }
+  };
+
+  const handleDismiss = () => {
+    setIsVisible(false);
+    localStorage.setItem('pwa-prompt-dismissed', new Date().getTime().toString());
+  };
+
+  if (isInstalled || !isVisible) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white shadow-2xl">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="text-3xl shrink-0">🐛</div>
+            <div>
+              <h3 className="font-bold text-lg leading-tight">Install PestLog</h3>
+              <p className="text-blue-100 text-sm">
+                {deviceInfo.isIOS ? 'Add to your home screen for quick access' : 'Get the app instantly'}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={handleDismiss}
+              className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 transition text-white font-medium text-sm"
+            >
+              Later
+            </button>
+            <button
+              onClick={handleInstallClick}
+              className="px-4 py-2 rounded-lg bg-white hover:bg-gray-100 transition text-blue-600 font-bold text-sm shadow-lg"
+            >
+              {deviceInfo.isIOS ? 'Instructions' : 'Install'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

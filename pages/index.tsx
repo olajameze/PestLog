@@ -1,5 +1,7 @@
 /* eslint-disable react/no-unescaped-entities */
 import Link from 'next/link';
+import PWAInstallPrompt from '../components/PWAInstallPrompt';
+import React from 'react';
 
 export default function Home() {
   const features = [
@@ -133,6 +135,9 @@ export default function Home() {
 
   return (
     <div className="bg-white dark:bg-black">
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
+      
       {/* Header/Navigation */}
       <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -589,5 +594,3 @@ export default function Home() {
     </div>
   );
 }
-
-import React from 'react';
