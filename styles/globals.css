@@ -1,8 +1,12 @@
+/* All @imports must be at the very top */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* Custom properties (CSS variables) */
 :root {
   --background: #ffffff;
   --foreground: #171717;
