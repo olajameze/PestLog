@@ -172,7 +172,7 @@ html {
 .form-input:focus-visible,
 .form-select:focus-visible,
 .form-textarea:focus-visible {
-  ring-2 ring-primary-500;
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-500), 0.1);
 }
 
 .form-input::placeholder,

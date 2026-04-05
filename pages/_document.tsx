@@ -8,29 +8,28 @@ export default function Document() {
         <meta name="theme-color" content="#2563EB" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1e1e1e" media="(prefers-color-scheme: dark)" />
         <meta name="description" content="Digital compliance logbook for pest control businesses" />
-        
+
         {/* Web App Manifest - MUST be in head for PWA */}
         <link rel="manifest" href="/manifest.json" />
-        
+
         {/* Apple iOS PWA Support */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PestLog" />
-        
+
         {/* Single apple-touch-icon (standard for iOS) */}
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        
+
         {/* Standard Favicons */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        
+
         {/* PWA Icons */}
-        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-        
+        <link rel="icon" type="image/svg+xml" sizes="192x192 512x512" href="/file.svg" />
+
         {/* Fonts - handled by next/font/google in _app.tsx */}
-        
+
         {/* Startup Image for iOS */}
         <link rel="apple-touch-startup-image" href="/apple-splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
         <link rel="apple-touch-startup-image" href="/apple-splash-1668x2224.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)" />
@@ -42,7 +41,7 @@ export default function Document() {
       <body>
         <Main />
         <NextScript />
-        
+
         {/* Service Worker Registration */}
         <script
           dangerouslySetInnerHTML={{
