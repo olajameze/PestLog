@@ -1,22 +1,29 @@
 import { useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/router';
+import Navbar from '../../components/navbar';
+import Card from '../../components/ui/Card';
+import Button from '../../components/ui/Button';
+import FormInput from '../../components/ui/FormInput';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
-      alert(error.message);
+      setError(error.message);
     } else {
       router.push('/dashboard');
     }
@@ -24,51 +31,54 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-offwhite flex items-center justify-center px-4 py-12">
+      <Navbar />
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-bold text-navy">
             Sign in to PestLog
           </h2>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        <Card>
+          <form className="mt-8 space-y-6" onSubmit={handleSignIn}>
+            <FormInput
+              label="Email Address"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+            <FormInput
+              label="Password"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              required
+            />
+            {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">{error}</div>}
+            <Button type="submit" fullWidth disabled={loading} size="lg">
+              {loading ? (
+                <>
+                  <span className="spinner"></span>
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+            <div className="text-center">
+              <Link href="/auth/signup" className="text-primary-600 hover:text-primary-700 font-medium">
+                Need an account? Sign up
+              </Link>
             </div>
-            <div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
-        </form>
+          </form>
+        </Card>
       </div>
     </div>
   );
 }
+

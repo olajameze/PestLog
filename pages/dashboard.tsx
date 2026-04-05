@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
+import Navbar from '../components/navbar';
+import Sidebar from '../components/sidebar';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import FormInput from '../components/ui/FormInput';
 
 interface User {
   id: string;
@@ -37,13 +42,14 @@ interface LogbookEntry {
   signature?: string;
 }
 
+type Tab = 'technicians' | 'logbook' | 'settings';
+
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('technicians');
+  const [activeTab, setActiveTab] = useState<'technicians' | 'logbook' | 'settings'>('technicians');
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [addingTech, setAddingTech] = useState(false);
@@ -55,31 +61,31 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/auth/signin');
-      } else {
-        setUser(session.user);
-        const res = await fetch('/api/company', {
+        return;
+      }
+      setUser(session.user);
+      const res = await fetch('/api/company', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const companyData = await res.json();
+      setCompany(companyData);
+      if (companyData) {
+        const techRes = await fetch('/api/technicians', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        const companyData = await res.json();
-        setCompany(companyData);
-        if (companyData) {
-          const techRes = await fetch('/api/technicians', {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          });
-          const techData = await techRes.json();
-          setTechnicians(techData);
+        const techData = await techRes.json();
+        setTechnicians(techData);
 
-          const subRes = await fetch('/api/subscription', {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          });
-          if (subRes.ok) {
-            const subData = await subRes.json();
-            setSubscription(subData);
-            const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
-            if (subData.status !== 'active' && trialExpired) {
-              router.push('/upgrade');
-              return;
-            }
+        const subRes = await fetch('/api/subscription', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          setSubscription(subData);
+          const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
+          if (subData.status !== 'active' && trialExpired) {
+            router.push('/upgrade');
+            return;
           }
         }
       }
@@ -100,10 +106,11 @@ export default function Dashboard() {
       router.push('/auth/signin');
       return;
     }
+    const token = session.access_token;
 
     const res = await fetch('/api/create-checkout-session', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
     if (res.ok && data.url) {
@@ -122,10 +129,11 @@ export default function Dashboard() {
       router.push('/auth/signin');
       return;
     }
+    const token = session.access_token;
 
     const res = await fetch('/api/create-portal-session', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
     if (res.ok && data.url) {
@@ -144,12 +152,13 @@ export default function Dashboard() {
       router.push('/auth/signin');
       return;
     }
+    const token = session.access_token;
 
     const res = await fetch('/api/technicians', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ name, email }),
     });
@@ -166,91 +175,87 @@ export default function Dashboard() {
   const handleRemoveTechnician = async (technicianId: string) => {
     if (!confirm('Are you sure you want to remove this technician?')) return;
     const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+    const token = session.access_token;
     const res = await fetch(`/api/technicians?id=${technicianId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
       setTechnicians(technicians.filter(t => t.id !== technicianId));
     }
   };
 
-  if (!user) return <div>Loading...</div>;
+  if (!user) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-offwhite">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setSidebarOpen(false)}>
-          <div className="absolute inset-0 bg-gray-600 opacity-75"></div>
-        </div>
-      )}
-
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-navy">PestLog</h2>
-            <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500">✕</button>
-          </div>
-          <nav className="flex-1 px-4 py-4 space-y-2">
-            <button onClick={() => { setActiveTab('technicians'); setSidebarOpen(false); }} className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${activeTab === 'technicians' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>Technicians</button>
-            <button onClick={() => { setActiveTab('logbook'); setSidebarOpen(false); }} className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${activeTab === 'logbook' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>Logbook</button>
-            <button onClick={() => { setActiveTab('settings'); setSidebarOpen(false); }} className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}>Settings</button>
-          </nav>
-          <div className="p-4 border-t border-gray-200">
-            <button onClick={handleSignOut} className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors">Sign Out</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="lg:pl-64">
-        <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-            <button onClick={() => setSidebarOpen(true)} aria-label="Open menu" className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500">☰</button>
-            <h1 className="text-2xl font-bold text-navy">
-              {activeTab === 'technicians' && 'Technicians'}
-              {activeTab === 'logbook' && 'Logbook Entries'}
-              {activeTab === 'settings' && 'Settings'}
-            </h1>
-            <div className="flex items-center space-x-4">
-              {company && <span className="text-sm text-gray-600">{company.name || company.email}</span>}
-            </div>
-          </div>
-        </header>
-
-        <main className="p-4 sm:p-6 lg:p-8">
+      <Navbar 
+        user={{ name: company?.name || company?.email || 'User', email: user?.email || '' }} 
+        onSignOut={handleSignOut} 
+      />
+      <div className="flex lg:pl-0">
+      <Sidebar 
+        activeTab={activeTab as string} 
+        onTabChange={(tab: string) => setActiveTab(tab as Tab)} 
+        onSignOut={handleSignOut}
+      />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 ml-0 lg:ml-64">
           {company ? (
             <>
               {appError && (
-                <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-                  {appError}
-                </div>
+                <Card className="mb-6 border-red-200 bg-red-50">
+                  <div className="text-red-800 p-4">
+                    {appError}
+                  </div>
+                </Card>
               )}
-              {activeTab === 'technicians' && <TechniciansTab technicians={technicians} onAddTechnician={handleAddTechnician} onRemoveTechnician={handleRemoveTechnician} />}
-              {activeTab === 'logbook' && <LogbookTab companyId={company.id} technicians={technicians} />}
-              {activeTab === 'settings' && <SettingsTab company={company} subscription={subscription} onSubscribe={handleSubscribe} onManageSubscription={handleManageSubscription} checkoutLoading={loadingCheckout} portalLoading={loadingPortal} />}
+              {activeTab === 'technicians' && (
+                <TechniciansTab 
+                  technicians={technicians} 
+                  onAddTechnician={handleAddTechnician} 
+                  onRemoveTechnician={handleRemoveTechnician} 
+                />
+              )}
+              {activeTab === 'logbook' && (
+                <LogbookTab companyId={company.id} technicians={technicians} />
+              )}
+              {activeTab === 'settings' && (
+                <SettingsTab 
+                  company={company} 
+                  subscription={subscription} 
+                  onSubscribe={handleSubscribe} 
+                  onManageSubscription={handleManageSubscription} 
+                  checkoutLoading={loadingCheckout} 
+                  portalLoading={loadingPortal} 
+                />
+              )}
             </>
           ) : (
             <CompanySetupTab />
           )}
         </main>
       </div>
-
-      {/* Mobile bottom navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="flex">
-          <button onClick={() => setActiveTab('technicians')} className={`flex-1 py-3 text-center transition-colors ${activeTab === 'technicians' ? 'text-blue-600' : 'text-gray-600'}`}>👥 Technicians</button>
-          <button onClick={() => setActiveTab('logbook')} className={`flex-1 py-3 text-center transition-colors ${activeTab === 'logbook' ? 'text-blue-600' : 'text-gray-600'}`}>📝 Logbook</button>
-          <button onClick={() => setActiveTab('settings')} className={`flex-1 py-3 text-center transition-colors ${activeTab === 'settings' ? 'text-blue-600' : 'text-gray-600'}`}>⚙️ Settings</button>
-        </div>
-      </div>
     </div>
   );
 }
 
-// ========== Components ==========
+// ========== Sub-Components ==========
+
+function CompanySetupTab() {
+  return (
+    <div className="max-w-md mx-auto">
+      <Card>
+        <h2 className="text-2xl font-bold text-navy mb-4 text-center">Welcome to PestLog!</h2>
+        <p className="text-zinc-600 mb-6 text-center">Let&apos;s set up your pest control company to get started.</p>
+        <CompanySetupForm />
+      </Card>
+    </div>
+  );
+}
 
 function CompanySetupForm() {
   const [name, setName] = useState('');
@@ -260,11 +265,18 @@ function CompanySetupForm() {
     e.preventDefault();
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert('You must be logged in');
+      setLoading(false);
+      return;
+    }
+    const token = session.access_token;
+
     const res = await fetch('/api/company', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ name }),
     });
@@ -278,34 +290,18 @@ function CompanySetupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="form-group">
-        <label htmlFor="company-name" className="form-label">Company Name</label>
-        <input
-          id="company-name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          placeholder="Enter company name"
-          className="form-input"
-        />
-      </div>
-      <button type="submit" disabled={loading} className="btn btn-primary hover-lift">
+      <FormInput
+        label="Company Name"
+        id="company-name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Enter company name"
+        required
+      />
+      <Button type="submit" fullWidth disabled={loading} size="lg">
         {loading ? 'Creating...' : 'Create Company'}
-      </button>
+      </Button>
     </form>
-  );
-}
-
-function CompanySetupTab() {
-  return (
-    <div className="max-w-md mx-auto">
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-2xl font-bold text-navy mb-4">Welcome to PestLog!</h2>
-        <p className="text-gray-600 mb-6">Let&apos;s set up your pest control company to get started.</p>
-        <CompanySetupForm />
-      </div>
-    </div>
   );
 }
 
@@ -333,114 +329,103 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-2xl sm:text-3xl font-bold text-navy">Technicians</h2>
-        <button 
+        <Button 
           onClick={() => setShowAddForm(true)} 
-          className="btn btn-primary hover-lift w-full sm:w-auto"
+          size="lg"
+          className="w-full sm:w-auto"
         >
           + Add Technician
-        </button>
+        </Button>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden lg:block bg-white rounded-xl shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {technicians.map((tech) => (
-              <tr key={tech.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tech.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{tech.email}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => onRemoveTechnician(tech.id)}
-                    className="text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1 rounded-lg transition-colors"
-                  >
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {technicians.length === 0 ? (
+        <Card className="text-center py-12">
+          <p className="text-zinc-600 text-lg">No technicians yet. Add your first technician above.</p>
+        </Card>
+      ) : (
+        <>
+          {/* Desktop table */}
+          <Card className="overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-zinc-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200">
+                {technicians.map((tech) => (
+                  <tr key={tech.id} className="hover:bg-zinc-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-navy">{tech.name}</td>
+                    <td className="px-6 py-4 text-zinc-600 text-sm">{tech.email}</td>
+                    <td className="px-6 py-4">
+                      <Button 
+                        variant="danger" 
+                        size="sm"
+                        onClick={() => onRemoveTechnician(tech.id)}
+                      >
+                        Remove
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </>
+      )}
 
-      {/* Mobile cards view */}
-      <div className="lg:hidden space-y-3">
-        {technicians.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-md p-5 text-center text-gray-600">
-            No technicians yet
-          </div>
-        ) : (
-          technicians.map((tech) => (
-            <div key={tech.id} className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start gap-2">
-                <div>
-                  <p className="font-semibold text-navy">{tech.name}</p>
-                  <p className="text-sm text-gray-600 break-all">{tech.email}</p>
-                </div>
-                <button
-                  onClick={() => onRemoveTechnician(tech.id)}
-                  className="btn btn-danger btn-sm whitespace-nowrap flex-shrink-0"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Add Technician Form Modal */}
+      {/* Add Technician Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 space-y-4">
-            <h3 className="text-xl font-bold text-navy">Add Technician</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowAddForm(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 space-y-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-navy mb-2">Add Technician</h3>
+              <p className="text-zinc-600">Enter technician details to add them to your team.</p>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="form-group">
-                <label htmlFor="tech-name" className="form-label">Technician Name</label>
-                <input
-                  id="tech-name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="Full name"
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="tech-email" className="form-label">Email Address</label>
-                <input
-                  id="tech-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="email@example.com"
-                  className="form-input"
-                />
-              </div>
-              <div className="btn-group-full pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setShowAddForm(false)} 
-                  className="btn btn-secondary"
+              <FormInput
+                label="Full Name"
+                id="tech-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="John Smith"
+                required
+              />
+              <FormInput
+                label="Email"
+                id="tech-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="john@company.com"
+                required
+              />
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  fullWidth
+                  onClick={() => setShowAddForm(false)}
                 >
                   Cancel
-                </button>
-                <button 
+                </Button>
+                <Button 
                   type="submit" 
-                  disabled={loading} 
-                  className="btn btn-primary"
+                  variant="primary"
+                  fullWidth
+                  disabled={loading}
                 >
-                  {loading ? 'Adding...' : 'Add Technician'}
-                </button>
+                  {loading ? (
+                    <>
+                      <span className="spinner"></span>
+                      Adding...
+                    </>
+                  ) : (
+                    'Add Technician'
+                  )}
+                </Button>
               </div>
             </form>
           </div>
@@ -464,8 +449,10 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
       const res = await fetch(`/api/logbook-entries?companyId=${companyId}`, {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      const data = await res.json();
-      setEntries(data);
+      if (res.ok) {
+        const data = await res.json();
+        setEntries(data);
+      }
       setLoading(false);
     };
     fetchEntries();
@@ -474,25 +461,57 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
   const exportToPDF = async () => {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
-    doc.text('Pest Control Log', 10, 10);
+    doc.text(`${companyId} Pest Control Log`, 10, 10);
     entries.forEach((entry, index) => {
-      doc.text(`${entry.date}: ${entry.clientName} - ${entry.address} - ${entry.treatment}`, 10, 20 + index * 10);
+      doc.text(`${entry.date}: ${entry.clientName} (${entry.address}) - ${entry.treatment}`, 10, 20 + index * 10);
     });
-    doc.save('log.pdf');
+    doc.save(`pestlog-logbook-${Date.now()}.pdf`);
   };
 
-  if (loading) return <div>Loading entries...</div>;
+  if (loading) return <div className="flex items-center justify-center min-h-64">Loading entries...</div>;
 
   return (
-    <div>
-      <h3 className="text-xl font-semibold mb-4">Logbook Entries</h3>
-      <button onClick={exportToPDF} className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Export to PDF</button>
-      <AddLogbookEntryForm companyId={companyId} technicians={technicians} onAdd={(entry) => setEntries([...entries, entry])} />
-      <ul className="mt-4 space-y-2">
-        {entries.map((entry) => (
-          <li key={entry.id} className="p-3 bg-gray-50 rounded">{entry.date} - {entry.clientName} - {entry.address} - {entry.treatment}</li>
-        ))}
-      </ul>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-navy">Logbook Entries</h2>
+        <Button onClick={exportToPDF} variant="secondary">
+          📥 Export PDF
+        </Button>
+      </div>
+      <Card>
+        <AddLogbookEntryForm companyId={companyId} technicians={technicians} onAdd={(entry) => setEntries([entry, ...entries])} />
+      </Card>
+      {entries.length === 0 ? (
+        <Card className="text-center py-12">
+          <p className="text-zinc-600 text-lg">No logbook entries yet.</p>
+          <p className="text-zinc-500 mt-2">Create your first entry above.</p>
+        </Card>
+      ) : (
+        <Card>
+          <div className="divide-y divide-zinc-200">
+            {entries.map((entry) => (
+              <div key={entry.id} className="p-6 hover:bg-zinc-50 transition-colors">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-navy">{entry.clientName}</h3>
+                    <p className="text-zinc-600 mt-1">{entry.address}</p>
+                    <p className="text-sm text-zinc-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
+                  </div>
+                  <span className="inline-flex px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm font-medium whitespace-nowrap">
+                    {entry.treatment}
+                  </span>
+                </div>
+                {entry.notes && (
+                  <p className="mt-3 text-zinc-700">{entry.notes}</p>
+                )}
+                {entry.photoUrl && (
+                  <img src={entry.photoUrl} alt="Job photo" className="mt-4 w-full h-48 object-cover rounded-2xl border" />
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
@@ -521,7 +540,12 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
     if (res.ok) {
       const entry = await res.json();
       onAdd(entry);
-      setDate(''); setClientName(''); setAddress(''); setTreatment(''); setNotes(''); setTechnicianId('');
+      setDate('');
+      setClientName('');
+      setAddress('');
+      setTreatment('');
+      setNotes('');
+      setTechnicianId('');
     } else {
       alert('Error adding entry');
     }
@@ -529,166 +553,174 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mt-4 p-4 border rounded-lg">
-      <div>
-        <label htmlFor="entry-date" className="block text-sm font-medium text-gray-700">Date</label>
-        <input
-          id="entry-date"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          required
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-        />
-      </div>
-      <div>
-        <label htmlFor="entry-client-name" className="block text-sm font-medium text-gray-700">Client Name</label>
-        <input
-          id="entry-client-name"
-          type="text"
-          value={clientName}
-          onChange={(e) => setClientName(e.target.value)}
-          required
-          placeholder="Enter client name"
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-        />
-      </div>
-      <div>
-        <label htmlFor="entry-address" className="block text-sm font-medium text-gray-700">Address</label>
-        <input
-          id="entry-address"
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          required
-          placeholder="Enter address"
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-        />
-      </div>
-      <div>
-        <label htmlFor="entry-treatment" className="block text-sm font-medium text-gray-700">Treatment</label>
-        <input
-          id="entry-treatment"
-          type="text"
-          value={treatment}
-          onChange={(e) => setTreatment(e.target.value)}
-          required
-          placeholder="Enter treatment"
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-        />
-      </div>
-      <div>
-        <label htmlFor="entry-technician" className="block text-sm font-medium text-gray-700">Technician</label>
-        <select
-          id="entry-technician"
-          value={technicianId}
-          onChange={(e) => setTechnicianId(e.target.value)}
-          required
-          aria-label="Select technician"
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-        >
-          <option value="">Select Technician</option>
-          {technicians.map((tech) => (
-            <option key={tech.id} value={tech.id}>{tech.name}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label htmlFor="entry-notes" className="block text-sm font-medium text-gray-700">Notes</label>
-        <textarea
+    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <FormInput
+        label="Date"
+        id="entry-date"
+        type="date"
+        value={date}
+        onChange={(e) => setDate(e.target.value)}
+        required
+      />
+      <FormInput
+        label="Client Name"
+        id="entry-client-name"
+        value={clientName}
+        onChange={(e) => setClientName(e.target.value)}
+        placeholder="Client name"
+        required
+      />
+      <FormInput
+        label="Address"
+        id="entry-address"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="Job address"
+        required
+      />
+      <FormInput
+        label="Treatment"
+        id="entry-treatment"
+        value={treatment}
+        onChange={(e) => setTreatment(e.target.value)}
+        placeholder="e.g. Rodent control"
+        required
+      />
+      <FormInput
+        label="Technician"
+        id="entry-technician"
+        as="select"
+        value={technicianId}
+        onChange={(e) => setTechnicianId(e.target.value)}
+        required
+        options={technicians.map((tech) => ({ value: tech.id, label: tech.name }))}
+      />
+      <div className="md:col-span-2">
+        <FormInput
+          label="Notes"
           id="entry-notes"
+          as="textarea"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Enter notes"
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+          placeholder="Treatment substances, observations, compliance notes..."
         />
       </div>
-      <button type="submit" disabled={loading} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">{loading ? 'Adding...' : 'Add Entry'}</button>
+      <div className="md:col-span-2 pt-2">
+        <Button type="submit" fullWidth size="lg" disabled={loading}>
+          {loading ? (
+            <>
+              <span className="spinner"></span>
+              Saving entry...
+            </>
+          ) : (
+            'Save Logbook Entry'
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
 
-function SettingsTab({ company, subscription, onSubscribe, onManageSubscription, checkoutLoading, portalLoading }: { company: Company; subscription: Subscription | null; onSubscribe: () => void; onManageSubscription: () => void; checkoutLoading: boolean; portalLoading: boolean }) {
+function SettingsTab({ company, subscription, onSubscribe, onManageSubscription, checkoutLoading, portalLoading }: {
+  company: Company;
+  subscription: Subscription | null;
+  onSubscribe: () => void;
+  onManageSubscription: () => void;
+  checkoutLoading: boolean;
+  portalLoading: boolean;
+}) {
+  const router = useRouter();
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl sm:text-3xl font-bold text-navy">Settings</h2>
       
-      {/* Company Information Card */}
-      <div className="bg-white rounded-xl shadow-md hover-lift p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-navy">Company Information</h3>
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm text-gray-600">Company Name</p>
-            <p className="text-base font-semibold text-gray-900">{company.name || 'Not set'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Email Address</p>
-            <p className="text-base font-semibold text-gray-900 break-all">{company.email}</p>
+      <Card className="space-y-6 p-8">
+        <div>
+          <h3 className="text-xl font-bold text-navy mb-4">Company Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm font-medium text-zinc-600 mb-1">Company Name</p>
+              <p className="text-lg font-bold text-navy">{company.name || company.email}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-zinc-600 mb-1">Email</p>
+              <p className="text-lg font-bold text-navy break-all">{company.email}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Subscription Card */}
-      <div className="bg-white rounded-xl shadow-md hover-lift p-6 space-y-4">
-        <h3 className="text-lg font-semibold text-navy">Subscription</h3>
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm text-gray-600">Current Status</p>
-            <p className="text-base font-semibold text-gray-900">
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+        <div>
+          <h3 className="text-xl font-bold text-navy mb-4">Subscription</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-sm font-medium text-zinc-600 mb-1">Status</p>
+              <span className={`inline-flex px-3 py-1 rounded-full text-sm font-bold ${
                 subscription?.status === 'active' 
                   ? 'bg-green-100 text-green-800'
                   : subscription?.status === 'trial'
                   ? 'bg-blue-100 text-blue-800'
-                  : 'bg-gray-100 text-gray-800'
+                  : 'bg-zinc-100 text-zinc-800'
               }`}>
-                {subscription?.status || 'None'}
+                {subscription?.status?.toUpperCase() || 'No Plan'}
               </span>
-            </p>
-          </div>
-          {subscription?.trialEndsAt && (
-            <div>
-              <p className="text-sm text-gray-600">Trial Ends</p>
-              <p className="text-base font-semibold text-gray-900">{new Date(subscription.trialEndsAt).toLocaleDateString()}</p>
             </div>
-          )}
+            {subscription?.trialEndsAt && (
+              <div>
+                <p className="text-sm font-medium text-zinc-600 mb-1">Trial Ends</p>
+                <p className="text-lg font-bold text-navy">{new Date(subscription.trialEndsAt).toLocaleDateString()}</p>
+              </div>
+            )}
+          </div>
         </div>
-        
-        {/* Action Buttons */}
-        <div className="pt-4">
-          {subscription?.status === 'active' ? (
-            <button 
-              onClick={onManageSubscription} 
-              disabled={portalLoading}
-              className="btn btn-success hover-lift w-full sm:w-auto"
-            >
-              {portalLoading ? (
-                <>
-                  <span className="spinner"></span>
-                  <span>Opening portal...</span>
-                </>
-              ) : (
-                'Manage Subscription'
-              )}
-            </button>
-          ) : (
-            <button 
-              onClick={onSubscribe} 
-              disabled={checkoutLoading}
-              className="btn btn-primary hover-lift w-full sm:w-auto"
-            >
-              {checkoutLoading ? (
-                <>
-                  <span className="spinner"></span>
-                  <span>Redirecting...</span>
-                </>
-              ) : (
-                'Upgrade to Pro'
-              )}
-            </button>
-          )}
+
+        <div className="pt-6 border-t border-zinc-200">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {subscription?.status === 'active' ? (
+              <Button 
+                onClick={onManageSubscription} 
+                size="lg"
+                disabled={portalLoading}
+                className="flex-1"
+              >
+                {portalLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Opening Portal...
+                  </>
+                ) : (
+                  'Manage Subscription'
+                )}
+              </Button>
+            ) : (
+              <Button 
+                onClick={onSubscribe} 
+                variant="primary"
+                size="lg"
+                disabled={checkoutLoading}
+                className="flex-1"
+              >
+                {checkoutLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Redirecting...
+                  </>
+                ) : (
+                  'Upgrade to Pro'
+                )}
+              </Button>
+            )}
+      <Button 
+        onClick={() => router.push('/reports')}
+        variant="secondary"
+        size="lg"
+      >
+        View Reports
+      </Button>
+          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
+
