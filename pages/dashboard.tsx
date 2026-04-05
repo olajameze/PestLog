@@ -278,8 +278,8 @@ function CompanySetupForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="company-name" className="block text-sm font-medium text-gray-700">Company Name</label>
+      <div className="form-group">
+        <label htmlFor="company-name" className="form-label">Company Name</label>
         <input
           id="company-name"
           type="text"
@@ -287,10 +287,10 @@ function CompanySetupForm() {
           onChange={(e) => setName(e.target.value)}
           required
           placeholder="Enter company name"
-          className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+          className="form-input"
         />
       </div>
-      <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+      <button type="submit" disabled={loading} className="btn btn-primary hover-lift">
         {loading ? 'Creating...' : 'Create Company'}
       </button>
     </form>
@@ -331,24 +331,38 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-navy">Technicians</h2>
-        <button onClick={() => setShowAddForm(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover-lift">Add Technician</button>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-navy">Technicians</h2>
+        <button 
+          onClick={() => setShowAddForm(true)} 
+          className="btn btn-primary hover-lift w-full sm:w-auto"
+        >
+          + Add Technician
+        </button>
       </div>
 
       {/* Desktop table */}
       <div className="hidden lg:block bg-white rounded-xl shadow-md overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50">
-            <tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr>
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {technicians.map((tech) => (
-              <tr key={tech.id}>
+              <tr key={tech.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tech.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{tech.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{tech.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button onClick={() => onRemoveTechnician(tech.id)} className="text-red-600 hover:text-red-900">Remove</button>
+                  <button
+                    onClick={() => onRemoveTechnician(tech.id)}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50 px-3 py-1 rounded-lg transition-colors"
+                  >
+                    Remove
+                  </button>
                 </td>
               </tr>
             ))}
@@ -356,52 +370,77 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
         </table>
       </div>
 
-      {/* Mobile cards */}
-      <div className="lg:hidden space-y-4">
-        {technicians.map((tech) => (
-          <div key={tech.id} className="bg-white rounded-xl shadow-md hover-lift p-4">
-            <div className="flex justify-between items-start">
-              <div><h3 className="text-lg font-semibold text-navy">{tech.name}</h3><p className="text-gray-600">{tech.email}</p></div>
-              <button onClick={() => onRemoveTechnician(tech.id)} className="text-red-600 hover:text-red-900 p-2">🗑️</button>
-            </div>
+      {/* Mobile cards view */}
+      <div className="lg:hidden space-y-3">
+        {technicians.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-5 text-center text-gray-600">
+            No technicians yet
           </div>
-        ))}
+        ) : (
+          technicians.map((tech) => (
+            <div key={tech.id} className="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow">
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <p className="font-semibold text-navy">{tech.name}</p>
+                  <p className="text-sm text-gray-600 break-all">{tech.email}</p>
+                </div>
+                <button
+                  onClick={() => onRemoveTechnician(tech.id)}
+                  className="btn btn-danger btn-sm whitespace-nowrap flex-shrink-0"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Modal */}
+      {/* Add Technician Form Modal */}
       {showAddForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setShowAddForm(false)}></div>
-          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-navy mb-4">Add Technician</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 space-y-4">
+            <h3 className="text-xl font-bold text-navy">Add Technician</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="technician-name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <div className="form-group">
+                <label htmlFor="tech-name" className="form-label">Technician Name</label>
                 <input
-                  id="technician-name"
+                  id="tech-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter technician name"
+                  placeholder="Full name"
+                  className="form-input"
                 />
               </div>
-              <div>
-                <label htmlFor="technician-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <div className="form-group">
+                <label htmlFor="tech-email" className="form-label">Email Address</label>
                 <input
-                  id="technician-email"
+                  id="tech-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                  placeholder="Enter technician email"
+                  placeholder="email@example.com"
+                  className="form-input"
                 />
               </div>
-              <div className="flex space-x-3 pt-4">
-                <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancel</button>
-                <button type="submit" disabled={loading} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">{loading ? 'Adding...' : 'Add Technician'}</button>
+              <div className="btn-group-full pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddForm(false)} 
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="btn btn-primary"
+                >
+                  {loading ? 'Adding...' : 'Add Technician'}
+                </button>
               </div>
             </form>
           </div>
@@ -572,9 +611,84 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
 function SettingsTab({ company, subscription, onSubscribe, onManageSubscription, checkoutLoading, portalLoading }: { company: Company; subscription: Subscription | null; onSubscribe: () => void; onManageSubscription: () => void; checkoutLoading: boolean; portalLoading: boolean }) {
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-navy">Settings</h2>
-      <div className="bg-white rounded-xl shadow-md hover-lift p-6"><h3 className="text-lg font-semibold text-navy mb-4">Company Information</h3><p><span className="font-medium">Name:</span> {company.name || 'Not set'}</p><p><span className="font-medium">Email:</span> {company.email}</p></div>
-      <div className="bg-white rounded-xl shadow-md hover-lift p-6"><h3 className="text-lg font-semibold text-navy mb-4">Subscription</h3><p><span className="font-medium">Status:</span> {subscription?.status || 'None'}</p>{subscription?.trialEndsAt && <p><span className="font-medium">Trial ends:</span> {new Date(subscription.trialEndsAt).toLocaleDateString()}</p>}{subscription?.status === 'active' ? <button onClick={onManageSubscription} className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-green-600 px-6 py-3 text-white font-semibold hover:bg-green-700" disabled={portalLoading}>{portalLoading ? <><span className="spinner"></span> Opening portal...</> : 'Manage Subscription'}</button> : <button onClick={onSubscribe} className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700" disabled={checkoutLoading}>{checkoutLoading ? <><span className="spinner"></span> Redirecting...</> : 'Upgrade to Pro'}</button>}</div>
+      <h2 className="text-2xl sm:text-3xl font-bold text-navy">Settings</h2>
+      
+      {/* Company Information Card */}
+      <div className="bg-white rounded-xl shadow-md hover-lift p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-navy">Company Information</h3>
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm text-gray-600">Company Name</p>
+            <p className="text-base font-semibold text-gray-900">{company.name || 'Not set'}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Email Address</p>
+            <p className="text-base font-semibold text-gray-900 break-all">{company.email}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Subscription Card */}
+      <div className="bg-white rounded-xl shadow-md hover-lift p-6 space-y-4">
+        <h3 className="text-lg font-semibold text-navy">Subscription</h3>
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm text-gray-600">Current Status</p>
+            <p className="text-base font-semibold text-gray-900">
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                subscription?.status === 'active' 
+                  ? 'bg-green-100 text-green-800'
+                  : subscription?.status === 'trial'
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {subscription?.status || 'None'}
+              </span>
+            </p>
+          </div>
+          {subscription?.trialEndsAt && (
+            <div>
+              <p className="text-sm text-gray-600">Trial Ends</p>
+              <p className="text-base font-semibold text-gray-900">{new Date(subscription.trialEndsAt).toLocaleDateString()}</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Action Buttons */}
+        <div className="pt-4">
+          {subscription?.status === 'active' ? (
+            <button 
+              onClick={onManageSubscription} 
+              disabled={portalLoading}
+              className="btn btn-success hover-lift w-full sm:w-auto"
+            >
+              {portalLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Opening portal...</span>
+                </>
+              ) : (
+                'Manage Subscription'
+              )}
+            </button>
+          ) : (
+            <button 
+              onClick={onSubscribe} 
+              disabled={checkoutLoading}
+              className="btn btn-primary hover-lift w-full sm:w-auto"
+            >
+              {checkoutLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Redirecting...</span>
+                </>
+              ) : (
+                'Upgrade to Pro'
+              )}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

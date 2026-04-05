@@ -116,50 +116,99 @@ export default function UpgradePage() {
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-white rounded-3xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-navy mb-3">Upgrade to PestLog</h1>
-          <p className="text-gray-600 mb-6">Keep your team active with PestLog subscription billing through Stripe.</p>
+        {/* Header Card */}
+        <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to PestLog</h1>
+          <p className="text-sm sm:text-base text-gray-600">Keep your team active with PestLog subscription billing through Stripe.</p>
+        </div>
 
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 hover-lift">
-              <p className="text-sm text-gray-600">Plan:</p>
-              <p className="text-xl font-semibold text-navy">PestLog Monthly</p>
-              <p className="text-sm text-gray-600">Flat £35 / month</p>
+        {/* Info Cards */}
+        <div className="space-y-3">
+          {/* Plan Card */}
+          <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-6 hover-lift">
+            <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Plan</p>
+            <p className="mt-2 text-lg sm:text-2xl font-bold text-navy">PestLog Monthly</p>
+            <p className="mt-1 text-base sm:text-lg font-semibold text-blue-600">£35 / month</p>
+          </div>
+
+          {/* Company Card */}
+          {company && (
+            <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 hover-lift">
+              <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Company</p>
+              <p className="mt-2 text-lg sm:text-xl font-semibold text-navy">{company.name || company.email}</p>
             </div>
+          )}
 
-            {company && (
-              <div className="rounded-2xl border border-gray-200 bg-white p-5 hover-lift">
-                <p className="text-sm text-gray-600">Company</p>
-                <p className="text-lg font-semibold text-navy">{company.name || company.email}</p>
-              </div>
-            )}
-
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 hover-lift">
-              <p className="text-sm text-gray-600">Subscription</p>
-              <p className="mt-2 text-base text-gray-800">Status: <span className="font-semibold">{subscription?.status || 'None'}</span></p>
+          {/* Subscription Status Card */}
+          <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 hover-lift">
+            <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Subscription Status</p>
+            <div className="mt-3 space-y-2">
+              <p className="text-base sm:text-lg text-gray-800">
+                Status: <span className="font-bold text-navy">{subscription?.status || 'None'}</span>
+              </p>
               {trialEndsDate && trialDaysLeft > 0 && (
-                <p className="mt-2 text-sm text-gray-600">Trial ends in {trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'} ({trialEndsDate.toLocaleDateString()})</p>
+                <p className="text-sm text-gray-600">
+                  ✓ Trial ends in <strong>{trialDaysLeft}</strong> day{trialDaysLeft === 1 ? '' : 's'} <span className="text-gray-500">({trialEndsDate.toLocaleDateString()})</span>
+                </p>
               )}
               {subscription?.status !== 'active' && trialEndsDate && trialDaysLeft <= 0 && (
-                <p className="mt-2 text-sm text-red-600">Your trial has ended. Please upgrade to continue using PestLog.</p>
+                <p className="text-sm font-semibold text-red-600">
+                  ⚠️ Your trial has ended. Please upgrade to continue using PestLog.
+                </p>
               )}
-            </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row">
-              {subscription?.status === 'active' ? (
-                <button onClick={handleManageSubscription} disabled={actionLoading} className="inline-flex justify-center items-center gap-2 rounded-2xl bg-green-600 px-6 py-3 text-white font-semibold hover:bg-green-700 disabled:opacity-50">
-                  {actionLoading ? <><span className="spinner"></span> Opening portal...</> : 'Manage Subscription'}
-                </button>
-              ) : (
-                <button onClick={handleSubscribe} disabled={actionLoading} className="inline-flex justify-center items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 text-white font-semibold hover:bg-blue-700 disabled:opacity-50">
-                  {actionLoading ? <><span className="spinner"></span> Redirecting...</> : 'Upgrade Now'}
-                </button>
-              )}
-              <button onClick={() => router.push('/dashboard')} className="inline-flex justify-center rounded-2xl border border-gray-300 bg-white px-6 py-3 text-gray-700 hover:bg-gray-50">
-                Back to Dashboard
-              </button>
             </div>
           </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+          {subscription?.status === 'active' ? (
+            <>
+              <button 
+                onClick={handleManageSubscription} 
+                disabled={actionLoading} 
+                className="btn btn-success hover:shadow-md hover-lift"
+              >
+                {actionLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    <span>Opening portal...</span>
+                  </>
+                ) : (
+                  'Manage Subscription'
+                )}
+              </button>
+              <button 
+                onClick={() => router.push('/dashboard')} 
+                className="btn btn-secondary hover:shadow-md hover-lift"
+              >
+                Back to Dashboard
+              </button>
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={handleSubscribe} 
+                disabled={actionLoading} 
+                className="btn btn-primary hover:shadow-md hover-lift"
+              >
+                {actionLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    <span>Redirecting...</span>
+                  </>
+                ) : (
+                  'Upgrade Now'
+                )}
+              </button>
+              <button 
+                onClick={() => router.push('/dashboard')} 
+                className="btn btn-secondary hover:shadow-md hover-lift"
+              >
+                Back to Dashboard
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

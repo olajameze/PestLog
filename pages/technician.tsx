@@ -233,23 +233,24 @@ export default function TechnicianPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-6">
-          <h2 className="text-2xl font-semibold text-navy mb-4">Add New Entry</h2>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label htmlFor="technician-entry-date" className="block text-sm font-medium text-gray-700">Date</label>
+        <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-6">Add New Entry</h2>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Date and Client Name Row */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="form-group">
+                <label htmlFor="technician-entry-date" className="form-label">Date <span className="text-red-500">*</span></label>
                 <input
                   id="technician-entry-date"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="form-input"
                 />
               </div>
-              <div>
-                <label htmlFor="technician-entry-client" className="block text-sm font-medium text-gray-700">Client Name</label>
+              <div className="form-group">
+                <label htmlFor="technician-entry-client" className="form-label">Client Name <span className="text-red-500">*</span></label>
                 <input
                   id="technician-entry-client"
                   type="text"
@@ -257,89 +258,121 @@ export default function TechnicianPage() {
                   onChange={(e) => setClientName(e.target.value)}
                   required
                   placeholder="Client name"
-                  className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="form-input"
                 />
               </div>
-              <div className="md:col-span-2">
-                <label htmlFor="technician-entry-address" className="block text-sm font-medium text-gray-700">Address</label>
-                <input
-                  id="technician-entry-address"
-                  type="text"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  required
-                  placeholder="Job address"
-                  className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label htmlFor="technician-entry-treatment" className="block text-sm font-medium text-gray-700">Treatment</label>
+            </div>
+
+            {/* Address Row */}
+            <div className="form-group">
+              <label htmlFor="technician-entry-address" className="form-label">Address <span className="text-red-500">*</span></label>
+              <input
+                id="technician-entry-address"
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+                placeholder="Job address"
+                className="form-input"
+              />
+            </div>
+
+            {/* Treatment and Photo Row */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="form-group">
+                <label htmlFor="technician-entry-treatment" className="form-label">Treatment <span className="text-red-500">*</span></label>
                 <select
                   id="technician-entry-treatment"
                   value={treatment}
                   onChange={(e) => setTreatment(e.target.value)}
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="form-select"
                 >
                   {treatments.map((option) => (
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label htmlFor="technician-entry-photo" className="block text-sm font-medium text-gray-700">Optional Photo</label>
+              <div className="form-group">
+                <label htmlFor="technician-entry-photo" className="form-label">Optional Photo</label>
                 <input
                   id="technician-entry-photo"
                   type="file"
                   accept="image/*"
                   onChange={(e) => e.target.files?.[0] && handlePhotoChange(e.target.files[0])}
-                  className="mt-1 block w-full text-sm text-gray-600"
+                  className="form-input"
                 />
-                {photoUrl && (
-                  <p className="mt-2 text-sm text-green-700">Photo uploaded successfully.</p>
+                {photoUploading && (
+                  <p className="mt-2 text-sm text-blue-600 flex items-center gap-1">
+                    <span className="spinner-dark"></span> Uploading photo...
+                  </p>
+                )}
+                {photoUrl && !photoUploading && (
+                  <p className="mt-2 text-sm text-green-600">✓ Photo uploaded successfully.</p>
                 )}
               </div>
             </div>
 
-            <div>
-              <label htmlFor="technician-entry-notes" className="block text-sm font-medium text-gray-700">Notes</label>
+            {/* Notes */}
+            <div className="form-group">
+              <label htmlFor="technician-entry-notes" className="form-label">Additional Notes</label>
               <textarea
                 id="technician-entry-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
-                placeholder="Enter treatment and observations"
-                className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                placeholder="Enter treatment substances, observations, and any notes about the job..."
+                className="form-textarea"
               />
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">E-signature</label>
-                <button type="button" onClick={clearSignature} className="text-sm text-blue-600 hover:text-blue-800">Clear</button>
+            {/* Signature Canvas */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="form-label mb-0">E-Signature</label>
+                {signatureDataUrl && (
+                  <button 
+                    type="button" 
+                    onClick={clearSignature} 
+                    className="text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Clear Signature
+                  </button>
+                )}
               </div>
-              <div className="rounded-2xl border border-gray-300 overflow-hidden shadow-sm">
+              <div className="rounded-lg border-2 border-gray-300 overflow-hidden bg-white shadow-sm">
                 <canvas
                   ref={canvasRef}
                   width={800}
                   height={200}
-                  className="w-full h-48 bg-white"
+                  className="w-full touch-none"
+                  style={{ cursor: 'crosshair' }}
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onPointerLeave={handlePointerUp}
                 />
               </div>
-              <p className="text-sm text-gray-500">Use your finger or mouse to sign above, then submit the entry.</p>
+              <p className="mt-2 text-xs sm:text-sm text-gray-500">👆 Use your finger or mouse to draw your signature above</p>
             </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full inline-flex justify-center rounded-2xl bg-blue-600 px-6 py-3 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60"
-            >
-              {submitting ? 'Saving entry...' : 'Save Entry'}
-            </button>
+            {/* Submit Button */}
+            <div className="pt-4">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn btn-primary btn-lg hover-lift w-full sm:w-auto"
+              >
+                {submitting ? (
+                  <>
+                    <span className="spinner"></span>
+                    <span>Saving entry...</span>
+                  </>
+                ) : (
+                  '✓ Save Entry'
+                )}
+              </button>
+            </div>
           </form>
         </div>
 

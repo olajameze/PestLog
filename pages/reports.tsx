@@ -202,112 +202,138 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-6">
-          <div className="grid gap-4 lg:grid-cols-4">
-            <div className="lg:col-span-1">
-              <label htmlFor="technician-select" className="block text-sm font-medium text-gray-700">Technician</label>
+        <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div className="form-group sm:col-span-1">
+              <label htmlFor="technician-select" className="form-label">Technician</label>
               <select
                 id="technician-select"
                 value={selectedTechnician}
                 onChange={(e) => setSelectedTechnician(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="form-select"
               >
                 {technicians.map((tech) => (
                   <option key={tech.id} value={tech.id}>{tech.name}</option>
                 ))}
               </select>
             </div>
-            <div>
-              <label htmlFor="start-date" className="block text-sm font-medium text-gray-700">Start Date</label>
+            <div className="form-group">
+              <label htmlFor="start-date" className="form-label">Start Date</label>
               <input
                 id="start-date"
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="form-input"
               />
             </div>
-            <div>
-              <label htmlFor="end-date" className="block text-sm font-medium text-gray-700">End Date</label>
+            <div className="form-group">
+              <label htmlFor="end-date" className="form-label">End Date</label>
               <input
                 id="end-date"
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-2xl px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="form-input"
               />
             </div>
-            <div className="flex items-end">
+            <div className="form-group flex flex-col justify-end">
               <button
                 onClick={fetchReport}
-                className="w-full rounded-2xl bg-blue-600 px-6 py-3 text-white text-sm font-semibold hover:bg-blue-700 hover-lift disabled:opacity-50"
+                className="btn btn-primary hover-lift"
                 disabled={fetching}
               >
-                {fetching ? <span className="inline-flex items-center gap-2"><span className="spinner"></span>Fetching...</span> : 'Fetch Report'}
+                {fetching ? (
+                  <>
+                    <span className="spinner"></span>
+                    <span>Fetching...</span>
+                  </>
+                ) : (
+                  '📊 Fetch Report'
+                )}
               </button>
             </div>
           </div>
         </div>
 
         {report && (
-          <div className="bg-white rounded-2xl shadow-md p-6 space-y-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-2xl font-semibold text-navy">Report Results</h2>
+          <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy">Report Results</h2>
               <button
                 onClick={downloadPdf}
-                className="rounded-2xl bg-green-600 px-6 py-3 text-white text-sm font-semibold hover:bg-green-700"
+                className="btn btn-success hover-lift w-full sm:w-auto"
               >
-                Download PDF
+                📥 Download PDF
               </button>
             </div>
 
+            {/* Report Summary */}
+            <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4 sm:p-6">
+              <div className="grid gap-2 sm:grid-cols-3 text-sm sm:text-base">
+                <div>
+                  <p className="text-gray-600">Company</p>
+                  <p className="font-semibold text-navy">{report.companyName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Technician</p>
+                  <p className="font-semibold text-navy">{technicians.find((t) => t.id === selectedTechnician)?.name || ''}</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Period</p>
+                  <p className="font-semibold text-navy">{new Date(startDate).toLocaleDateString()} — {new Date(endDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Jobs Section */}
             <div className="space-y-4">
-              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-                <p><span className="font-semibold">Company:</span> {report.companyName}</p>
-                <p><span className="font-semibold">Technician:</span> {technicians.find((t) => t.id === selectedTechnician)?.name || ''}</p>
-                <p><span className="font-semibold">Period:</span> {new Date(startDate).toLocaleDateString()} — {new Date(endDate).toLocaleDateString()}</p>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-navy">Jobs</h3>
-                {report.entries.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-500">No jobs found for this range.</div>
-                ) : (
-                  <div className="space-y-4">
-                    {report.entries.map((entry) => (
-                      <div key={entry.id} className="rounded-2xl border border-gray-200 p-5 shadow-sm hover-lift">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <h4 className="text-lg font-semibold text-navy">{entry.clientName}</h4>
-                            <p className="text-sm text-gray-500">{new Date(entry.date).toLocaleDateString()}</p>
-                          </div>
-                          <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">{entry.treatment}</span>
+              <h3 className="text-xl sm:text-2xl font-bold text-navy">📋 Jobs ({report.entries.length})</h3>
+              {report.entries.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
+                  No jobs found for this range.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {report.entries.map((entry) => (
+                    <div key={entry.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1">
+                          <h4 className="text-lg font-semibold text-navy">{entry.clientName}</h4>
+                          <p className="text-sm text-gray-600">{entry.address}</p>
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
                         </div>
-                        <p className="mt-3 text-gray-700">{entry.address}</p>
-                        {entry.notes && <p className="mt-2 text-gray-600">Notes: {entry.notes}</p>}
-                        {entry.signature && <p className="mt-2 text-gray-600">Signature: {entry.signature}</p>}
+                        <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      {entry.notes && <p className="mt-3 text-gray-600 text-sm">{entry.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-navy">Certifications</h3>
-                {report.certifications.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-500">No certifications available for this technician.</div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {report.certifications.map((cert) => (
-                      <div key={cert.id} className="rounded-2xl border border-gray-200 p-5 shadow-sm hover-lift">
-                        <p className="text-sm text-gray-700">Uploaded: {new Date(cert.uploadedAt).toLocaleDateString()}</p>
-                        <p className="text-sm text-gray-700">Expiry: {cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'N/A'}</p>
-                        <a href={cert.fileUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-blue-600 hover:text-blue-800">Download certification</a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* Certifications Section */}
+            <div className="space-y-4">
+              <h3 className="text-xl sm:text-2xl font-bold text-navy">📜 Certifications ({report.certifications.length})</h3>
+              {report.certifications.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
+                  No certifications available for this technician.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {report.certifications.map((cert) => (
+                    <div key={cert.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
+                      <p className="text-sm text-gray-600">Uploaded</p>
+                      <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
+                      <p className="mt-3 text-sm text-gray-600">Expiry</p>
+                      <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
+                      <a href={cert.fileUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                        📥 Download
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
