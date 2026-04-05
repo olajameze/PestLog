@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     // Get company and return subscription status directly from Company model
-    const company = await prisma.company.findUnique({
+    let company = await prisma.company.findUnique({
       where: { email: user.email! },
       select: {
         subscriptionStatus: true,
@@ -26,10 +26,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      const technician = await prisma.technician.findFirst({
+        where: { email: user.email! },
+        include: { company: { select: { subscriptionStatus: true, trialEndsAt: true, stripeCustomerId: true } } },
+      });
+
+      if (!technician || !technician.company) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
+
+      company = technician.company;
     }
 
-    // Return subscription info in a consistent format
     return res.status(200).json({
       status: company.subscriptionStatus,
       trialEndsAt: company.trialEndsAt,

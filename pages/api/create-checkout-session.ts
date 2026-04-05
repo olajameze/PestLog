@@ -38,12 +38,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'gbp',
             product_data: {
-              name: 'PestLog Subscription',
-              description: 'Monthly subscription for PestLog',
+              name: 'PestLog Monthly',
+              description: 'Monthly PestLog subscription for your team',
             },
-            unit_amount: 999, // $9.99
+            unit_amount: 3500,
             recurring: {
               interval: 'month',
             },
@@ -52,8 +52,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       mode: 'subscription',
+      subscription_data: {
+        trial_period_days: 14,
+      },
+      customer_email: company.email,
       success_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard?canceled=true`,
+      cancel_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/upgrade?canceled=true`,
       metadata: {
         companyId: company.id,
       },

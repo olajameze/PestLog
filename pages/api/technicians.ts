@@ -41,8 +41,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
     return res.status(201).json(technician);
+  } else if (req.method === 'DELETE') {
+    // Remove technician
+    const { id } = req.query;
+    if (!id) {
+      return res.status(400).json({ error: 'Technician ID required' });
+    }
+    const company = await prisma.company.findUnique({
+      where: { email: user.email },
+    });
+    if (!company) {
+      return res.status(400).json({ error: 'No company found' });
+    }
+    // Verify technician belongs to company
+    const technician = await prisma.technician.findUnique({
+      where: { id: id as string, companyId: company.id },
+    });
+    if (!technician) {
+      return res.status(404).json({ error: 'Technician not found' });
+    }
+    await prisma.technician.delete({
+      where: { id: id as string },
+    });
+    return res.status(200).json({ message: 'Technician removed' });
   } else {
-    res.setHeader('Allow', ['GET', 'POST']);
+    res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 }
