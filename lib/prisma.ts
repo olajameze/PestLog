@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
-const connectionString = process.env.POSTGRES_PRISMA_URL || process.env.DATABASE_URL;
+const connectionString = process.env.POSTGRES_PRISMA_URL;
 
 if (!connectionString) {
   throw new Error('Missing database connection string. Set POSTGRES_PRISMA_URL in your .env file.');

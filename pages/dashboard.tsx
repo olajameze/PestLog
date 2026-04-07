@@ -88,13 +88,25 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const companyData = await res.json();
+      if (!res.ok) {
+        setCompany(null);
+        setTechnicians([]);
+        setAppError(companyData?.error || 'Unable to load company details.');
+        showToast('Load failed', companyData?.error || 'Unable to load company details.', 'error');
+        return;
+      }
+
       setCompany(companyData);
       if (companyData) {
         const techRes = await fetch('/api/technicians', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         const techData = await techRes.json();
-        setTechnicians(techData);
+        setTechnicians(Array.isArray(techData) ? techData : []);
+        if (!techRes.ok) {
+          setAppError(techData?.error || 'Unable to load technicians.');
+          showToast('Load failed', techData?.error || 'Unable to load technicians.', 'error');
+        }
 
         const subRes = await fetch('/api/subscription', {
           headers: { Authorization: `Bearer ${session.access_token}` },
@@ -111,7 +123,7 @@ export default function Dashboard() {
       }
     };
     getUser();
-  }, [isPreviewMode, router]);
+  }, [isPreviewMode, router, showToast]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -379,7 +391,7 @@ function CompanySetupForm() {
 
 function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
   technicians: Technician[];
-  onAddTechnician: (name: string, email: string) => void;
+  onAddTechnician: (name: string, email: string) => Promise<void>;
   onRemoveTechnician: (id: string) => void;
 }) {
   const [name, setName] = useState('');
@@ -389,10 +401,13 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await onAddTechnician(name, email);
-    setName('');
-    setEmail('');
-    setLoading(false);
+    try {
+      await onAddTechnician(name, email);
+      setName('');
+      setEmail('');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -414,7 +429,7 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
         </form>
       </Card>
 
-      {technicians.length === 0 ? (
+      {!Array.isArray(technicians) || technicians.length === 0 ? (
         <Card className="text-center py-12">
           <p className="text-zinc-600 text-lg">No technicians yet. Add your first technician above.</p>
         </Card>
