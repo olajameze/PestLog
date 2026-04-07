@@ -16,14 +16,16 @@ declare global {
 
 export default function PWAInstallPrompt() {
   const [deviceInfo, setDeviceInfo] = useState({ isIOS: false, isAndroid: false });
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const forcePrompt = new URLSearchParams(window.location.search).get('showPwaPrompt') === '1';
     const dismissedAt = localStorage.getItem('pwa-prompt-dismissed');
-    if (dismissedAt) {
+    if (!forcePrompt && dismissedAt) {
       const dismissedTs = Number(dismissedAt);
       const oneDay = 24 * 60 * 60 * 1000;
       if (!Number.isNaN(dismissedTs) && Date.now() - dismissedTs < oneDay) {
@@ -41,9 +43,13 @@ export default function PWAInstallPrompt() {
     const userAgent = navigator.userAgent;
     const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
     const isAndroid = /Android/.test(userAgent);
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    setIsMobileViewport(isMobile);
     setDeviceInfo({ isIOS, isAndroid });
 
-    if (isIOS || isAndroid) {
+    // Show by default on mobile so users can discover install flow,
+    // and also when browser exposes the install event.
+    if (isIOS || isAndroid || isMobile || forcePrompt) {
       setIsVisible(true);
     }
 
@@ -79,7 +85,7 @@ export default function PWAInstallPrompt() {
       } catch (error) {
         void error;
       }
-    } else if (deviceInfo.isIOS) {
+    } else if (deviceInfo.isIOS || isMobileViewport) {
       alert(
         "To install PestLog on your iPhone:\n\n" +
         "1. Tap the Share button (box with arrow)\n" +
@@ -121,7 +127,7 @@ export default function PWAInstallPrompt() {
               onClick={handleInstallClick}
               className="px-4 py-2 rounded-lg bg-white hover:bg-gray-100 transition text-blue-600 font-bold text-sm shadow-lg"
             >
-              {deviceInfo.isIOS ? 'Instructions' : 'Install'}
+              {deviceInfo.isIOS || isMobileViewport ? 'Instructions' : 'Install'}
             </button>
           </div>
         </div>

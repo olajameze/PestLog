@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Button from './ui/Button';
+import { DashboardIcon, LogbookIcon, ReportsIcon, SettingsIcon } from './icons';
 
 interface SidebarProps {
   activeTab?: string;
@@ -12,10 +13,10 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const tabs = [
-    { id: 'technicians', label: 'Dashboard', href: '/dashboard?tab=technicians' },
-    { id: 'logbook', label: 'Logbook', href: '/dashboard?tab=logbook' },
-    { id: 'reports', label: 'Reports', href: '/reports' },
-    { id: 'settings', label: 'Settings', href: '/dashboard?tab=settings' },
+    { id: 'technicians', label: 'Dashboard', href: '/dashboard?tab=technicians', icon: DashboardIcon },
+    { id: 'logbook', label: 'Logbook', href: '/dashboard?tab=logbook', icon: LogbookIcon },
+    { id: 'reports', label: 'Reports', href: '/reports', icon: ReportsIcon },
+    { id: 'settings', label: 'Settings', href: '/dashboard?tab=settings', icon: SettingsIcon },
   ];
 
   const isActive = (id: string) => activeTab === id;
@@ -62,12 +63,13 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
                   onTabChange?.(tab.id);
                   setMobileOpen(false);
                 }}
-                className={`block rounded-lg px-4 py-3 text-base font-medium transition ${
+                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition ${
                   isActive(tab.id)
                     ? 'bg-primary-500 text-white'
                     : 'text-zinc-700 hover:bg-zinc-100 hover:text-navy'
                 }`}
               >
+                <tab.icon size={18} className={isActive(tab.id) ? 'text-white' : 'text-slate-500'} />
                 {tab.label}
               </Link>
             ))}

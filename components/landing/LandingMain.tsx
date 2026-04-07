@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { featureCards, howItWorksSteps, pricingPlans } from './content';
+import { ComplianceIcon, ContractsIcon, TimeSavingIcon } from '../icons';
 
 export default function LandingMain() {
   return (
     <>
-      <section className="bg-offwhite px-4 py-16 sm:px-6 lg:py-24">
+      <section className="bg-offwhite px-4 py-14 sm:px-6 lg:py-24">
         <div className="mx-auto w-full max-w-7xl text-center">
           <h1 className="mx-auto max-w-5xl text-4xl font-bold leading-tight text-navy sm:text-5xl lg:text-6xl">
             Prove Compliance, Log Jobs, and Win More Contracts
@@ -29,7 +31,24 @@ export default function LandingMain() {
             Trusted by 50+ pest control businesses
           </span>
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {['Logo 1', 'Logo 2', 'Logo 3', 'Logo 4'].map((logo) => (
+            <a
+              href="https://weatherspestsolutions.co.uk/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Visit Weathers' Pest Solutions website"
+              title="Weathers' Pest Solutions"
+              className="flex flex-col items-center justify-center rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 transition hover:border-primary-400 hover:bg-white"
+            >
+              <Image
+                src="/weathers-logo.png"
+                alt="Weathers' Pest Solutions logo"
+                width={160}
+                height={60}
+                className="h-10 w-auto object-contain"
+              />
+              <span className="mt-2 text-xs font-semibold text-primary-700">Weathers&apos; Pest Solutions</span>
+            </a>
+            {['Partner Logo 2', 'Partner Logo 3', 'Partner Logo 4'].map((logo) => (
               <div key={logo} className="rounded-xl border border-zinc-200 bg-offwhite px-4 py-3 text-center text-sm font-medium text-zinc-500">
                 {logo}
               </div>
@@ -47,8 +66,11 @@ export default function LandingMain() {
             <h2 className="text-3xl font-bold text-navy sm:text-4xl">Key Features</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {featureCards.map((item) => (
-              <article key={item.title} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            {featureCards.map((item, index) => (
+              <article key={item.title} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
+                <div className="inline-flex rounded-xl bg-primary-50 p-2 text-primary-600 transition duration-200 group-hover:scale-105">
+                  {index === 0 ? <ComplianceIcon size={20} /> : index === 1 ? <TimeSavingIcon size={20} /> : <ContractsIcon size={20} />}
+                </div>
                 <h3 className="text-2xl font-semibold text-navy">{item.title}</h3>
                 <p className="mt-3 text-base leading-relaxed text-zinc-600">{item.body}</p>
               </article>
@@ -62,7 +84,7 @@ export default function LandingMain() {
           <h2 className="text-center text-3xl font-bold text-navy sm:text-4xl">How It Works</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {howItWorksSteps.map((step, index) => (
-              <article key={step} className="rounded-2xl border border-zinc-200 bg-offwhite p-5">
+              <article key={step} className="rounded-2xl border border-zinc-200 bg-offwhite p-5 transition duration-200 hover:border-primary-300">
                 <p className="text-sm font-semibold text-primary-600">Step {index + 1}</p>
                 <p className="mt-2 text-base font-medium text-navy">{step}</p>
               </article>
@@ -78,7 +100,7 @@ export default function LandingMain() {
           </div>
           <div className="grid gap-6 lg:grid-cols-3">
             {pricingPlans.map((plan) => (
-              <article key={plan.name} className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <article key={plan.name} className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                 <span className="inline-flex w-fit rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
                   14-day free trial
                 </span>
