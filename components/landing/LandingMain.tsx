@@ -15,10 +15,10 @@ export default function LandingMain() {
             The digital compliance logbook for pest control professionals. Meet UK regulations (Rodenticide Stewardship Regime), log jobs on-site, and generate audit-ready reports.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/auth/signup" className="inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600">
+            <Link href="/auth/signup" className="inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
               Start Free Trial
             </Link>
-            <Link href="/dashboard?preview=1" className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-white">
+            <Link href="/dashboard?preview=1" className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
               View Demo
             </Link>
           </div>
@@ -38,7 +38,7 @@ export default function LandingMain() {
               rel="noopener noreferrer"
               aria-label="Visit Weathers' Pest Solutions website"
               title="Weathers' Pest Solutions"
-              className="flex flex-col items-center justify-center rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 transition hover:border-primary-400 hover:bg-white"
+              className="interactive-surface flex flex-col items-center justify-center rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 hover:border-primary-400 hover:bg-white"
             >
               <Image
                 src="/weathers-logo.png"
@@ -50,7 +50,7 @@ export default function LandingMain() {
               <span className="mt-2 text-xs font-semibold text-primary-700">Weathers&apos; Pest Solutions</span>
             </a>
             {['Partner Logo 2', 'Partner Logo 3', 'Partner Logo 4'].map((logo) => (
-              <div key={logo} className="rounded-xl border border-zinc-200 bg-offwhite px-4 py-3 text-center text-sm font-medium text-zinc-500">
+              <div key={logo} className="interactive-surface rounded-xl border border-zinc-200 bg-offwhite px-4 py-3 text-center text-sm font-medium text-zinc-500">
                 {logo}
               </div>
             ))}
@@ -68,7 +68,7 @@ export default function LandingMain() {
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {featureCards.map((item, index) => (
-              <article key={item.title} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
+              <article key={item.title} className="interactive-surface rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <div className="inline-flex rounded-xl bg-primary-50 p-2 text-primary-600 transition duration-200 group-hover:scale-105">
                   {index === 0 ? <ComplianceIcon size={20} /> : index === 1 ? <TimeSavingIcon size={20} /> : <ContractsIcon size={20} />}
                 </div>
@@ -85,7 +85,7 @@ export default function LandingMain() {
           <h2 className="text-center text-3xl font-bold text-navy sm:text-4xl">How It Works</h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {howItWorksSteps.map((step, index) => (
-              <article key={step} className="rounded-2xl border border-zinc-200 bg-offwhite p-5 transition duration-200 hover:border-primary-300">
+              <article key={step} className="interactive-surface rounded-2xl border border-zinc-200 bg-offwhite p-5 hover:border-primary-300">
                 <p className="text-sm font-semibold text-primary-600">Step {index + 1}</p>
                 <p className="mt-2 text-base font-medium text-navy">{step}</p>
               </article>
@@ -101,7 +101,7 @@ export default function LandingMain() {
           </div>
           <div className="grid gap-6 lg:grid-cols-3">
             {pricingPlans.map((plan) => (
-              <article key={plan.name} className="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
+              <article key={plan.name} className="interactive-surface flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <span className="inline-flex w-fit rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
                   14-day free trial
                 </span>
@@ -117,7 +117,7 @@ export default function LandingMain() {
                   ))}
                 </ul>
                 <div className="mt-6 flex justify-center">
-                  <Link href={plan.href} className="inline-flex w-fit rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600">
+                  <Link href={plan.href} className="inline-flex w-fit rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
                   {plan.cta}
                   </Link>
                 </div>
@@ -131,7 +131,7 @@ export default function LandingMain() {
         <div className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-200 bg-offwhite p-8 text-center sm:p-10">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Ready to simplify compliance and grow your business?</h2>
           <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using PestLog.</p>
-          <Link href="/auth/signup" className="inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 mt-6">
+          <Link href="/auth/signup" className="mt-6 inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
             Start Your Free Trial
           </Link>
         </div>

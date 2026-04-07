@@ -15,12 +15,14 @@ export default function SignUp() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
   const { showToast } = useToast();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -40,6 +42,7 @@ export default function SignUp() {
       setError(error.message);
       showToast('Sign up failed', error.message, 'error');
     } else {
+      setSuccessMessage('Account created. Check your email for the confirmation link.');
       showToast('Account created', 'Check your email for a confirmation link.', 'success');
       router.push('/auth/signin');
     }
@@ -53,7 +56,7 @@ export default function SignUp() {
           14-day free trial
         </span>
       </div>
-      <form className="space-y-4" onSubmit={handleSignUp}>
+      <form className={`space-y-4 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignUp}>
         <FormInput
           label="Business Name"
           id="business-name"
@@ -97,7 +100,8 @@ export default function SignUp() {
           placeholder="Re-enter your password"
           required
         />
-        {error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
+        {error ? <div className="form-feedback form-feedback-error">{error}</div> : null}
+        {successMessage ? <div className="form-feedback form-feedback-success">{successMessage}</div> : null}
         <div className="flex justify-center">
           <Button type="submit" disabled={loading} size="sm">
             {loading ? 'Creating account...' : 'Create Account'}

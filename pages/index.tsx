@@ -6,7 +6,7 @@ import LandingFooter from '../components/landing/LandingFooter';
 
 export default function Home() {
   return (
-    <div className="bg-white">
+    <div className="bg-white page-fade-in">
       <PWAInstallPrompt />
       <LandingHeader />
       <LandingMain />

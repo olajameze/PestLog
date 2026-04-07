@@ -8,8 +8,8 @@ interface CardProps {
 }
 
 export default function Card({ children, className = '', hoverLift = false, shadow = 'md' }: CardProps) {
-  const baseClasses = `bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-${shadow}`;
-  const hoverClasses = hoverLift ? 'hover-lift hover:shadow-lg transition-all' : '';
+  const baseClasses = `bg-white dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 p-6 shadow-${shadow} transition-[transform,box-shadow,border-color,background-color] duration-200`;
+  const hoverClasses = hoverLift ? 'hover-lift hover:shadow-lg hover:border-zinc-300' : '';
   
   return (
     <div className={`${baseClasses} ${hoverClasses} ${className}`}>

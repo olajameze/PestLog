@@ -254,7 +254,7 @@ export default function Dashboard() {
   if (!user) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-offwhite">
+    <div className="min-h-screen bg-offwhite page-fade-in">
       <div className="flex lg:pl-0">
       <Sidebar 
         activeTab={currentTab as string} 

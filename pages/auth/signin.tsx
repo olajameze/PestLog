@@ -12,6 +12,7 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -19,6 +20,7 @@ export default function SignIn() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccessMessage('');
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -27,6 +29,7 @@ export default function SignIn() {
       setError(error.message);
       showToast('Sign in failed', error.message, 'error');
     } else {
+      setSuccessMessage('Signed in successfully. Redirecting to dashboard...');
       showToast('Signed in', 'Redirecting to dashboard', 'success');
       router.push('/dashboard');
     }
@@ -35,7 +38,7 @@ export default function SignIn() {
 
   return (
     <AuthLayout title="Welcome back to PestLog" subtitle="Sign in to access your compliance dashboard">
-      <form className="space-y-6" onSubmit={handleSignIn}>
+      <form className={`space-y-6 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignIn}>
         <FormInput
           label="Email Address"
           id="email"
@@ -54,7 +57,8 @@ export default function SignIn() {
           placeholder="••••••••"
           required
         />
-        {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+        {error ? <div className="form-feedback form-feedback-error">{error}</div> : null}
+        {successMessage ? <div className="form-feedback form-feedback-success">{successMessage}</div> : null}
         <div className="flex justify-center">
           <Button type="submit" disabled={loading} size="sm">
             {loading ? (
