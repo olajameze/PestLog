@@ -98,9 +98,11 @@ export default function SignUp() {
           required
         />
         {error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
-        <Button type="submit" disabled={loading} size="lg">
-          {loading ? 'Creating account...' : 'Create Account'}
-        </Button>
+        <div className="flex justify-center">
+          <Button type="submit" disabled={loading} size="sm">
+            {loading ? 'Creating account...' : 'Create Account'}
+          </Button>
+        </div>
       </form>
       <p className="mt-4 text-center text-xs text-zinc-500">
         By creating an account, you agree to our Terms of Service and Privacy Policy.

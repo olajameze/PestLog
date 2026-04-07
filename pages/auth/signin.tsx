@@ -55,16 +55,18 @@ export default function SignIn() {
           required
         />
         {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
-        <Button type="submit" disabled={loading} size="lg">
-          {loading ? (
-            <>
-              <span className="spinner"></span>
-              Signing in...
-            </>
-          ) : (
-            'Sign In'
-          )}
-        </Button>
+        <div className="flex justify-center">
+          <Button type="submit" disabled={loading} size="sm">
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
+          </Button>
+        </div>
         <div className="text-center text-sm text-zinc-600">
           Don&apos;t have an account?{' '}
           <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">

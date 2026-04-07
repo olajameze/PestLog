@@ -15,10 +15,10 @@ export default function LandingMain() {
             The digital compliance logbook for pest control professionals. Meet UK regulations (Rodenticide Stewardship Regime), log jobs on-site, and generate audit-ready reports.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/auth/signup" className="btn btn-primary btn-lg min-w-48">
+            <Link href="/auth/signup" className="inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600">
               Start Free Trial
             </Link>
-            <a href="#features" className="btn btn-secondary btn-lg min-w-48">
+            <a href="#features" className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-white">
               View Demo
             </a>
           </div>
@@ -115,7 +115,7 @@ export default function LandingMain() {
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
-                <Link href={plan.href} className="btn btn-primary btn-lg mt-6 text-center">
+                <Link href={plan.href} className="inline-flex w-fit rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 mt-6">
                   {plan.cta}
                 </Link>
               </article>
@@ -128,7 +128,7 @@ export default function LandingMain() {
         <div className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-200 bg-offwhite p-8 text-center sm:p-10">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Ready to simplify compliance and grow your business?</h2>
           <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using PestLog.</p>
-          <Link href="/auth/signup" className="btn btn-primary btn-lg mt-6">
+          <Link href="/auth/signup" className="inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 mt-6">
             Start Your Free Trial
           </Link>
         </div>
