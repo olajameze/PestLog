@@ -55,7 +55,7 @@ export default function SignIn() {
           required
         />
         {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
-        <Button type="submit" fullWidth disabled={loading} size="lg">
+        <Button type="submit" disabled={loading} size="lg">
           {loading ? (
             <>
               <span className="spinner"></span>

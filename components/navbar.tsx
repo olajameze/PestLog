@@ -72,7 +72,7 @@ export default function Navbar({ user, onSignOut, logo = '🐛 PestLog' }: Navba
                   <Link href="/reports" className={`block px-3 py-2 rounded-md font-medium ${isActive('/reports') ? 'bg-primary-50 text-primary-600' : 'text-zinc-600 hover:bg-zinc-100 hover:text-navy'}`}>
                     Reports
                   </Link>
-                  <Button variant="secondary" fullWidth className="mt-2" onClick={onSignOut}>
+                  <Button variant="secondary" className="mt-2" onClick={onSignOut}>
                     Sign Out
                   </Button>
                 </>
@@ -82,7 +82,7 @@ export default function Navbar({ user, onSignOut, logo = '🐛 PestLog' }: Navba
                     Sign In
                   </Link>
                   <Link href="/auth/signup">
-                    <Button variant="primary" fullWidth className="mt-2">
+                    <Button variant="primary" className="mt-2">
                       Start Free Trial
                     </Button>
                   </Link>

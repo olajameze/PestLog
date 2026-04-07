@@ -370,7 +370,7 @@ function CompanySetupForm() {
         placeholder="Enter company name"
         required
       />
-      <Button type="submit" fullWidth disabled={loading} size="lg">
+      <Button type="submit" disabled={loading} size="lg">
         {loading ? 'Creating...' : 'Create Company'}
       </Button>
     </form>
@@ -407,7 +407,7 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
             <FormInput label="Email Address" id="tech-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" required />
           </div>
           <div className="sm:col-span-2 flex items-end">
-            <Button type="submit" fullWidth disabled={loading}>
+            <Button type="submit" disabled={loading}>
               {loading ? 'Adding...' : 'Add Technician'}
             </Button>
           </div>
@@ -616,7 +616,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
         />
       </div>
       <div className="md:col-span-2 pt-2">
-        <Button type="submit" fullWidth size="lg" disabled={loading}>
+        <Button type="submit" size="lg" disabled={loading}>
           {loading ? (
             <>
               <span className="spinner"></span>

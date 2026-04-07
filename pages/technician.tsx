@@ -441,7 +441,7 @@ export default function TechnicianPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="btn btn-primary btn-lg hover-lift w-full sm:w-auto"
+                className="btn btn-primary btn-lg hover-lift"
               >
                 {submitting ? (
                   <>

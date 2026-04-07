@@ -76,7 +76,7 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
           </nav>
 
           <div className="border-t border-zinc-200 p-4">
-            <Button variant="danger" size="sm" fullWidth onClick={onSignOut}>
+            <Button variant="danger" size="sm" onClick={onSignOut}>
               Sign Out
             </Button>
           </div>

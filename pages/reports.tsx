@@ -325,7 +325,7 @@ export default function ReportsPage() {
               <h2 className="text-2xl sm:text-3xl font-bold text-navy">Report Results</h2>
               <button
                 onClick={downloadPdf}
-                className="btn btn-success hover-lift w-full sm:w-auto"
+                className="btn btn-success hover-lift"
               >
                 📥 Download PDF
               </button>

@@ -98,7 +98,7 @@ export default function SignUp() {
           required
         />
         {error ? <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div> : null}
-        <Button type="submit" fullWidth disabled={loading} size="lg">
+        <Button type="submit" disabled={loading} size="lg">
           {loading ? 'Creating account...' : 'Create Account'}
         </Button>
       </form>

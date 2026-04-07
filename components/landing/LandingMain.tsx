@@ -115,7 +115,7 @@ export default function LandingMain() {
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
-                <Link href={plan.href} className="btn btn-primary btn-lg mt-6 w-full text-center">
+                <Link href={plan.href} className="btn btn-primary btn-lg mt-6 text-center">
                   {plan.cta}
                 </Link>
               </article>
