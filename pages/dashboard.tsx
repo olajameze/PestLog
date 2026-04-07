@@ -58,9 +58,26 @@ export default function Dashboard() {
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const router = useRouter();
   const { showToast } = useToast();
+  const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
 
   useEffect(() => {
     const getUser = async () => {
+      if (isPreviewMode) {
+        setUser({ id: 'preview-user', email: 'preview@pestlog.local' });
+        setCompany({
+          id: 'preview-company',
+          name: 'PestLog Preview Co.',
+          email: 'owner@preview.local',
+          subscriptionStatus: 'active',
+        });
+        setTechnicians([
+          { id: 'tech-1', name: 'John Smith', email: 'john@preview.local' },
+          { id: 'tech-2', name: 'Sarah Johnson', email: 'sarah@preview.local' },
+        ]);
+        setSubscription({ status: 'active' });
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/auth/signin');
@@ -94,7 +111,7 @@ export default function Dashboard() {
       }
     };
     getUser();
-  }, [router]);
+  }, [isPreviewMode, router]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -103,11 +120,19 @@ export default function Dashboard() {
       : activeTab;
 
   const handleSignOut = async () => {
+    if (isPreviewMode) {
+      router.push('/');
+      return;
+    }
     await supabase.auth.signOut();
     router.push('/');
   };
 
   const handleSubscribe = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Checkout is disabled in preview mode.', 'info');
+      return;
+    }
     setLoadingCheckout(true);
     setAppError(null);
     const { data: { session } } = await supabase.auth.getSession();
@@ -132,6 +157,10 @@ export default function Dashboard() {
   };
 
   const handleManageSubscription = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Billing portal is disabled in preview mode.', 'info');
+      return;
+    }
     setLoadingPortal(true);
     setAppError(null);
     const { data: { session } } = await supabase.auth.getSession();
@@ -156,6 +185,11 @@ export default function Dashboard() {
   };
 
   const handleAddTechnician = async (name: string, email: string) => {
+    if (isPreviewMode) {
+      setTechnicians((prev) => [...prev, { id: `preview-${Date.now()}`, name, email }]);
+      showToast('Preview mode', 'Technician added locally in preview mode.', 'success');
+      return;
+    }
     setAppError(null);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -184,6 +218,11 @@ export default function Dashboard() {
   };
 
   const handleRemoveTechnician = async (technicianId: string) => {
+    if (isPreviewMode) {
+      setTechnicians((prev) => prev.filter((t) => t.id !== technicianId));
+      showToast('Preview mode', 'Technician removed locally in preview mode.', 'success');
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/auth/signin');

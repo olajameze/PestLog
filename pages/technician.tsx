@@ -35,6 +35,7 @@ const treatments = [
 export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TechnicianProfile | null>(null);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
@@ -53,6 +54,18 @@ export default function TechnicianPage() {
 
   useEffect(() => {
     const loadProfile = async () => {
+      if (isPreviewMode) {
+        setProfile({
+          id: 'preview-tech',
+          name: 'John Smith',
+          email: 'john@preview.local',
+          companyId: 'preview-company',
+          companyName: 'PestLog Preview Co.',
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/auth/signin');
@@ -87,10 +100,32 @@ export default function TechnicianPage() {
     };
 
     loadProfile();
-  }, [router]);
+  }, [isPreviewMode, router]);
 
   useEffect(() => {
     const loadEntries = async () => {
+      if (isPreviewMode) {
+        setEntries([
+          {
+            id: 'preview-1',
+            date: new Date().toISOString(),
+            clientName: 'Riverside Restaurant',
+            address: '45 High Street, Manchester',
+            treatment: 'Rodenticide Bait Stations',
+            notes: 'Installed 6 bait stations in kitchen and storage areas.',
+          },
+          {
+            id: 'preview-2',
+            date: new Date(Date.now() - 86400000).toISOString(),
+            clientName: 'City Warehouse Ltd',
+            address: '12 Industrial Estate, Leeds',
+            treatment: 'Rodent Monitoring',
+            notes: 'Quarterly inspection completed. No activity detected.',
+          },
+        ]);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -105,7 +140,7 @@ export default function TechnicianPage() {
     if (profile) {
       loadEntries();
     }
-  }, [profile]);
+  }, [isPreviewMode, profile]);
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
@@ -149,6 +184,12 @@ export default function TechnicianPage() {
   };
 
   const handlePhotoChange = async (file: File) => {
+    if (isPreviewMode) {
+      setPhotoFile(file);
+      setPhotoUrl(URL.createObjectURL(file));
+      showToast('Preview mode', 'Using local preview image only.', 'info');
+      return;
+    }
     if (!profile) return;
     setPhotoUploading(true);
     const filePath = `${profile.id}/${Date.now()}-${file.name}`;
@@ -172,6 +213,33 @@ export default function TechnicianPage() {
     e.preventDefault();
     if (!profile) return;
     setSubmitting(true);
+
+    if (isPreviewMode) {
+      setEntries((prev) => [
+        {
+          id: `preview-${Date.now()}`,
+          date: date || new Date().toISOString(),
+          clientName,
+          address,
+          treatment,
+          notes,
+          photoUrl,
+          signature: signatureDataUrl,
+        },
+        ...prev,
+      ]);
+      setDate('');
+      setClientName('');
+      setAddress('');
+      setTreatment(treatments[0]);
+      setNotes('');
+      setPhotoFile(null);
+      setPhotoUrl('');
+      clearSignature();
+      showToast('Preview mode', 'Entry saved locally in preview mode.', 'success');
+      setSubmitting(false);
+      return;
+    }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -227,6 +295,10 @@ export default function TechnicianPage() {
     <div className="min-h-screen bg-offwhite">
       <div className="flex">
         <Sidebar activeTab="logbook" onSignOut={async () => {
+          if (isPreviewMode) {
+            router.push('/');
+            return;
+          }
           await supabase.auth.signOut();
           router.push('/auth/signin');
         }} />

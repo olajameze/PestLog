@@ -18,6 +18,7 @@ type Subscription = {
 export default function UpgradePage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const [company, setCompany] = useState<Company | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,16 @@ export default function UpgradePage() {
 
   useEffect(() => {
     const loadData = async () => {
+      if (isPreviewMode) {
+        const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        setCompany({ id: 'preview-company', name: 'PestLog Preview Co.', email: 'owner@preview.local' });
+        setSubscription({ status: 'trial', trialEndsAt: endDate.toISOString() });
+        setTrialEndsDate(endDate);
+        setTrialDaysLeft(7);
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/auth/signin');
@@ -65,9 +76,13 @@ export default function UpgradePage() {
     };
 
     loadData();
-  }, [router]);
+  }, [isPreviewMode, router]);
 
   const handleSubscribe = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Checkout is disabled in preview mode.', 'info');
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/auth/signin');
@@ -89,6 +104,10 @@ export default function UpgradePage() {
   };
 
   const handleManageSubscription = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Billing portal is disabled in preview mode.', 'info');
+      return;
+    }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/auth/signin');
@@ -112,8 +131,6 @@ export default function UpgradePage() {
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-offwhite">Loading subscription details...</div>;
   }
-
-  const isTrialActive = subscription?.status === 'trial' && trialDaysLeft > 0;
 
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">

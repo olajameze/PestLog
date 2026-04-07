@@ -42,6 +42,7 @@ type ReportResponse = {
 export default function ReportsPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const [company, setCompany] = useState<Company | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selectedTechnician, setSelectedTechnician] = useState('');
@@ -53,6 +54,19 @@ export default function ReportsPage() {
 
   useEffect(() => {
     const loadOwnerData = async () => {
+      if (isPreviewMode) {
+        const mockTechs = [
+          { id: 'tech-1', name: 'John Smith', email: 'john@preview.local' },
+          { id: 'tech-2', name: 'Sarah Johnson', email: 'sarah@preview.local' },
+          { id: 'tech-3', name: 'Mike Williams', email: 'mike@preview.local' },
+        ];
+        setCompany({ id: 'preview-company', name: 'PestLog Preview Co.', email: 'owner@preview.local' });
+        setTechnicians(mockTechs);
+        setSelectedTechnician(mockTechs[0].id);
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         router.push('/auth/signin');
@@ -98,11 +112,47 @@ export default function ReportsPage() {
     };
 
     loadOwnerData();
-  }, [router]);
+  }, [isPreviewMode, router]);
 
   const fetchReport = async () => {
     if (!selectedTechnician || !startDate || !endDate) {
       showToast('Missing filters', 'Select a technician and date range first.', 'error');
+      return;
+    }
+
+    if (isPreviewMode) {
+      const selectedName = technicians.find((t) => t.id === selectedTechnician)?.name || 'Technician';
+      setReport({
+        companyName: company?.name || 'PestLog Preview Co.',
+        entries: [
+          {
+            id: 'entry-1',
+            date: startDate || new Date().toISOString(),
+            clientName: 'Riverside Restaurant',
+            address: '45 High Street, Manchester',
+            treatment: 'Rodenticide Bait Stations',
+            notes: 'Installed 6 bait stations and reviewed prevention advice.',
+          },
+          {
+            id: 'entry-2',
+            date: endDate || new Date().toISOString(),
+            clientName: 'City Warehouse Ltd',
+            address: '12 Industrial Estate, Leeds',
+            treatment: 'Rodent Monitoring',
+            notes: 'Quarterly inspection complete with no active findings.',
+          },
+        ],
+        certifications: [
+          {
+            id: 'cert-1',
+            fileUrl: '#',
+            uploadedAt: new Date().toISOString(),
+            expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+      });
+      showToast('Preview mode', `Generated preview report for ${selectedName}.`, 'info');
+      setFetching(false);
       return;
     }
 
@@ -197,6 +247,10 @@ export default function ReportsPage() {
     <div className="min-h-screen bg-offwhite">
       <div className="flex">
         <Sidebar activeTab="reports" onSignOut={async () => {
+          if (isPreviewMode) {
+            router.push('/');
+            return;
+          }
           await supabase.auth.signOut();
           router.push('/auth/signin');
         }} />
