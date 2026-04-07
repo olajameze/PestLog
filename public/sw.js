@@ -47,6 +47,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip cross-origin requests (fonts, analytics, external APIs).
+  // Let the browser handle these directly.
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
   // Skip Chrome extensions and other non-http protocols
   if (event.request.url.startsWith('chrome-extension://')) {
     return;

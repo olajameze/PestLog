@@ -367,7 +367,8 @@ function CompanySetupForm() {
     if (res.ok) {
       window.location.reload();
     } else {
-      showToast('Setup failed', 'Error creating company', 'error');
+      const err = await res.json().catch(() => ({ error: 'Error creating company' }));
+      showToast('Setup failed', err.error || 'Error creating company', 'error');
     }
     setLoading(false);
   };
@@ -547,11 +548,36 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
   const [treatment, setTreatment] = useState('');
   const [notes, setNotes] = useState('');
   const [technicianId, setTechnicianId] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
+  const handlePhotoChange = async (file: File) => {
+    setPhotoUploading(true);
+    const filePath = `logbook/${companyId}/${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage
+      .from('logbook-photos')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      showToast('Upload failed', error.message, 'error');
+      setPhotoUploading(false);
+      return;
+    }
+
+    const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
+    setPhotoUrl(publicData.publicUrl);
+    showToast('Upload complete', 'Photo attached to this entry.', 'success');
+    setPhotoUploading(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (photoUploading) {
+      showToast('Please wait', 'Image upload is still in progress.', 'info');
+      return;
+    }
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch('/api/logbook-entries', {
@@ -560,7 +586,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token}`,
       },
-      body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianId }),
+      body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianId, photoUrl }),
     });
     if (res.ok) {
       const entry = await res.json();
@@ -571,6 +597,10 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
       setTreatment('');
       setNotes('');
       setTechnicianId('');
+      setPhotoUrl('');
+      const fileInput = document.getElementById('entry-photo') as HTMLInputElement | null;
+      if (fileInput) fileInput.value = '';
+      showToast('Entry saved', 'Logbook entry saved successfully.', 'success');
     } else {
       showToast('Save failed', 'Error adding entry', 'error');
     }
@@ -630,8 +660,27 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
           placeholder="Treatment substances, observations, compliance notes..."
         />
       </div>
+      <div className="md:col-span-2">
+        <label htmlFor="entry-photo" className="mb-2 block text-sm font-medium text-zinc-700">
+          Job Photo (optional)
+        </label>
+        <input
+          id="entry-photo"
+          type="file"
+          accept="image/*"
+          className="block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handlePhotoChange(file);
+          }}
+        />
+        {photoUploading ? <p className="mt-2 text-sm text-zinc-500">Uploading photo...</p> : null}
+        {!photoUploading && photoUrl ? (
+          <Image src={photoUrl} alt="Uploaded job photo preview" width={800} height={300} className="mt-3 h-40 w-full rounded-xl border object-cover" />
+        ) : null}
+      </div>
       <div className="md:col-span-2 pt-2">
-        <Button type="submit" size="lg" disabled={loading}>
+        <Button type="submit" size="lg" disabled={loading || photoUploading}>
           {loading ? (
             <>
               <span className="spinner"></span>
@@ -726,6 +775,19 @@ function SettingsTab({ company, subscription, onSubscribe, onManageSubscription,
   const [emailAlerts, setEmailAlerts] = useState(initialSettings.emailAlerts);
   const [weeklySummary, setWeeklySummary] = useState(initialSettings.weeklySummary);
   const [mfaRequired, setMfaRequired] = useState(initialSettings.mfaRequired);
+  const [complianceDeadlines, setComplianceDeadlines] = useState(initialSettings.emailAlerts ?? true);
+  const [certExpiryAlerts, setCertExpiryAlerts] = useState(true);
+  const [followUpReminders, setFollowUpReminders] = useState(true);
+  const [missedLogbookAlerts, setMissedLogbookAlerts] = useState(true);
+  const [billingEvents, setBillingEvents] = useState(false);
+  const [digestMode, setDigestMode] = useState(true);
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
+  const [quietStart, setQuietStart] = useState('21:00');
+  const [quietEnd, setQuietEnd] = useState('07:00');
+  const [pushPermission, setPushPermission] = useState<'unsupported' | 'default' | 'denied' | 'granted'>(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
+    return Notification.permission;
+  });
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingCompliance, setSavingCompliance] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
@@ -742,8 +804,31 @@ function SettingsTab({ company, subscription, onSubscribe, onManageSubscription,
         emailAlerts,
         weeklySummary,
         mfaRequired,
+        complianceDeadlines,
+        certExpiryAlerts,
+        followUpReminders,
+        missedLogbookAlerts,
+        billingEvents,
+        digestMode,
+        quietHoursEnabled,
+        quietStart,
+        quietEnd,
       })
     );
+  };
+
+  const requestPushPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      showToast('Not supported', 'Push notifications are not supported on this device/browser.', 'info');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setPushPermission(permission);
+    if (permission === 'granted') {
+      showToast('Notifications enabled', 'Critical compliance alerts will be delivered when available.', 'success');
+      return;
+    }
+    showToast('Notifications blocked', 'You can enable notifications later from browser settings.', 'info');
   };
 
   const handleSaveProfile = async () => {
@@ -833,6 +918,61 @@ function SettingsTab({ company, subscription, onSubscribe, onManageSubscription,
             <span className="text-sm font-medium text-navy">Weekly owner summary report</span>
             <input type="checkbox" checked={weeklySummary} onChange={(e) => setWeeklySummary(e.target.checked)} />
           </label>
+        </div>
+        <div className="rounded-xl border border-zinc-200 p-4">
+          <p className="text-sm font-semibold text-navy">Push Notification Status</p>
+          <p className="mt-1 text-xs text-zinc-600">
+            {pushPermission === 'granted'
+              ? 'Allowed on this device.'
+              : pushPermission === 'denied'
+              ? 'Blocked in browser settings.'
+              : pushPermission === 'unsupported'
+              ? 'Not supported on this device/browser.'
+              : 'Not requested yet.'}
+          </p>
+          <Button className="mt-3" variant="secondary" onClick={requestPushPermission} disabled={pushPermission === 'unsupported'}>
+            Enable Device Notifications
+          </Button>
+        </div>
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-navy">Alert Categories</p>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Compliance/report deadlines</span>
+            <input type="checkbox" checked={complianceDeadlines} onChange={(e) => setComplianceDeadlines(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Technician certification expiry reminders</span>
+            <input type="checkbox" checked={certExpiryAlerts} onChange={(e) => setCertExpiryAlerts(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Follow-up treatment reminders</span>
+            <input type="checkbox" checked={followUpReminders} onChange={(e) => setFollowUpReminders(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Missed or overdue logbook entries</span>
+            <input type="checkbox" checked={missedLogbookAlerts} onChange={(e) => setMissedLogbookAlerts(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Subscription and billing status events</span>
+            <input type="checkbox" checked={billingEvents} onChange={(e) => setBillingEvents(e.target.checked)} />
+          </label>
+        </div>
+        <div className="space-y-3 rounded-xl border border-zinc-200 p-4">
+          <p className="text-sm font-semibold text-navy">Noise Control</p>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Digest mode for non-urgent updates</span>
+            <input type="checkbox" checked={digestMode} onChange={(e) => setDigestMode(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Quiet hours</span>
+            <input type="checkbox" checked={quietHoursEnabled} onChange={(e) => setQuietHoursEnabled(e.target.checked)} />
+          </label>
+          {quietHoursEnabled ? (
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <FormInput label="Quiet hours start" id="settings-quiet-start" type="time" value={quietStart} onChange={(e) => setQuietStart(e.target.value)} />
+              <FormInput label="Quiet hours end" id="settings-quiet-end" type="time" value={quietEnd} onChange={(e) => setQuietEnd(e.target.value)} />
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-3">
           <Button onClick={handleSaveNotifications} disabled={savingNotifications}>
