@@ -115,9 +115,11 @@ export default function LandingMain() {
                     <li key={feature}>• {feature}</li>
                   ))}
                 </ul>
-                <Link href={plan.href} className="inline-flex w-fit rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600 mt-6">
+                <div className="mt-6 flex justify-center">
+                  <Link href={plan.href} className="inline-flex w-fit rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600">
                   {plan.cta}
-                </Link>
+                  </Link>
+                </div>
               </article>
             ))}
           </div>
