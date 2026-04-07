@@ -18,10 +18,11 @@ export default function LandingMain() {
             <Link href="/auth/signup" className="inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-600">
               Start Free Trial
             </Link>
-            <a href="#features" className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-white">
+            <Link href="/dashboard?preview=1" className="inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-white">
               View Demo
-            </a>
+            </Link>
           </div>
+          <p className="mt-3 text-xs text-zinc-500">View Demo opens an interactive preview dashboard.</p>
         </div>
       </section>
 

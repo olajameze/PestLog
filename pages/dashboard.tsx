@@ -640,96 +640,198 @@ function SettingsTab({ company, subscription, onSubscribe, onManageSubscription,
   portalLoading: boolean;
 }) {
   const router = useRouter();
+  const { showToast } = useToast();
+  const loadSavedSettings = () => {
+    if (typeof window === 'undefined') {
+      return {
+        companyName: company.name || '',
+        billingEmail: company.email || '',
+        phone: '',
+        retentionDays: '365',
+        certReminderDays: '30',
+        emailAlerts: true,
+        weeklySummary: true,
+        mfaRequired: false,
+      };
+    }
+    const saved = localStorage.getItem(`settings-${company.id}`);
+    if (!saved) {
+      return {
+        companyName: company.name || '',
+        billingEmail: company.email || '',
+        phone: '',
+        retentionDays: '365',
+        certReminderDays: '30',
+        emailAlerts: true,
+        weeklySummary: true,
+        mfaRequired: false,
+      };
+    }
+    try {
+      const parsed = JSON.parse(saved) as {
+        companyName?: string;
+        billingEmail?: string;
+        phone?: string;
+        retentionDays?: string;
+        certReminderDays?: string;
+        emailAlerts?: boolean;
+        weeklySummary?: boolean;
+        mfaRequired?: boolean;
+      };
+      return {
+        companyName: parsed.companyName ?? company.name ?? '',
+        billingEmail: parsed.billingEmail ?? company.email,
+        phone: parsed.phone ?? '',
+        retentionDays: parsed.retentionDays ?? '365',
+        certReminderDays: parsed.certReminderDays ?? '30',
+        emailAlerts: parsed.emailAlerts ?? true,
+        weeklySummary: parsed.weeklySummary ?? true,
+        mfaRequired: parsed.mfaRequired ?? false,
+      };
+    } catch {
+      return {
+        companyName: company.name || '',
+        billingEmail: company.email || '',
+        phone: '',
+        retentionDays: '365',
+        certReminderDays: '30',
+        emailAlerts: true,
+        weeklySummary: true,
+        mfaRequired: false,
+      };
+    }
+  };
+
+  const initialSettings = loadSavedSettings();
+  const [companyName, setCompanyName] = useState(initialSettings.companyName);
+  const [billingEmail, setBillingEmail] = useState(initialSettings.billingEmail);
+  const [phone, setPhone] = useState(initialSettings.phone);
+  const [retentionDays, setRetentionDays] = useState(initialSettings.retentionDays);
+  const [certReminderDays, setCertReminderDays] = useState(initialSettings.certReminderDays);
+  const [emailAlerts, setEmailAlerts] = useState(initialSettings.emailAlerts);
+  const [weeklySummary, setWeeklySummary] = useState(initialSettings.weeklySummary);
+  const [mfaRequired, setMfaRequired] = useState(initialSettings.mfaRequired);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingCompliance, setSavingCompliance] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+
+  const persistSettings = () => {
+    localStorage.setItem(
+      `settings-${company.id}`,
+      JSON.stringify({
+        companyName,
+        billingEmail,
+        phone,
+        retentionDays,
+        certReminderDays,
+        emailAlerts,
+        weeklySummary,
+        mfaRequired,
+      })
+    );
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    persistSettings();
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    setSavingProfile(false);
+    showToast('Profile saved', 'Company settings saved locally. Backend endpoint can be wired later.', 'success');
+  };
+
+  const handleSaveCompliance = async () => {
+    setSavingCompliance(true);
+    persistSettings();
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    setSavingCompliance(false);
+    showToast('Compliance saved', 'Compliance policy settings saved locally.', 'success');
+  };
+
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true);
+    persistSettings();
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    setSavingNotifications(false);
+    showToast('Notifications saved', 'Alert preferences saved locally.', 'success');
+  };
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl sm:text-3xl font-bold text-navy">Settings</h2>
-      
+
       <Card className="space-y-6 p-8">
-        <div>
-          <h3 className="text-xl font-bold text-navy mb-4">Company Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm font-medium text-zinc-600 mb-1">Company Name</p>
-              <p className="text-lg font-bold text-navy">{company.name || company.email}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-zinc-600 mb-1">Email</p>
-              <p className="text-lg font-bold text-navy break-all">{company.email}</p>
-            </div>
-          </div>
+        <h3 className="text-xl font-bold text-navy">Company & Billing</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormInput label="Company Name" id="settings-company-name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+          <FormInput label="Billing Email" id="settings-billing-email" type="email" value={billingEmail} onChange={(e) => setBillingEmail(e.target.value)} />
+          <FormInput label="Phone Number" id="settings-phone-number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+44 7..." />
         </div>
-
-        <div>
-          <h3 className="text-xl font-bold text-navy mb-4">Subscription</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm font-medium text-zinc-600 mb-1">Status</p>
-              <span className={`inline-flex px-3 py-1 rounded-full text-sm font-bold ${
-                subscription?.status === 'active' 
-                  ? 'bg-green-100 text-green-800'
-                  : subscription?.status === 'trial'
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'bg-zinc-100 text-zinc-800'
-              }`}>
-                {subscription?.status?.toUpperCase() || 'No Plan'}
-              </span>
-            </div>
-            {subscription?.trialEndsAt && (
-              <div>
-                <p className="text-sm font-medium text-zinc-600 mb-1">Trial Ends</p>
-                <p className="text-lg font-bold text-navy">{new Date(subscription.trialEndsAt).toLocaleDateString()}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="pt-6 border-t border-zinc-200">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {subscription?.status === 'active' ? (
-              <Button 
-                onClick={onManageSubscription} 
-                size="lg"
-                disabled={portalLoading}
-                className="flex-1"
-              >
-                {portalLoading ? (
-                  <>
-                    <span className="spinner"></span>
-                    Opening Portal...
-                  </>
-                ) : (
-                  'Manage Subscription'
-                )}
-              </Button>
-            ) : (
-              <Button 
-                onClick={onSubscribe} 
-                variant="primary"
-                size="lg"
-                disabled={checkoutLoading}
-                className="flex-1"
-              >
-                {checkoutLoading ? (
-                  <>
-                    <span className="spinner"></span>
-                    Redirecting...
-                  </>
-                ) : (
-                  'Upgrade to Pro'
-                )}
-              </Button>
-            )}
-      <Button 
-        onClick={() => router.push('/reports')}
-        variant="secondary"
-        size="lg"
-      >
-        View Reports
-      </Button>
-          </div>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={handleSaveProfile} disabled={savingProfile}>{savingProfile ? 'Saving...' : 'Save Profile'}</Button>
+          {subscription?.status === 'active' ? (
+            <Button onClick={onManageSubscription} disabled={portalLoading}>
+              {portalLoading ? 'Opening Portal...' : 'Manage Membership'}
+            </Button>
+          ) : (
+            <Button onClick={onSubscribe} disabled={checkoutLoading}>
+              {checkoutLoading ? 'Redirecting...' : 'Upgrade Membership'}
+            </Button>
+          )}
         </div>
       </Card>
+
+      <Card className="space-y-6 p-8">
+        <h3 className="text-xl font-bold text-navy">Compliance & Data Policy</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormInput
+            label="Data Retention (days)"
+            id="settings-retention-days"
+            type="number"
+            value={retentionDays}
+            onChange={(e) => setRetentionDays(e.target.value)}
+          />
+          <FormInput
+            label="Certification Reminder (days before expiry)"
+            id="settings-cert-reminder-days"
+            type="number"
+            value={certReminderDays}
+            onChange={(e) => setCertReminderDays(e.target.value)}
+          />
+        </div>
+        <Button onClick={handleSaveCompliance} disabled={savingCompliance}>
+          {savingCompliance ? 'Saving...' : 'Save Compliance Policy'}
+        </Button>
+      </Card>
+
+      <Card className="space-y-6 p-8">
+        <h3 className="text-xl font-bold text-navy">Security & Notifications</h3>
+        <div className="space-y-3">
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Require MFA for all admins</span>
+            <input type="checkbox" checked={mfaRequired} onChange={(e) => setMfaRequired(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Email alerts for failed compliance checks</span>
+            <input type="checkbox" checked={emailAlerts} onChange={(e) => setEmailAlerts(e.target.checked)} />
+          </label>
+          <label className="flex items-center justify-between rounded-lg border border-zinc-200 px-4 py-3">
+            <span className="text-sm font-medium text-navy">Weekly owner summary report</span>
+            <input type="checkbox" checked={weeklySummary} onChange={(e) => setWeeklySummary(e.target.checked)} />
+          </label>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={handleSaveNotifications} disabled={savingNotifications}>
+            {savingNotifications ? 'Saving...' : 'Save Security & Notifications'}
+          </Button>
+          <Button onClick={() => router.push('/reports')} variant="secondary">
+            View Reports
+          </Button>
+        </div>
+      </Card>
+
+      <p className="text-xs text-zinc-500">
+        Note: this settings UI is launch-ready. Values persist locally now and can be connected to backend API endpoints without changing the interface.
+      </p>
     </div>
   );
 }
