@@ -22,6 +22,14 @@ export default function PWAInstallPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    const dismissedAt = localStorage.getItem('pwa-prompt-dismissed');
+    if (dismissedAt) {
+      const dismissedTs = Number(dismissedAt);
+      const oneDay = 24 * 60 * 60 * 1000;
+      if (!Number.isNaN(dismissedTs) && Date.now() - dismissedTs < oneDay) {
+        return;
+      }
+    }
 
     const alreadyInstalled = window.matchMedia('(display-mode: standalone)').matches;
     if (alreadyInstalled) {
@@ -48,7 +56,6 @@ export default function PWAInstallPrompt() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
     const handleAppInstalled = () => {
-      console.log('[PWA] App installed successfully');
       setIsVisible(false);
       setIsInstalled(true);
     };
@@ -66,14 +73,11 @@ export default function PWAInstallPrompt() {
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
-          console.log('[PWA] Installation accepted');
           setIsVisible(false);
-        } else {
-          console.log('[PWA] Installation dismissed');
         }
         setDeferredPrompt(null);
       } catch (error) {
-        console.error('[PWA] Installation error:', error);
+        void error;
       }
     } else if (deviceInfo.isIOS) {
       alert(

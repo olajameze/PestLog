@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
+import { useToast } from '../components/ui/ToastProvider';
 
 type Company = {
   id: string;
@@ -16,6 +17,7 @@ type Subscription = {
 
 export default function UpgradePage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [company, setCompany] = useState<Company | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,7 +83,7 @@ export default function UpgradePage() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      alert(data.error || 'Unable to start checkout');
+      showToast('Checkout failed', data.error || 'Unable to start checkout', 'error');
       setActionLoading(false);
     }
   };
@@ -102,7 +104,7 @@ export default function UpgradePage() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      alert(data.error || 'Unable to open Stripe portal');
+      showToast('Portal failed', data.error || 'Unable to open Stripe portal', 'error');
       setActionLoading(false);
     }
   };

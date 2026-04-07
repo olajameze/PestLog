@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import Button from './ui/Button';
 
 interface SidebarProps {
@@ -11,81 +10,76 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab = 'technicians', onTabChange, onSignOut }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const router = useRouter();
 
   const tabs = [
-    { id: 'technicians', label: '👥 Technicians', href: '/dashboard?tab=technicians' },
-    { id: 'logbook', label: '📝 Logbook', href: '/dashboard?tab=logbook' },
-    { id: 'reports', label: '📊 Reports', href: '/reports' },
-    { id: 'settings', label: '⚙️ Settings', href: '/dashboard?tab=settings' },
+    { id: 'technicians', label: 'Dashboard', href: '/dashboard?tab=technicians' },
+    { id: 'logbook', label: 'Logbook', href: '/dashboard?tab=logbook' },
+    { id: 'reports', label: 'Reports', href: '/reports' },
+    { id: 'settings', label: 'Settings', href: '/dashboard?tab=settings' },
   ];
 
   const isActive = (id: string) => activeTab === id;
 
   return (
     <>
-      {/* Mobile Toggle */}
-      <button 
+      <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden p-4 fixed top-4 left-4 z-50 bg-white rounded-xl shadow-lg"
+        className="fixed left-4 top-4 z-50 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg lg:hidden"
       >
         ☰
       </button>
 
-      {/* Sidebar Overlay */}
       {mobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-2xl transform transition-transform lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:static`}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-zinc-200 bg-white transform transition-transform lg:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:static`}
+      >
         <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-zinc-200">
-            <h2 className="text-2xl font-bold text-navy">PestLog</h2>
-            <button 
+          <div className="border-b border-zinc-200 px-5 py-5">
+            <h2 className="text-3xl font-semibold text-navy">PestLog</h2>
+            <p className="mt-1 text-sm text-zinc-500">Compliance Suite</p>
+            <button
               onClick={() => setMobileOpen(false)}
-              className="lg:hidden mt-4 p-2 rounded-lg hover:bg-zinc-100"
+              className="mt-3 rounded-lg p-2 hover:bg-zinc-100 lg:hidden"
             >
               ✕
             </button>
           </div>
 
-          <nav className="flex-1 p-6 space-y-2">
+          <nav className="flex-1 space-y-1 p-3">
             {tabs.map((tab) => (
-              <Link 
+              <Link
                 key={tab.id}
                 href={tab.href}
                 onClick={() => {
                   onTabChange?.(tab.id);
                   setMobileOpen(false);
                 }}
-                className={`w-full flex items-center gap-3 p-4 rounded-2xl font-medium transition-all ${
+                className={`block rounded-lg px-4 py-3 text-base font-medium transition ${
                   isActive(tab.id)
-                    ? 'bg-primary-500 text-white shadow-lg'
-                    : 'text-zinc-700 hover:bg-zinc-100 hover:text-navy hover:shadow-md'
+                    ? 'bg-primary-500 text-white'
+                    : 'text-zinc-700 hover:bg-zinc-100 hover:text-navy'
                 }`}
               >
-                <span className="text-xl">{tab.label.split(' ')[0]}</span>
-                <span>{tab.label.split(' ').slice(1).join(' ')}</span>
+                {tab.label}
               </Link>
             ))}
           </nav>
 
-          <div className="p-6 border-t border-zinc-200">
-            <Button 
-              variant="danger" 
-              fullWidth
-              onClick={onSignOut}
-              className="hover-lift"
-            >
+          <div className="border-t border-zinc-200 p-4">
+            <Button variant="danger" fullWidth onClick={onSignOut}>
               Sign Out
             </Button>
           </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

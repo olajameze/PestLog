@@ -5,6 +5,7 @@ export default function Document() {
     <Html lang="en">
       <Head>
         {/* PWA & App Meta Tags */}
+        <meta name="theme-color" content="#2563EB" />
         <meta name="theme-color" content="#2563EB" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1e1e1e" media="(prefers-color-scheme: dark)" />
         <meta name="description" content="Digital compliance logbook for pest control businesses" />
@@ -16,9 +17,7 @@ export default function Document() {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="PestLog" />
-
-        {/* Single apple-touch-icon (standard for iOS) */}
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Standard Favicons */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -41,25 +40,6 @@ export default function Document() {
       <body>
         <Main />
         <NextScript />
-
-        {/* Service Worker Registration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then((registration) => {
-                      console.log('[PWA] Service Worker registered:', registration);
-                    })
-                    .catch((error) => {
-                      console.error('[PWA] Service Worker registration failed:', error);
-                    });
-                });
-              }
-            `,
-          }}
-        />
       </body>
     </Html>
   );

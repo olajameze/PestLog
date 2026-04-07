@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
+import Sidebar from '../components/sidebar';
+import { useToast } from '../components/ui/ToastProvider';
 
 type TechnicianProfile = {
   id: string;
@@ -32,6 +34,7 @@ const treatments = [
 
 export default function TechnicianPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TechnicianProfile | null>(null);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
@@ -154,7 +157,7 @@ export default function TechnicianPage() {
       .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
     if (error) {
-      alert(error.message);
+      showToast('Upload failed', error.message, 'error');
       setPhotoUploading(false);
       return;
     }
@@ -206,7 +209,7 @@ export default function TechnicianPage() {
       clearSignature();
     } else {
       const err = await res.json();
-      alert(err.error || 'Could not save entry');
+      showToast('Save failed', err.error || 'Could not save entry', 'error');
     }
 
     setSubmitting(false);
@@ -221,8 +224,14 @@ export default function TechnicianPage() {
   }
 
   return (
-    <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <div className="min-h-screen bg-offwhite">
+      <div className="flex">
+        <Sidebar activeTab="logbook" onSignOut={async () => {
+          await supabase.auth.signOut();
+          router.push('/auth/signin');
+        }} />
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="max-w-5xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -345,8 +354,7 @@ export default function TechnicianPage() {
                   ref={canvasRef}
                   width={800}
                   height={200}
-                  className="w-full touch-none"
-                  style={{ cursor: 'crosshair' }}
+                  className="signature-canvas w-full touch-none"
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
@@ -405,6 +413,8 @@ export default function TechnicianPage() {
               No logbook entries yet. Add the first entry above.
             </div>
           )}
+        </div>
+      </div>
         </div>
       </div>
     </div>

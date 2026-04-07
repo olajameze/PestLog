@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
+import Sidebar from '../components/sidebar';
+import { useToast } from '../components/ui/ToastProvider';
 
 type Company = {
   id: string;
@@ -39,6 +41,7 @@ type ReportResponse = {
 
 export default function ReportsPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [company, setCompany] = useState<Company | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selectedTechnician, setSelectedTechnician] = useState('');
@@ -99,7 +102,7 @@ export default function ReportsPage() {
 
   const fetchReport = async () => {
     if (!selectedTechnician || !startDate || !endDate) {
-      alert('Select a technician and date range first.');
+      showToast('Missing filters', 'Select a technician and date range first.', 'error');
       return;
     }
 
@@ -114,7 +117,7 @@ export default function ReportsPage() {
 
     if (!res.ok) {
       const error = await res.json();
-      alert(error.error || 'Failed to load report');
+      showToast('Report failed', error.error || 'Failed to load report', 'error');
       setFetching(false);
       return;
     }
@@ -191,8 +194,14 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-offwhite">
+      <div className="flex">
+        <Sidebar activeTab="reports" onSignOut={async () => {
+          await supabase.auth.signOut();
+          router.push('/auth/signin');
+        }} />
+        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="max-w-6xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -337,6 +346,8 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
+      </div>
+        </div>
       </div>
     </div>
   );

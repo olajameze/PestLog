@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
-import Navbar from '../components/navbar';
 import Sidebar from '../components/sidebar';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
+import { useToast } from '../components/ui/ToastProvider';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 interface User {
   id: string;
@@ -52,9 +54,10 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'technicians' | 'logbook' | 'settings'>('technicians');
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
-  const [addingTech, setAddingTech] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const router = useRouter();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const getUser = async () => {
@@ -93,6 +96,12 @@ export default function Dashboard() {
     getUser();
   }, [router]);
 
+  const tabQuery = router.query.tab;
+  const currentTab: Tab =
+    tabQuery === 'technicians' || tabQuery === 'logbook' || tabQuery === 'settings'
+      ? tabQuery
+      : activeTab;
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -117,6 +126,7 @@ export default function Dashboard() {
       window.location.href = data.url;
     } else {
       setAppError(data.error || 'Unable to start checkout. Please try again.');
+      showToast('Checkout failed', data.error || 'Unable to start checkout. Please try again.', 'error');
       setLoadingCheckout(false);
     }
   };
@@ -140,12 +150,12 @@ export default function Dashboard() {
       window.location.href = data.url;
     } else {
       setAppError(data.error || 'Unable to open customer portal.');
+      showToast('Portal failed', data.error || 'Unable to open customer portal.', 'error');
       setLoadingPortal(false);
     }
   };
 
   const handleAddTechnician = async (name: string, email: string) => {
-    setAddingTech(true);
     setAppError(null);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -165,15 +175,15 @@ export default function Dashboard() {
     if (res.ok) {
       const newTech = await res.json();
       setTechnicians([...technicians, newTech]);
+      showToast('Technician added', `${newTech.name} was added.`, 'success');
     } else {
       const err = await res.json();
       setAppError(err.error || 'Unable to add technician');
+      showToast('Add failed', err.error || 'Unable to add technician', 'error');
     }
-    setAddingTech(false);
   };
 
   const handleRemoveTechnician = async (technicianId: string) => {
-    if (!confirm('Are you sure you want to remove this technician?')) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/auth/signin');
@@ -186,6 +196,7 @@ export default function Dashboard() {
     });
     if (res.ok) {
       setTechnicians(technicians.filter(t => t.id !== technicianId));
+      showToast('Technician removed', 'The technician was removed.', 'success');
     }
   };
 
@@ -193,19 +204,27 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-offwhite">
-      <Navbar 
-        user={{ name: company?.name || company?.email || 'User', email: user?.email || '' }} 
-        onSignOut={handleSignOut} 
-      />
       <div className="flex lg:pl-0">
       <Sidebar 
-        activeTab={activeTab as string} 
+        activeTab={currentTab as string} 
         onTabChange={(tab: string) => setActiveTab(tab as Tab)} 
         onSignOut={handleSignOut}
       />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 ml-0 lg:ml-64">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {company ? (
             <>
+              <div className="mb-6 rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
+                <h1 className="text-4xl font-bold text-navy">
+                  {currentTab === 'technicians' ? 'Technician Management' : currentTab === 'logbook' ? 'Treatment Logbook' : 'Settings'}
+                </h1>
+                <p className="mt-1 text-zinc-600">
+                  {currentTab === 'technicians'
+                    ? 'Manage your team and track certification status'
+                    : currentTab === 'logbook'
+                    ? 'Record pest control treatments and maintain compliance records'
+                    : 'Manage account and billing preferences'}
+                </p>
+              </div>
               {appError && (
                 <Card className="mb-6 border-red-200 bg-red-50">
                   <div className="text-red-800 p-4">
@@ -213,17 +232,17 @@ export default function Dashboard() {
                   </div>
                 </Card>
               )}
-              {activeTab === 'technicians' && (
+              {currentTab === 'technicians' && (
                 <TechniciansTab 
                   technicians={technicians} 
                   onAddTechnician={handleAddTechnician} 
-                  onRemoveTechnician={handleRemoveTechnician} 
+                  onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
                 />
               )}
-              {activeTab === 'logbook' && (
+              {currentTab === 'logbook' && (
                 <LogbookTab companyId={company.id} technicians={technicians} />
               )}
-              {activeTab === 'settings' && (
+              {currentTab === 'settings' && (
                 <SettingsTab 
                   company={company} 
                   subscription={subscription} 
@@ -239,6 +258,19 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+      <ConfirmDialog
+        open={Boolean(confirmRemoveId)}
+        title="Remove technician?"
+        description="This action cannot be easily undone."
+        confirmLabel="Remove"
+        onCancel={() => setConfirmRemoveId(null)}
+        onConfirm={() => {
+          if (confirmRemoveId) {
+            handleRemoveTechnician(confirmRemoveId);
+            setConfirmRemoveId(null);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -260,13 +292,14 @@ function CompanySetupTab() {
 function CompanySetupForm() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      alert('You must be logged in');
+      showToast('Authentication required', 'You must be logged in', 'error');
       setLoading(false);
       return;
     }
@@ -283,7 +316,7 @@ function CompanySetupForm() {
     if (res.ok) {
       window.location.reload();
     } else {
-      alert('Error creating company');
+      showToast('Setup failed', 'Error creating company', 'error');
     }
     setLoading(false);
   };
@@ -310,7 +343,6 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
   onAddTechnician: (name: string, email: string) => void;
   onRemoveTechnician: (id: string) => void;
 }) {
-  const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -321,114 +353,46 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
     await onAddTechnician(name, email);
     setName('');
     setEmail('');
-    setShowAddForm(false);
     setLoading(false);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-navy">Technicians</h2>
-        <Button 
-          onClick={() => setShowAddForm(true)} 
-          size="lg"
-          className="w-full sm:w-auto"
-        >
-          + Add Technician
-        </Button>
-      </div>
+      <Card className="space-y-4">
+        <h2 className="text-3xl font-bold text-navy">Add New Technician</h2>
+        <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-12">
+          <div className="sm:col-span-5">
+            <FormInput label="Full Name" id="tech-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" required />
+          </div>
+          <div className="sm:col-span-5">
+            <FormInput label="Email Address" id="tech-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" required />
+          </div>
+          <div className="sm:col-span-2 flex items-end">
+            <Button type="submit" fullWidth disabled={loading}>
+              {loading ? 'Adding...' : 'Add Technician'}
+            </Button>
+          </div>
+        </form>
+      </Card>
 
       {technicians.length === 0 ? (
         <Card className="text-center py-12">
           <p className="text-zinc-600 text-lg">No technicians yet. Add your first technician above.</p>
         </Card>
       ) : (
-        <>
-          {/* Desktop table */}
-          <Card className="overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-zinc-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-600 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200">
-                {technicians.map((tech) => (
-                  <tr key={tech.id} className="hover:bg-zinc-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-navy">{tech.name}</td>
-                    <td className="px-6 py-4 text-zinc-600 text-sm">{tech.email}</td>
-                    <td className="px-6 py-4">
-                      <Button 
-                        variant="danger" 
-                        size="sm"
-                        onClick={() => onRemoveTechnician(tech.id)}
-                      >
-                        Remove
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        </>
-      )}
-
-      {/* Add Technician Modal */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowAddForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 space-y-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-navy mb-2">Add Technician</h3>
-              <p className="text-zinc-600">Enter technician details to add them to your team.</p>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <FormInput
-                label="Full Name"
-                id="tech-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Smith"
-                required
-              />
-              <FormInput
-                label="Email"
-                id="tech-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="john@company.com"
-                required
-              />
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  type="button"
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  variant="primary"
-                  fullWidth
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner"></span>
-                      Adding...
-                    </>
-                  ) : (
-                    'Add Technician'
-                  )}
-                </Button>
+        <div className="space-y-4">
+          {technicians.map((tech) => (
+            <Card key={tech.id} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-2xl font-semibold text-navy">{tech.name}</h3>
+                <p className="text-zinc-600">{tech.email}</p>
               </div>
-            </form>
-          </div>
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm">Upload Certification</Button>
+                <Button variant="danger" size="sm" onClick={() => onRemoveTechnician(tech.id)}>Remove</Button>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </div>
@@ -505,7 +469,13 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                   <p className="mt-3 text-zinc-700">{entry.notes}</p>
                 )}
                 {entry.photoUrl && (
-                  <img src={entry.photoUrl} alt="Job photo" className="mt-4 w-full h-48 object-cover rounded-2xl border" />
+                  <Image
+                    src={entry.photoUrl}
+                    alt="Job photo"
+                    width={1200}
+                    height={400}
+                    className="mt-4 h-48 w-full rounded-2xl border object-cover"
+                  />
                 )}
               </div>
             ))}
@@ -524,6 +494,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
   const [notes, setNotes] = useState('');
   const [technicianId, setTechnicianId] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -547,7 +518,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
       setNotes('');
       setTechnicianId('');
     } else {
-      alert('Error adding entry');
+      showToast('Save failed', 'Error adding entry', 'error');
     }
     setLoading(false);
   };
