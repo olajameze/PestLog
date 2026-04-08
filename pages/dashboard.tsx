@@ -42,7 +42,26 @@ interface LogbookEntry {
   treatment: string;
   notes?: string;
   photoUrl?: string;
+  photoUrls?: string[];
+  photos?: { url: string }[];
   signature?: string;
+}
+
+function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
+  if (Array.isArray(photos) && photos.length > 0) {
+    return photos.map((photo) => photo.url).filter(Boolean).slice(0, 4);
+  }
+  if (Array.isArray(photoUrls) && photoUrls.length > 0) return photoUrls.slice(0, 4);
+  if (!photoUrl) return [];
+  try {
+    const parsed = JSON.parse(photoUrl);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === 'string').slice(0, 4);
+    }
+  } catch {
+    // Not JSON; treat as single URL.
+  }
+  return [photoUrl];
 }
 
 type Tab = 'technicians' | 'logbook' | 'settings';
@@ -542,15 +561,20 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                 {entry.notes && (
                   <p className="mt-3 text-zinc-700">{entry.notes}</p>
                 )}
-                {entry.photoUrl && (
-                  <Image
-                    src={entry.photoUrl}
-                    alt="Job photo"
-                    width={1200}
-                    height={400}
-                    className="mt-4 h-48 w-full rounded-2xl border object-cover"
-                  />
-                )}
+                {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
+                      <Image
+                        key={url}
+                        src={url}
+                        alt="Job photo"
+                        width={600}
+                        height={300}
+                        className="h-40 w-full rounded-2xl border object-cover"
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -567,27 +591,36 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
   const [treatment, setTreatment] = useState('');
   const [notes, setNotes] = useState('');
   const [technicianId, setTechnicianId] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  const handlePhotoChange = async (file: File) => {
-    setPhotoUploading(true);
-    const filePath = `logbook/${companyId}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage
-      .from('logbook-photos')
-      .upload(filePath, file, { cacheControl: '3600', upsert: false });
-
-    if (error) {
-      showToast('Upload failed', error.message, 'error');
-      setPhotoUploading(false);
-      return;
+  const handlePhotoChange = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const selectedFiles = Array.from(files).slice(0, 4);
+    if (selectedFiles.length > 4) {
+      showToast('Upload limit', 'You can upload up to 4 photos per entry.', 'info');
     }
+    setPhotoUploading(true);
+    const uploadedUrls: string[] = [];
+    for (const file of selectedFiles) {
+      const filePath = `logbook/${companyId}/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from('logbook-photos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-    const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
-    setPhotoUrl(publicData.publicUrl);
-    showToast('Upload complete', 'Photo attached to this entry.', 'success');
+      if (error) {
+        showToast('Upload failed', error.message, 'error');
+        setPhotoUploading(false);
+        return;
+      }
+
+      const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
+      uploadedUrls.push(publicData.publicUrl);
+    }
+    setPhotoUrls(uploadedUrls);
+    showToast('Upload complete', `${uploadedUrls.length} photo(s) attached to this entry.`, 'success');
     setPhotoUploading(false);
   };
 
@@ -595,6 +628,11 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
     e.preventDefault();
     if (photoUploading) {
       showToast('Please wait', 'Image upload is still in progress.', 'info');
+      return;
+    }
+    const effectiveTechnicianId = technicianId || technicians[0]?.id || '';
+    if (!effectiveTechnicianId) {
+      showToast('Save failed', 'Please add a technician before creating logbook entries.', 'error');
       return;
     }
     setLoading(true);
@@ -605,7 +643,17 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session?.access_token}`,
       },
-      body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianId, photoUrl }),
+      body: JSON.stringify({
+        companyId,
+        date,
+        clientName,
+        address,
+        treatment,
+        notes,
+        technicianId: effectiveTechnicianId,
+        photoUrl: photoUrls[0] || null,
+        photoUrls,
+      }),
     });
     if (res.ok) {
       const entry = await res.json();
@@ -616,12 +664,15 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
       setTreatment('');
       setNotes('');
       setTechnicianId('');
-      setPhotoUrl('');
+      setPhotoUrls([]);
       const fileInput = document.getElementById('entry-photo') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
       showToast('Entry saved', 'Logbook entry saved successfully.', 'success');
     } else {
-      showToast('Save failed', 'Error adding entry', 'error');
+      const err = await res.json().catch(() => ({ error: 'Error adding entry' }));
+      const message = err.details ? `${err.error || 'Error adding entry'}: ${err.details}` : (err.error || 'Error adding entry');
+      console.error('Logbook save failed', err);
+      showToast('Save failed', message, 'error');
     }
     setLoading(false);
   };
@@ -664,7 +715,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
         label="Technician"
         id="entry-technician"
         as="select"
-        value={technicianId}
+        value={technicianId || technicians[0]?.id || ''}
         onChange={(e) => setTechnicianId(e.target.value)}
         required
         options={technicians.map((tech) => ({ value: tech.id, label: tech.name }))}
@@ -681,21 +732,25 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
       </div>
       <div className="md:col-span-2">
         <label htmlFor="entry-photo" className="mb-2 block text-sm font-medium text-zinc-700">
-          Job Photo (optional)
+          Job Photos (optional, up to 4)
         </label>
         <input
           id="entry-photo"
           type="file"
+          multiple
           accept="image/*"
           className="block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
           onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handlePhotoChange(file);
+            void handlePhotoChange(e.target.files);
           }}
         />
         {photoUploading ? <p className="mt-2 text-sm text-zinc-500">Uploading photo...</p> : null}
-        {!photoUploading && photoUrl ? (
-          <Image src={photoUrl} alt="Uploaded job photo preview" width={800} height={300} className="mt-3 h-40 w-full rounded-xl border object-cover" />
+        {!photoUploading && photoUrls.length > 0 ? (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {photoUrls.map((url) => (
+              <Image key={url} src={url} alt="Uploaded job photo preview" width={600} height={300} className="h-32 w-full rounded-xl border object-cover" />
+            ))}
+          </div>
         ) : null}
       </div>
       <div className="md:col-span-2 pt-2">

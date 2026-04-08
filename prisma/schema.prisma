@@ -49,8 +49,17 @@ model LogbookEntry {
   treatment    String
   notes        String?
   photoUrl     String?
+  photos       LogbookPhoto[]
   signature    String?
   createdAt    DateTime   @default(now())
   company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+}
+
+model LogbookPhoto {
+  id             String      @id @default(cuid())
+  logbookEntryId String
+  url            String
+  createdAt      DateTime    @default(now())
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
 }

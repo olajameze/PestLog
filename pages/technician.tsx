@@ -21,8 +21,27 @@ type LogbookEntry = {
   treatment: string;
   notes?: string;
   photoUrl?: string;
+  photoUrls?: string[];
+  photos?: { url: string }[];
   signature?: string;
 };
+
+function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
+  if (Array.isArray(photos) && photos.length > 0) {
+    return photos.map((photo) => photo.url).filter(Boolean).slice(0, 4);
+  }
+  if (Array.isArray(photoUrls) && photoUrls.length > 0) return photoUrls.slice(0, 4);
+  if (!photoUrl) return [];
+  try {
+    const parsed = JSON.parse(photoUrl);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === 'string').slice(0, 4);
+    }
+  } catch {
+    // Not JSON; treat as single URL.
+  }
+  return [photoUrl];
+}
 
 const treatments = [
   'General Pest Control',
@@ -45,7 +64,7 @@ export default function TechnicianPage() {
   const [address, setAddress] = useState('');
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -183,27 +202,33 @@ export default function TechnicianPage() {
     setSignatureDataUrl(canvas.toDataURL('image/png'));
   };
 
-  const handlePhotoChange = async (file: File) => {
+  const handlePhotoChange = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const selectedFiles = Array.from(files).slice(0, 4);
     if (isPreviewMode) {
-      setPhotoUrl(URL.createObjectURL(file));
+      setPhotoUrls(selectedFiles.map((file) => URL.createObjectURL(file)));
       showToast('Preview mode', 'Using local preview image only.', 'info');
       return;
     }
     if (!profile) return;
     setPhotoUploading(true);
-    const filePath = `${profile.id}/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage
-      .from('logbook-photos')
-      .upload(filePath, file, { cacheControl: '3600', upsert: false });
+    const uploadedUrls: string[] = [];
+    for (const file of selectedFiles) {
+      const filePath = `${profile.id}/${Date.now()}-${file.name}`;
+      const { error } = await supabase.storage
+        .from('logbook-photos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
-    if (error) {
-      showToast('Upload failed', error.message, 'error');
-      setPhotoUploading(false);
-      return;
+      if (error) {
+        showToast('Upload failed', error.message, 'error');
+        setPhotoUploading(false);
+        return;
+      }
+
+      const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
+      uploadedUrls.push(publicData.publicUrl);
     }
-
-    const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
-    setPhotoUrl(publicData.publicUrl);
+    setPhotoUrls(uploadedUrls);
     setPhotoUploading(false);
   };
 
@@ -221,7 +246,8 @@ export default function TechnicianPage() {
           address,
           treatment,
           notes,
-          photoUrl,
+          photoUrl: photoUrls[0],
+          photoUrls,
           signature: signatureDataUrl,
         },
         ...prev,
@@ -231,7 +257,7 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
-      setPhotoUrl('');
+      setPhotoUrls([]);
       clearSignature();
       showToast('Preview mode', 'Entry saved locally in preview mode.', 'success');
       setSubmitting(false);
@@ -256,7 +282,8 @@ export default function TechnicianPage() {
         address,
         treatment,
         notes,
-        photoUrl,
+        photoUrl: photoUrls[0],
+        photoUrls,
         signature: signatureDataUrl,
       }),
     });
@@ -269,11 +296,13 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
-      setPhotoUrl('');
+      setPhotoUrls([]);
       clearSignature();
     } else {
       const err = await res.json();
-      showToast('Save failed', err.error || 'Could not save entry', 'error');
+      const message = err.details ? `${err.error || 'Could not save entry'}: ${err.details}` : (err.error || 'Could not save entry');
+      console.error('Technician logbook save failed', err);
+      showToast('Save failed', message, 'error');
     }
 
     setSubmitting(false);
@@ -371,12 +400,13 @@ export default function TechnicianPage() {
                 </select>
               </div>
               <div className="form-group">
-                <label htmlFor="technician-entry-photo" className="form-label">Optional Photo</label>
+                <label htmlFor="technician-entry-photo" className="form-label">Optional Photos (up to 4)</label>
                 <input
                   id="technician-entry-photo"
                   type="file"
+                  multiple
                   accept="image/*"
-                  onChange={(e) => e.target.files?.[0] && handlePhotoChange(e.target.files[0])}
+                  onChange={(e) => void handlePhotoChange(e.target.files)}
                   className="form-input"
                 />
                 {photoUploading && (
@@ -384,8 +414,15 @@ export default function TechnicianPage() {
                     <span className="spinner-dark"></span> Uploading photo...
                   </p>
                 )}
-                {photoUrl && !photoUploading && (
-                  <p className="mt-2 text-sm text-green-600">✓ Photo uploaded successfully.</p>
+                {photoUrls.length > 0 && !photoUploading && (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-sm text-green-600">✓ {photoUrls.length} photo(s) uploaded successfully.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {photoUrls.map((url) => (
+                        <Image key={url} src={url} alt="Uploaded job photo preview" width={400} height={200} className="h-24 w-full rounded-lg border object-cover" unoptimized />
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -464,16 +501,21 @@ export default function TechnicianPage() {
               </div>
               <p className="mt-4 text-gray-700">{entry.address}</p>
               {entry.notes && <p className="mt-2 text-gray-600 whitespace-pre-line">{entry.notes}</p>}
-              {entry.photoUrl && (
-                <Image
-                  src={entry.photoUrl}
-                  alt="Logged job photo"
-                  width={1200}
-                  height={600}
-                  className="mt-4 max-h-60 w-full object-cover rounded-2xl border border-gray-200"
-                  unoptimized
-                />
-              )}
+              {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
+                    <Image
+                      key={url}
+                      src={url}
+                      alt="Logged job photo"
+                      width={800}
+                      height={400}
+                      className="max-h-52 w-full object-cover rounded-2xl border border-gray-200"
+                      unoptimized
+                    />
+                  ))}
+                </div>
+              ) : null}
               {entry.signature && (
                 <div className="mt-4">
                   <p className="text-sm text-gray-500 mb-2">Signature</p>

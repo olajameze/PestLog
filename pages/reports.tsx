@@ -23,8 +23,28 @@ type ReportEntry = {
   address: string;
   treatment: string;
   notes?: string;
+  photoUrl?: string;
+  photoUrls?: string[];
+  photos?: { url: string }[];
   signature?: string;
 };
+
+function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
+  if (Array.isArray(photos) && photos.length > 0) {
+    return photos.map((photo) => photo.url).filter(Boolean).slice(0, 4);
+  }
+  if (Array.isArray(photoUrls) && photoUrls.length > 0) return photoUrls.slice(0, 4);
+  if (!photoUrl) return [];
+  try {
+    const parsed = JSON.parse(photoUrl);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((value): value is string => typeof value === 'string').slice(0, 4);
+    }
+  } catch {
+    // Not JSON; treat as single URL.
+  }
+  return [photoUrl];
+}
 
 type Certification = {
   id: string;
@@ -132,6 +152,8 @@ export default function ReportsPage() {
             address: '45 High Street, Manchester',
             treatment: 'Rodenticide Bait Stations',
             notes: 'Installed 6 bait stations and reviewed prevention advice.',
+            photoUrl: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200',
+            photoUrls: ['https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200'],
           },
           {
             id: 'entry-2',
@@ -140,6 +162,8 @@ export default function ReportsPage() {
             address: '12 Industrial Estate, Leeds',
             treatment: 'Rodent Monitoring',
             notes: 'Quarterly inspection complete with no active findings.',
+            photoUrl: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200',
+            photoUrls: ['https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200'],
           },
         ],
         certifications: [
@@ -202,6 +226,11 @@ export default function ReportsPage() {
       y += 16;
       if (entry.notes) {
         doc.text(`Notes: ${entry.notes}`, 50, y);
+        y += 16;
+      }
+      const entryPhotos = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
+      if (entryPhotos.length > 0) {
+        doc.text(`Photos: ${entryPhotos.join(', ')}`, 50, y);
         y += 16;
       }
       if (entry.signature) {
@@ -369,6 +398,30 @@ export default function ReportsPage() {
                         <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
                       </div>
                       {entry.notes && <p className="mt-3 text-gray-600 text-sm">{entry.notes}</p>}
+                      {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
+                        <div className="mt-4 space-y-2">
+                          <div className="grid grid-cols-2 gap-3">
+                            {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
+                              <div key={url} className="space-y-2">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={url}
+                                  alt={`Job photo for ${entry.clientName}`}
+                                  className="h-40 w-full rounded-xl border border-gray-200 object-cover"
+                                />
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
+                                >
+                                  Open photo
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>

@@ -2,6 +2,28 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 
+type ReportPhotoRecord = { url: string };
+type ReportEntryRecord = {
+  id: string;
+  date: Date;
+  clientName: string;
+  address: string;
+  treatment: string;
+  notes: string | null;
+  photoUrl: string | null;
+  signature: string | null;
+  photos: ReportPhotoRecord[];
+};
+
+const prismaLogbook = prisma.logbookEntry as unknown as {
+  findMany: (args: unknown) => Promise<ReportEntryRecord[]>;
+};
+
+function shouldFallbackFromPhotosRelation(error: unknown): boolean {
+  const message = String(error);
+  return message.includes('LogbookPhoto') || message.includes('photos');
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -36,26 +58,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
   endDate.setHours(23, 59, 59, 999);
 
-  const entries = await prisma.logbookEntry.findMany({
-    where: {
-      companyId: company.id,
-      technicianId,
-      date: {
-        gte: startDate,
-        lte: endDate,
+  let entries: ReportEntryRecord[];
+  try {
+    entries = await prismaLogbook.findMany({
+      where: {
+        companyId: company.id,
+        technicianId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
       },
-    },
-    orderBy: { date: 'desc' },
-    select: {
-      id: true,
-      date: true,
-      clientName: true,
-      address: true,
-      treatment: true,
-      notes: true,
-      signature: true,
-    },
-  });
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        date: true,
+        clientName: true,
+        address: true,
+        treatment: true,
+        notes: true,
+        photoUrl: true,
+        photos: {
+          select: { url: true },
+          orderBy: { createdAt: 'asc' },
+        },
+        signature: true,
+      },
+    });
+  } catch (error) {
+    if (!shouldFallbackFromPhotosRelation(error)) throw error;
+    const fallback = await prisma.logbookEntry.findMany({
+      where: {
+        companyId: company.id,
+        technicianId,
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        date: true,
+        clientName: true,
+        address: true,
+        treatment: true,
+        notes: true,
+        photoUrl: true,
+        signature: true,
+      },
+    });
+    entries = fallback.map((entry) => ({ ...entry, photos: [] }));
+  }
 
   const certifications = await prisma.certification.findMany({
     where: { technicianId },
