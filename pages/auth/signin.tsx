@@ -37,7 +37,7 @@ export default function SignIn() {
   };
 
   return (
-    <AuthLayout title="Welcome back to PestLog" subtitle="Sign in to access your compliance dashboard">
+    <AuthLayout title="Welcome back to PestTrek" subtitle="Sign in to access your compliance dashboard">
       <form className={`space-y-6 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignIn}>
         <FormInput
           label="Email Address"

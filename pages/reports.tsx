@@ -60,7 +60,7 @@ export default function ReportsPage() {
           { id: 'tech-2', name: 'Sarah Johnson', email: 'sarah@preview.local' },
           { id: 'tech-3', name: 'Mike Williams', email: 'mike@preview.local' },
         ];
-        setCompany({ id: 'preview-company', name: 'PestLog Preview Co.', email: 'owner@preview.local' });
+        setCompany({ id: 'preview-company', name: 'PestTrek Preview Co.', email: 'owner@preview.local' });
         setTechnicians(mockTechs);
         setSelectedTechnician(mockTechs[0].id);
         setLoading(false);
@@ -123,7 +123,7 @@ export default function ReportsPage() {
     if (isPreviewMode) {
       const selectedName = technicians.find((t) => t.id === selectedTechnician)?.name || 'Technician';
       setReport({
-        companyName: company?.name || 'PestLog Preview Co.',
+        companyName: company?.name || 'PestTrek Preview Co.',
         entries: [
           {
             id: 'entry-1',
@@ -193,7 +193,7 @@ export default function ReportsPage() {
     doc.setFontSize(14);
     doc.text('Jobs', 40, y);
     y += 20;
-    report.entries.forEach((entry, index) => {
+    report.entries.forEach((entry) => {
       const line = `${new Date(entry.date).toLocaleDateString()} | ${entry.clientName} | ${entry.treatment}`;
       doc.setFontSize(12);
       doc.text(line, 40, y);
@@ -236,7 +236,7 @@ export default function ReportsPage() {
       });
     }
 
-    doc.save(`pestlog-report-${selectedTechnician}-${Date.now()}.pdf`);
+    doc.save(`pesttrek-report-${selectedTechnician}-${Date.now()}.pdf`);
   };
 
   if (loading) {

@@ -8,7 +8,7 @@ export default function LandingHeader() {
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur transition-shadow duration-200 hover:shadow-sm">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 sm:px-6">
         <Link href="/" className="text-3xl font-semibold text-navy transition-colors hover:text-primary-600">
-          PestLog
+          PestTrek
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium text-zinc-600 md:flex">
           <a href="#features" className="rounded-md px-2 py-1 transition-colors hover:bg-zinc-100 hover:text-navy focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">Features</a>

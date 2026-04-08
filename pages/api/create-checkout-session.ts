@@ -7,6 +7,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
 
+type Plan = 'pro' | 'business';
+
+const PRICE_IDS: Record<Plan, string> = {
+  // Replace these with your Stripe Dashboard Price IDs.
+  pro: 'price_1TJsS6C3CXyzwZzXmqVCJy86',
+  business: 'price_1TJsSfC3CXyzwZzX4liw2ahT',
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -20,34 +28,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const token = authHeader.replace('Bearer ', '');
   const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
+  if (error || !user?.email) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  // Get user's company
-  const company = await prisma.company.findUnique({
+  const { plan } = req.body as { plan?: Plan };
+  if (!plan || !(plan in PRICE_IDS)) {
+    return res.status(400).json({ error: 'Invalid plan. Use "pro" or "business".' });
+  }
+
+  const selectedPlan = plan as Plan;
+  const priceId = PRICE_IDS[selectedPlan];
+
+  // Resolve company for owner or technician account.
+  let company = await prisma.company.findUnique({
     where: { email: user.email },
   });
+
+  if (!company) {
+    const technician = await prisma.technician.findFirst({
+      where: { email: user.email },
+      include: { company: true },
+    });
+    company = technician?.company ?? null;
+  }
+
   if (!company) {
     return res.status(400).json({ error: 'No company found' });
   }
 
   try {
+    let stripeCustomerId = company.stripeCustomerId;
+    if (!stripeCustomerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: company.name ?? undefined,
+        metadata: { companyId: company.id },
+      });
+      stripeCustomerId = customer.id;
+      await prisma.company.update({
+        where: { id: company.id },
+        data: { stripeCustomerId },
+      });
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const requestOrigin =
+      typeof req.headers.origin === 'string' && req.headers.origin.trim().length > 0
+        ? req.headers.origin
+        : undefined;
+    const origin = appUrl || requestOrigin || 'http://localhost:3000';
+
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      customer: stripeCustomerId,
       line_items: [
         {
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: 'PestLog Monthly',
-              description: 'Monthly PestLog subscription for your team',
-            },
-            unit_amount: 3500,
-            recurring: {
-              interval: 'month',
-            },
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -55,16 +91,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       subscription_data: {
         trial_period_days: 14,
       },
-      customer_email: company.email,
-      success_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/upgrade?canceled=true`,
-      metadata: {
-        companyId: company.id,
-      },
+      success_url: `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/upgrade`,
+      client_reference_id: company.id,
+      customer_email: user.email,
     });
 
     res.status(200).json({ url: session.url });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message });
+    res.status(500).json({ error: (error as Error).message || 'Unable to create checkout session.' });
   }
 }

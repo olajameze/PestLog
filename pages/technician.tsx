@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
@@ -44,7 +45,6 @@ export default function TechnicianPage() {
   const [address, setAddress] = useState('');
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState('');
   const [photoUploading, setPhotoUploading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState('');
@@ -60,7 +60,7 @@ export default function TechnicianPage() {
           name: 'John Smith',
           email: 'john@preview.local',
           companyId: 'preview-company',
-          companyName: 'PestLog Preview Co.',
+          companyName: 'PestTrek Preview Co.',
         });
         setLoading(false);
         return;
@@ -185,7 +185,6 @@ export default function TechnicianPage() {
 
   const handlePhotoChange = async (file: File) => {
     if (isPreviewMode) {
-      setPhotoFile(file);
       setPhotoUrl(URL.createObjectURL(file));
       showToast('Preview mode', 'Using local preview image only.', 'info');
       return;
@@ -193,7 +192,7 @@ export default function TechnicianPage() {
     if (!profile) return;
     setPhotoUploading(true);
     const filePath = `${profile.id}/${Date.now()}-${file.name}`;
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('logbook-photos')
       .upload(filePath, file, { cacheControl: '3600', upsert: false });
 
@@ -205,7 +204,6 @@ export default function TechnicianPage() {
 
     const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
     setPhotoUrl(publicData.publicUrl);
-    setPhotoFile(file);
     setPhotoUploading(false);
   };
 
@@ -233,7 +231,6 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
-      setPhotoFile(null);
       setPhotoUrl('');
       clearSignature();
       showToast('Preview mode', 'Entry saved locally in preview mode.', 'success');
@@ -272,7 +269,6 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
-      setPhotoFile(null);
       setPhotoUrl('');
       clearSignature();
     } else {
@@ -469,12 +465,26 @@ export default function TechnicianPage() {
               <p className="mt-4 text-gray-700">{entry.address}</p>
               {entry.notes && <p className="mt-2 text-gray-600 whitespace-pre-line">{entry.notes}</p>}
               {entry.photoUrl && (
-                <img src={entry.photoUrl} alt="Logged job photo" className="mt-4 max-h-60 w-full object-cover rounded-2xl border border-gray-200" />
+                <Image
+                  src={entry.photoUrl}
+                  alt="Logged job photo"
+                  width={1200}
+                  height={600}
+                  className="mt-4 max-h-60 w-full object-cover rounded-2xl border border-gray-200"
+                  unoptimized
+                />
               )}
               {entry.signature && (
                 <div className="mt-4">
                   <p className="text-sm text-gray-500 mb-2">Signature</p>
-                  <img src={entry.signature} alt="Job signature" className="w-full max-h-40 object-contain rounded-2xl border border-gray-200" />
+                  <Image
+                    src={entry.signature}
+                    alt="Job signature"
+                    width={1200}
+                    height={400}
+                    className="w-full max-h-40 object-contain rounded-2xl border border-gray-200"
+                    unoptimized
+                  />
                 </div>
               )}
             </div>

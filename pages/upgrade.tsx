@@ -23,6 +23,7 @@ export default function UpgradePage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'business' | null>(null);
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [trialEndsDate, setTrialEndsDate] = useState<Date | null>(null);
 
@@ -30,7 +31,7 @@ export default function UpgradePage() {
     const loadData = async () => {
       if (isPreviewMode) {
         const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        setCompany({ id: 'preview-company', name: 'PestLog Preview Co.', email: 'owner@preview.local' });
+        setCompany({ id: 'preview-company', name: 'PestTrek Preview Co.', email: 'owner@preview.local' });
         setSubscription({ status: 'trial', trialEndsAt: endDate.toISOString() });
         setTrialEndsDate(endDate);
         setTrialDaysLeft(7);
@@ -78,7 +79,7 @@ export default function UpgradePage() {
     loadData();
   }, [isPreviewMode, router]);
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (plan: 'pro' | 'business') => {
     if (isPreviewMode) {
       showToast('Preview mode', 'Checkout is disabled in preview mode.', 'info');
       return;
@@ -90,9 +91,14 @@ export default function UpgradePage() {
     }
 
     setActionLoading(true);
+    setSelectedPlan(plan);
     const res = await fetch('/api/create-checkout-session', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ plan }),
     });
     const data = await res.json();
     if (res.ok && data.url) {
@@ -100,6 +106,7 @@ export default function UpgradePage() {
     } else {
       showToast('Checkout failed', data.error || 'Unable to start checkout', 'error');
       setActionLoading(false);
+      setSelectedPlan(null);
     }
   };
 
@@ -125,6 +132,7 @@ export default function UpgradePage() {
     } else {
       showToast('Portal failed', data.error || 'Unable to open Stripe portal', 'error');
       setActionLoading(false);
+      setSelectedPlan(null);
     }
   };
 
@@ -137,20 +145,12 @@ export default function UpgradePage() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to PestLog</h1>
-          <p className="text-sm sm:text-base text-gray-600">Keep your team active with PestLog subscription billing through Stripe.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to PestTrek</h1>
+          <p className="text-sm sm:text-base text-gray-600">Choose a plan and start with a 14-day free trial for your team.</p>
         </div>
 
-        {/* Info Cards */}
+        {/* Status Cards */}
         <div className="space-y-3">
-          {/* Plan Card */}
-          <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-6 hover-lift">
-            <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Plan</p>
-            <p className="mt-2 text-lg sm:text-2xl font-bold text-navy">PestLog Monthly</p>
-            <p className="mt-1 text-base sm:text-lg font-semibold text-blue-600">£35 / month</p>
-          </div>
-
-          {/* Company Card */}
           {company && (
             <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 hover-lift">
               <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Company</p>
@@ -172,62 +172,63 @@ export default function UpgradePage() {
               )}
               {subscription?.status !== 'active' && trialEndsDate && trialDaysLeft <= 0 && (
                 <p className="text-sm font-semibold text-red-600">
-                  ⚠️ Your trial has ended. Please upgrade to continue using PestLog.
+                  ⚠️ Your trial has ended. Please choose a plan to continue using PestTrek.
                 </p>
               )}
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
+            <div className="mb-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">14-day free trial</div>
+            <h2 className="text-xl font-bold text-navy">Pro</h2>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£25<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <button
+              onClick={() => handleSubscribe('pro')}
+              disabled={actionLoading}
+              className="btn btn-primary mt-6 w-full"
+            >
+              {actionLoading && selectedPlan === 'pro' ? 'Redirecting...' : 'Start Free Trial'}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
+            <div className="mb-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">14-day free trial</div>
+            <h2 className="text-xl font-bold text-navy">Business</h2>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <button
+              onClick={() => handleSubscribe('business')}
+              disabled={actionLoading}
+              className="btn btn-primary mt-6 w-full"
+            >
+              {actionLoading && selectedPlan === 'business' ? 'Redirecting...' : 'Start Free Trial'}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <div className="mb-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">14-day free trial</div>
+            <h2 className="text-xl font-bold text-navy">Enterprise</h2>
+            <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
+            <a
+              href="mailto:hello@jgdev.co.uk?subject=PestTrek Enterprise Enquiry"
+              className="btn btn-secondary mt-6 w-full inline-flex items-center justify-center"
+            >
+              Contact Sales
+            </a>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
           {subscription?.status === 'active' ? (
-            <>
-              <button 
-                onClick={handleManageSubscription} 
-                disabled={actionLoading} 
-                className="btn btn-success hover:shadow-md hover-lift"
-              >
-                {actionLoading ? (
-                  <>
-                    <span className="spinner"></span>
-                    <span>Opening portal...</span>
-                  </>
-                ) : (
-                  'Manage Subscription'
-                )}
-              </button>
-              <button 
-                onClick={() => router.push('/dashboard')} 
-                className="btn btn-secondary hover:shadow-md hover-lift"
-              >
-                Back to Dashboard
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                onClick={handleSubscribe} 
-                disabled={actionLoading} 
-                className="btn btn-primary hover:shadow-md hover-lift"
-              >
-                {actionLoading ? (
-                  <>
-                    <span className="spinner"></span>
-                    <span>Redirecting...</span>
-                  </>
-                ) : (
-                  'Upgrade Now'
-                )}
-              </button>
-              <button 
-                onClick={() => router.push('/dashboard')} 
-                className="btn btn-secondary hover:shadow-md hover-lift"
-              >
-                Back to Dashboard
-              </button>
-            </>
-          )}
+            <button onClick={handleManageSubscription} disabled={actionLoading} className="btn btn-success hover:shadow-md hover-lift">
+              {actionLoading ? 'Opening portal...' : 'Manage Subscription'}
+            </button>
+          ) : null}
+          <button onClick={() => router.push('/dashboard')} className="btn btn-secondary hover:shadow-md hover-lift">
+            Back to Dashboard
+          </button>
         </div>
       </div>
     </div>

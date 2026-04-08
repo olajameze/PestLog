@@ -19,6 +19,7 @@ interface Company {
   name?: string;
   email: string;
   subscriptionStatus: string;
+  trialEndsAt?: string | null;
 }
 
 interface Technician {
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
+  const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const router = useRouter();
   const { showToast } = useToast();
@@ -66,7 +68,7 @@ export default function Dashboard() {
         setUser({ id: 'preview-user', email: 'preview@pestlog.local' });
         setCompany({
           id: 'preview-company',
-          name: 'PestLog Preview Co.',
+          name: 'PestTrek Preview Co.',
           email: 'owner@preview.local',
           subscriptionStatus: 'active',
         });
@@ -114,10 +116,16 @@ export default function Dashboard() {
         if (subRes.ok) {
           const subData = await subRes.json();
           setSubscription(subData);
-          const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
+          const now = Date.now();
+          const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < now;
           if (subData.status !== 'active' && trialExpired) {
             router.push('/upgrade');
             return;
+          }
+          if (subData.status !== 'active' && subData.trialEndsAt && new Date(subData.trialEndsAt).getTime() > now) {
+            setTrialBanner(new Date(subData.trialEndsAt).toLocaleDateString());
+          } else {
+            setTrialBanner(null);
           }
         }
       }
@@ -156,7 +164,11 @@ export default function Dashboard() {
 
     const res = await fetch('/api/create-checkout-session', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ plan: 'pro' }),
     });
     const data = await res.json();
     if (res.ok && data.url) {
@@ -276,6 +288,13 @@ export default function Dashboard() {
                     : 'Manage account and billing preferences'}
                 </p>
               </div>
+              {trialBanner ? (
+                <Card className="mb-6 border-blue-200 bg-blue-50">
+                  <div className="p-4 text-blue-900">
+                    Your 14-day free trial ends on {trialBanner}. Upgrade to keep using PestTrek.
+                  </div>
+                </Card>
+              ) : null}
               {appError && (
                 <Card className="mb-6 border-red-200 bg-red-50">
                   <div className="text-red-800 p-4">
@@ -332,7 +351,7 @@ function CompanySetupTab() {
   return (
     <div className="max-w-md mx-auto">
       <Card>
-        <h2 className="text-2xl font-bold text-navy mb-4 text-center">Welcome to PestLog!</h2>
+        <h2 className="text-2xl font-bold text-navy mb-4 text-center">Welcome to PestTrek!</h2>
         <p className="text-zinc-600 mb-6 text-center">Let&apos;s set up your pest control company to get started.</p>
         <CompanySetupForm />
       </Card>
@@ -484,7 +503,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
     entries.forEach((entry, index) => {
       doc.text(`${entry.date}: ${entry.clientName} (${entry.address}) - ${entry.treatment}`, 10, 20 + index * 10);
     });
-    doc.save(`pestlog-logbook-${Date.now()}.pdf`);
+    doc.save(`pesttrek-logbook-${Date.now()}.pdf`);
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-64">Loading entries...</div>;

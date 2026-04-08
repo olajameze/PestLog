@@ -1,6 +1,6 @@
 {
-  "name": "PestLog",
-  "short_name": "PestLog",
+  "name": "PestTrek",
+  "short_name": "PestTrek",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#2563EB",

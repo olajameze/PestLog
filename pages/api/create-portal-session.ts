@@ -33,9 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`;
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: company.stripeCustomerId,
-      return_url: process.env.STRIPE_PORTAL_RETURN_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000/dashboard',
+      return_url: process.env.STRIPE_PORTAL_RETURN_URL || returnUrl,
     });
 
     return res.status(200).json({ url: portalSession.url });

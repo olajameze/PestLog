@@ -1,4 +1,4 @@
-// Service Worker for PestLog PWA
+// Service Worker for PestTrek PWA
 // Enables offline support and caching
 
 const CACHE_NAME = 'pestlog-v1';
@@ -131,7 +131,7 @@ async function syncLogbookEntries() {
 // Push notifications
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || 'PestLog Notification';
+  const title = data.title || 'PestTrek Notification';
   const options = {
     body: data.body || 'You have a new notification',
     icon: '/pwa-icon-192x192.png',

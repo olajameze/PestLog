@@ -56,7 +56,7 @@ export default function LandingMain() {
             ))}
           </div>
           <p className="max-w-3xl text-center text-sm text-zinc-600">
-            &quot;PestLog helped us move from paper logs to audit-ready records in under a week.&quot;
+            &quot;PestTrek helped us move from paper logs to audit-ready records in under a week.&quot;
           </p>
         </div>
       </section>
@@ -130,7 +130,7 @@ export default function LandingMain() {
       <section className="bg-white px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-200 bg-offwhite p-8 text-center sm:p-10">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Ready to simplify compliance and grow your business?</h2>
-          <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using PestLog.</p>
+          <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using PestTrek.</p>
           <Link href="/auth/signup" className="mt-6 inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
             Start Your Free Trial
           </Link>

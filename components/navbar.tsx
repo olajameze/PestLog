@@ -9,7 +9,7 @@ interface NavbarProps {
   logo?: string;
 }
 
-export default function Navbar({ user, onSignOut, logo = '🐛 PestLog' }: NavbarProps) {
+export default function Navbar({ user, onSignOut, logo = '🐛 PestTrek' }: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
 

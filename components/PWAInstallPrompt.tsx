@@ -87,7 +87,7 @@ export default function PWAInstallPrompt() {
       }
     } else if (deviceInfo.isIOS || isMobileViewport) {
       alert(
-        "To install PestLog on your iPhone:\n\n" +
+        "To install PestTrek on your iPhone:\n\n" +
         "1. Tap the Share button (box with arrow)\n" +
         "2. Scroll down and tap 'Add to Home Screen'\n" +
         "3. Tap 'Add' to confirm\n\n" +
@@ -110,7 +110,7 @@ export default function PWAInstallPrompt() {
           <div className="flex items-center gap-4 flex-1">
             <div className="text-3xl shrink-0">🐛</div>
             <div>
-              <h3 className="font-bold text-lg leading-tight">Install PestLog</h3>
+              <h3 className="font-bold text-lg leading-tight">Install PestTrek</h3>
               <p className="text-blue-100 text-sm">
                 {deviceInfo.isIOS ? 'Add to your home screen for quick access' : 'Get the app instantly'}
               </p>
