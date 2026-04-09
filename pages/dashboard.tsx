@@ -85,7 +85,8 @@ export default function Dashboard() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [activeTab, setActiveTab] = useState<'technicians' | 'logbook' | 'settings'>('technicians');
   const [loadingCheckout, setLoadingCheckout] = useState(false);
-  const [loadingPortal, setLoadingPortal] = useState(false);
+const [loadingPortal, setLoadingPortal] = useState(false);
+
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -1066,11 +1067,14 @@ function SettingsTab({ company, subscription, onSubscribe, onManageSubscription,
               {portalLoading ? 'Opening Portal...' : 'Manage Membership'}
             </Button>
           ) : (
-            <Button onClick={onSubscribe} disabled={checkoutLoading}>
-              {checkoutLoading ? 'Redirecting...' : 'Upgrade Membership'}
+                <Button onClick={onSubscribe} disabled={checkoutLoading} className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
+              {checkoutLoading ? 'Loading...' : 'Choose Plan & Upgrade'}
             </Button>
           )}
         </div>
+        {/* PlanSelectorModal - Add below after imports & before SettingsTab */}
+
+
       </Card>
 
       <Card className="space-y-6 p-8">

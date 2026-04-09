@@ -1,18 +1,16 @@
-# Certification Upload Implementation
+# PestTrek Progress Tracker
 
-## [ ] 1. Create pages/api/technicians/certifications.ts
-POST: file upload to Supabase + Prisma Certification create.
+**Status**: Plan Modal (0/4) ⏳
 
-## [ ] 2. Edit pages/dashboard.tsx
-- Add CertificationUploadModal component.
-- Button onClick → open modal w/ tech.id.
-- List existing certs per tech.
+1. [ ] Update TODO.md
+2. [ ] Create PlanModal component in dashboard.tsx
+3. [ ] Replace SettingsTab upgrade button
+4. [ ] Test plan selection → Stripe
+5. [ ] npm run build ✓
 
-## [ ] 3. Create Supabase bucket 'certifications-bucket' (public policies).
+**After**:
+```
+Dashboard → Settings → Upgrade → Modal (Pro/Business) → Checkout
+```
 
-## [ ] 4. Deploy & test
-npm run build
-vercel --prod
-Upload cert → shows in dashboard/reports.
-
-## [ ] 5. Update TODO
+**Deploy**: `vercel --prod`
