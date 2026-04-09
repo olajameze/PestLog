@@ -145,7 +145,7 @@ export default function Dashboard() {
   const [selectedTechId, setSelectedTechId] = useState('');
   const [showCertModal, setShowCertModal] = useState(false);
   const [technicianCerts, setTechnicianCerts] = useState<Certification[]>([]);
-  const [certFile, setCertFile] = useState<File | null>(null);
+  const [certFile, setCertFile] = useState<{ file: File; dataUrl: string; contentType: string } | null>(null);
   const [certExpiry, setCertExpiry] = useState('');
   const [certLoading, setCertLoading] = useState(false);
   const router = useRouter();
@@ -154,26 +154,23 @@ export default function Dashboard() {
 
   const isPro = company ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) : false;
 
-  const handleCertUpload = async () => {
-    if (!selectedTechId || !certFile || !company) {
-      showToast('Invalid upload', 'Select technician and file', 'error');
-      return;
-    }
+    const handleCertUpload = async () => {
+      if (!selectedTechId || !certFile || !company) {
+        showToast('Invalid upload', 'Select technician and file', 'error');
+        return;
+      }
 
-    setCertLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setCertLoading(false);
-      return;
-    }
+      setCertLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setCertLoading(false);
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
       const formData = {
         technicianId: selectedTechId,
         expiryDate: certExpiry || undefined,
-        file: base64,
+        file: certFile.dataUrl,
       };
 
       const res = await fetch('/api/technicians/certifications', {
@@ -200,11 +197,10 @@ export default function Dashboard() {
       } else {
         const err = await res.json();
         showToast('Upload failed', err.error || 'Try again', 'error');
+        console.error('Cert upload error:', err);
       }
       setCertLoading(false);
     };
-    reader.readAsDataURL(certFile);
-  };
 
   const loadTechCerts = async (techId: string) => {
     if (!company?.id) return;
@@ -528,7 +524,21 @@ export default function Dashboard() {
                   id="cert-file"
                   type="file"
                   accept="image/*,application/pdf"
-                  onChange={(e) => setCertFile((e.target as HTMLInputElement).files?.[0] || null)}
+                  onChange={(e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files && files[0]) {
+                      const originalFile = files[0];
+                      const contentType = originalFile.type;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const base64 = reader.result as string;
+                        setCertFile({ file: originalFile, dataUrl: base64, contentType });
+                      };
+                      reader.readAsDataURL(originalFile);
+                    } else {
+                      setCertFile(null);
+                    }
+                  }}
                   className="form-input"
                 />
               </div>
@@ -871,6 +881,23 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       />
       <div className="md:col-span-2">
         <FormInput label="Notes" id="entry-notes" as="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Treatment substances, observations..." />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="form-group">
+          <label htmlFor="logbook-photos" className="form-label">Photos (optional, up to 4)</label>
+          <input
+            id="logbook-photos"
+            type="file"
+            multiple
+            accept="image/*"
+            className="form-input"
+          />
+        </div>
+        <div className="form-group">
+          <label className="form-label">E-Signature</label>
+          <canvas className="w-full h-32 border rounded-lg bg-white" />
+          <p className="text-xs text-gray-500 mt-1">Draw signature (optional)</p>
+        </div>
       </div>
       <div className="md:col-span-2 pt-2">
         <Button type="submit" size="lg" disabled={loading}>{loading ? 'Saving entry...' : 'Save Logbook Entry'}</Button>
