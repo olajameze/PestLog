@@ -464,7 +464,6 @@ export default function Dashboard() {
                   onAddTechnician={handleAddTechnician} 
                   onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
                   isPro={isPro}
-                  technicianCerts={technicianCerts}
                   setSelectedTechId={setSelectedTechId}
                   setShowCertModal={setShowCertModal}
                   onLoadTechCerts={loadTechCerts}
@@ -651,12 +650,11 @@ interface Certification {
   uploadedAt: string;
 }
 
-function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPro, technicianCerts, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
+function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
   technicians: Technician[];
   onAddTechnician: (name: string, email: string) => Promise<void>;
   onRemoveTechnician: (id: string) => void;
   isPro: boolean;
-  technicianCerts: Certification[];
   setSelectedTechId: (id: string) => void;
   setShowCertModal: (open: boolean) => void;
   onLoadTechCerts: (techId: string) => Promise<void>;
