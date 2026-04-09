@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 
-const CERT_BUCKET = 'Certifications';
+const CERT_BUCKET = 'certifications-bucket';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
