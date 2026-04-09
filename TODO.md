@@ -1,16 +1,31 @@
-# PestTrek Progress Tracker
+# ✅ PestTrek Prisma TLS Fix COMPLETE - All Steps: 5/5
 
-**Status**: Plan Modal (0/4) ⏳
-
-1. [ ] Update TODO.md
-2. [ ] Create PlanModal component in dashboard.tsx
-3. [ ] Replace SettingsTab upgrade button
-4. [ ] Test plan selection → Stripe
-5. [ ] npm run build ✓
-
-**After**:
+## Issue (RESOLVED)
+Prisma P1011 TLS self-signed cert error on Vercel/Supabase pooler FIXED by:
 ```
-Dashboard → Settings → Upgrade → Modal (Pro/Business) → Checkout
+postgresql://...@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=no-verify
 ```
 
-**Deploy**: `vercel --prod`
+## Steps ✓
+✅ 1. **Vercel POSTGRES_PRISMA_URL updated + redeployed**
+✅ 2. **Dashboard loads** (https://pest-trek.vercel.app/dashboard works)
+✅ 3. **Prisma generates** (lib/prisma.ts workaround active)
+✅ 4. **API endpoints respond** (/api/company success)
+✅ 5. **No TLS errors** in Vercel logs
+
+**Next:** Settings tab data issue (secondary).
+
+---
+## NEW ISSUE: Settings Tab Missing Data
+Settings shows empty fields (company name/email, subscription).
+
+**Quick Check:**
+1. Visit https://pest-trek.vercel.app/dashboard?tab=settings
+2. Open Network tab → Check /api/subscription response
+3. Console errors?
+
+**Likely Fix:** /api/subscription.ts needs implementation.
+
+Progress: 🎉 TLS FIXED | 🔄 Settings WIP
+
+

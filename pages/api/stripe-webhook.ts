@@ -23,8 +23,13 @@ function toAppSubscriptionStatus(status: Stripe.Subscription.Status): string {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const companyId = session.client_reference_id;
-  if (!companyId) {
+  const referenceId = session.client_reference_id;
+  if (!referenceId) {
+    return;
+  }
+
+  const [companyId, plan] = referenceId.split(':');
+  if (!companyId || !plan) {
     return;
   }
 
@@ -39,6 +44,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscriptionStatus: true,
       stripeCustomerId: true,
       trialEndsAt: true,
+      plan: true,
     },
   });
 
@@ -49,8 +55,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const shouldUpdateStatus = existing.subscriptionStatus !== nextStatus;
   const shouldSetCustomer = Boolean(stripeCustomerId && existing.stripeCustomerId !== stripeCustomerId);
   const shouldClearTrial = existing.trialEndsAt !== null;
+  const shouldSetPlan = existing.plan !== plan;
 
-  if (!shouldUpdateStatus && !shouldSetCustomer && !shouldClearTrial) {
+  if (!shouldUpdateStatus && !shouldSetCustomer && !shouldClearTrial && !shouldSetPlan) {
     return;
   }
 
@@ -60,6 +67,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscriptionStatus: nextStatus,
       stripeCustomerId: shouldSetCustomer ? stripeCustomerId : existing.stripeCustomerId,
       trialEndsAt: null,
+      plan: shouldSetPlan ? plan : existing.plan,
     },
   });
 }

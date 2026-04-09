@@ -13,6 +13,7 @@ model Company {
   stripeCustomerId   String?       @unique
   subscriptionStatus String        @default("trial")
   trialEndsAt        DateTime?
+  plan               String?       @default("trial")
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   technicians        Technician[]

@@ -93,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       success_url: `${origin}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/upgrade`,
-      client_reference_id: company.id,
+      client_reference_id: `${company.id}:${selectedPlan}`,
       // customer_email: user.email,  // removed - conflict w/ customer
     });
 

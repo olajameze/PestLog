@@ -22,13 +22,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subscriptionStatus: true,
         trialEndsAt: true,
         stripeCustomerId: true,
+        plan: true,
       },
     });
 
     if (!company) {
       const technician = await prisma.technician.findFirst({
         where: { email: user.email! },
-        include: { company: { select: { subscriptionStatus: true, trialEndsAt: true, stripeCustomerId: true } } },
+        include: { company: { select: { subscriptionStatus: true, trialEndsAt: true, stripeCustomerId: true, plan: true } } },
       });
 
       if (!technician || !technician.company) {
@@ -42,6 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: company.subscriptionStatus,
       trialEndsAt: company.trialEndsAt,
       stripeCustomerId: company.stripeCustomerId,
+      plan: company.plan,
     });
   } else {
     res.setHeader('Allow', ['GET']);

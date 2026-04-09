@@ -20,6 +20,7 @@ interface Company {
   email: string;
   subscriptionStatus: string;
   trialEndsAt?: string | null;
+  plan?: string;
 }
 
 interface Technician {
@@ -32,6 +33,7 @@ interface Subscription {
   status: string;
   trialEndsAt?: string;
   stripeCustomerId?: string;
+  plan?: string;
 }
 
 interface LogbookEntry {
