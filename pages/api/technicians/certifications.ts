@@ -50,7 +50,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { error: uploadError } = await supabase.storage
     .from(CERT_BUCKET)
     .upload(filePath, buffer, {
-      contentType: file.split(';')[0],
       upsert: false,
     });
 
