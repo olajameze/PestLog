@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls, getPublicPhotoUrl } from '../../lib/supabase-admin';
+import { checkPlan } from '../../lib/planGuard';
 
 type ReportPhotoRecord = { url: string };
 type ReportEntryRecord = {
@@ -45,7 +46,6 @@ async function signEntryPhotos<T extends { photoUrl: string | null; photos: { ur
   const signedUniquePhotoValues = await createSignedPhotoUrls(uniquePhotoValues);
   const signedMap = new Map(uniquePhotoValues.map((value, index) => [value, signedUniquePhotoValues[index] || value]));
   const signedPrimaryPhoto = entry.photoUrl ? await createSignedPhotoUrl(entry.photoUrl) : null;
-  const signedPhotoUrls = photoUrlsFromPrimary.map((value) => signedMap.get(value) || value);
 
   const signedPhotos =
     entry.photos.length > 0
@@ -80,10 +80,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
+    select: { id: true, name: true, email: true, plan: true },
   });
 
   if (!company) {
     return res.status(403).json({ error: 'Access denied' });
+  }
+
+  // Plan gating: Pro+ only
+  if (!checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise'])) {
+    return res.status(403).json({ error: 'Pro plan required for compliance reports' });
   }
 
   if (req.method !== 'GET') {

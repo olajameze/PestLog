@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
@@ -269,7 +270,10 @@ export default function ReportsPage() {
         doc.setFontSize(12);
         doc.text(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()}`, 40, y);
         y += 16;
-        doc.text(`Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'N/A'}`, 40, y);
+        const expiryStatus = cert.expiryDate && new Date(cert.expiryDate) < new Date() ? 'EXPIRED' : 'Valid';
+        doc.setTextColor(expiryStatus === 'EXPIRED' ? 255 : 0, 0, 0);
+        doc.text(`Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() + ' (' + expiryStatus + ')' : 'No expiry'}`, 40, y);
+        doc.setTextColor(0, 0, 0);
         y += 16;
         doc.text(`File URL: ${cert.fileUrl}`, 40, y);
         y += 24;

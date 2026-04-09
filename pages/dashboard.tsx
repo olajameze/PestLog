@@ -8,6 +8,7 @@ import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
 import { useToast } from '../components/ui/ToastProvider';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { checkPlan } from '../lib/planGuard';
 
 interface User {
   id: string;
@@ -141,9 +142,83 @@ export default function Dashboard() {
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [selectedTechId, setSelectedTechId] = useState('');
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [technicianCerts, setTechnicianCerts] = useState<Certification[]>([]);
+  const [certFile, setCertFile] = useState<File | null>(null);
+  const [certExpiry, setCertExpiry] = useState('');
+  const [certLoading, setCertLoading] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
+
+  const isPro = company ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) : false;
+
+  const handleCertUpload = async () => {
+    if (!selectedTechId || !certFile || !company) {
+      showToast('Invalid upload', 'Select technician and file', 'error');
+      return;
+    }
+
+    setCertLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setCertLoading(false);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const formData = {
+        technicianId: selectedTechId,
+        expiryDate: certExpiry || undefined,
+        file: base64,
+      };
+
+      const res = await fetch('/api/technicians/certifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        showToast('Success', 'Certification uploaded', 'success');
+        setShowCertModal(false);
+        setCertFile(null);
+        setCertExpiry('');
+        // Refresh certs
+        const certRes = await fetch(`/api/technicians/${selectedTechId}/certifications`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (certRes.ok) {
+          setTechnicianCerts(await certRes.json());
+        }
+      } else {
+        const err = await res.json();
+        showToast('Upload failed', err.error || 'Try again', 'error');
+      }
+      setCertLoading(false);
+    };
+    reader.readAsDataURL(certFile);
+  };
+
+  const loadTechCerts = async (techId: string) => {
+    if (!company?.id) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`/api/technicians/${techId}/certifications`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (res.ok) {
+      setTechnicianCerts(await res.json());
+      setSelectedTechId(techId);
+    }
+  };
 
   useEffect(() => {
     const getUser = async () => {
@@ -384,10 +459,15 @@ export default function Dashboard() {
                 </Card>
               )}
               {currentTab === 'technicians' && (
-                <TechniciansTab 
+              <TechniciansTab 
                   technicians={technicians} 
                   onAddTechnician={handleAddTechnician} 
                   onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
+                  isPro={isPro}
+                  technicianCerts={technicianCerts}
+                  setSelectedTechId={setSelectedTechId}
+                  setShowCertModal={setShowCertModal}
+                  onLoadTechCerts={loadTechCerts}
                 />
               )}
               {currentTab === 'logbook' && (
@@ -424,11 +504,83 @@ export default function Dashboard() {
       />
 
       {/* Plan Modal */}
-      {showPlanModal && (
+{showPlanModal && (
         <PlanModal
           onClose={() => setShowPlanModal(false)}
           onSubscribe={handleSubscribe}
         />
+      )}
+      {/* Certification Modal */}
+      {showCertModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-navy">Upload Certification</h2>
+              <Button size="sm" variant="secondary" onClick={() => setShowCertModal(false)}>✕</Button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="form-label block mb-2">Technician</label>
+                <p className="text-lg font-semibold">{technicians.find(t => t.id === selectedTechId)?.name}</p>
+              </div>
+              <div className="form-group">
+                <label htmlFor="cert-file" className="form-label">Certification File (PDF/Image)</label>
+                <input
+                  id="cert-file"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) => setCertFile((e.target as HTMLInputElement).files?.[0] || null)}
+                  className="form-input"
+                />
+              </div>
+              <FormInput
+                label="Expiry Date (optional)"
+                id="cert-expiry"
+                type="date"
+                value={certExpiry}
+                onChange={(e) => setCertExpiry(e.target.value)}
+              />
+              <Button 
+                onClick={handleCertUpload} 
+                disabled={!certFile || certLoading || !isPro}
+                className="w-full"
+                size="lg"
+              >
+                {certLoading ? 'Uploading...' : 'Upload Certification'}
+              </Button>
+            </div>
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-semibold text-navy mb-3">Existing Certifications ({technicianCerts.length})</h3>
+              {technicianCerts.length === 0 ? (
+                <p className="text-gray-500 text-sm">No certifications uploaded yet.</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {technicianCerts.map((cert) => {
+                    const isExpired = cert.expiryDate && new Date(cert.expiryDate) < new Date();
+                    return (
+                      <div key={cert.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
+                          <p className={`text-sm ${isExpired ? 'text-red-600 font-semibold' : 'text-green-600'}`}>
+                            {cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}
+                          </p>
+                        </div>
+                        <a 
+                          href={`https://your-supabase-url.supabase.co/storage/v1/object/public/certifications-bucket/${cert.fileUrl}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          📥 Download
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -492,10 +644,22 @@ function CompanySetupTab() {
 }
 
 // TechniciansTab component (simplified – keep your full implementation)
-function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
+interface Certification {
+  id: string;
+  fileUrl: string;
+  expiryDate?: string;
+  uploadedAt: string;
+}
+
+function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPro, technicianCerts, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
   technicians: Technician[];
   onAddTechnician: (name: string, email: string) => Promise<void>;
   onRemoveTechnician: (id: string) => void;
+  isPro: boolean;
+  technicianCerts: Certification[];
+  setSelectedTechId: (id: string) => void;
+  setShowCertModal: (open: boolean) => void;
+  onLoadTechCerts: (techId: string) => Promise<void>;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -540,7 +704,18 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
                 <p className="text-zinc-600">{tech.email}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm">Upload Certification</Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={async () => {
+                    await onLoadTechCerts(tech.id);
+                    setSelectedTechId(tech.id);
+                    setShowCertModal(true);
+                  }}
+                  disabled={!isPro}
+                >
+                  {isPro ? 'Manage Certification' : 'Pro Required'}
+                </Button>
                 <Button variant="danger" size="sm" onClick={() => onRemoveTechnician(tech.id)}>Remove</Button>
               </div>
             </Card>
