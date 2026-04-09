@@ -819,33 +819,40 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch('/api/logbook-entries', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianId }),
-    });
-    if (res.ok) {
-      const entry = await res.json();
-      onAdd(entry);
-      setDate('');
-      setClientName('');
-      setAddress('');
-      setTreatment('');
-      setNotes('');
-      setTechnicianId('');
-      showToast('Entry saved', 'Logbook entry saved successfully.', 'success');
-    } else {
-      showToast('Save failed', 'Error adding entry', 'error');
-    }
-    setLoading(false);
-  };
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!companyId || !date || !clientName || !address || !treatment || !technicianId) {
+        showToast('Missing fields', 'Please fill all required fields', 'error');
+        return;
+      }
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Sending logbook payload:', { companyId, date, clientName, address, treatment, notes, technicianId });
+      const res = await fetch('/api/logbook-entries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianId }),
+      });
+      if (res.ok) {
+        const entry = await res.json();
+        onAdd(entry);
+        setDate('');
+        setClientName('');
+        setAddress('');
+        setTreatment('');
+        setNotes('');
+        setTechnicianId('');
+        showToast('Entry saved', 'Logbook entry saved successfully.', 'success');
+      } else {
+        const error = await res.json();
+        console.error('Logbook API error:', error);
+        showToast('Save failed', error.error || 'Error adding entry', 'error');
+      }
+      setLoading(false);
+    };
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -857,10 +864,10 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
         label="Technician"
         id="entry-technician"
         as="select"
-        value={technicianId || technicians[0]?.id || ''}
+        value={technicianId || ''}
         onChange={(e) => setTechnicianId(e.target.value)}
         required
-        options={technicians.map((tech) => ({ value: tech.id, label: tech.name }))}
+        options={[{ value: '', label: 'Select technician' }, ...technicians.map((tech) => ({ value: tech.id, label: tech.name }))]}
       />
       <div className="md:col-span-2">
         <FormInput label="Notes" id="entry-notes" as="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Treatment substances, observations..." />
