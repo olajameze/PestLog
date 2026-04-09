@@ -47,21 +47,33 @@ interface LogbookEntry {
   signature?: string;
 }
 
+function isRenderableImageSrc(value: string): boolean {
+  return (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('blob:') ||
+    value.startsWith('data:') ||
+    value.startsWith('/')
+  );
+}
+
 function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
   if (Array.isArray(photos) && photos.length > 0) {
-    return photos.map((photo) => photo.url).filter(Boolean).slice(0, 4);
+    return photos.map((photo) => photo.url).filter((url) => Boolean(url) && isRenderableImageSrc(url)).slice(0, 4);
   }
-  if (Array.isArray(photoUrls) && photoUrls.length > 0) return photoUrls.slice(0, 4);
+  if (Array.isArray(photoUrls) && photoUrls.length > 0) {
+    return photoUrls.filter((url) => isRenderableImageSrc(url)).slice(0, 4);
+  }
   if (!photoUrl) return [];
   try {
     const parsed = JSON.parse(photoUrl);
     if (Array.isArray(parsed)) {
-      return parsed.filter((value): value is string => typeof value === 'string').slice(0, 4);
+      return parsed.filter((value): value is string => typeof value === 'string' && isRenderableImageSrc(value)).slice(0, 4);
     }
   } catch {
     // Not JSON; treat as single URL.
   }
-  return [photoUrl];
+  return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
 type Tab = 'technicians' | 'logbook' | 'settings';
@@ -436,6 +448,13 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [openCertModal, setOpenCertModal] = useState(false);
+  const [selectedTechId, setSelectedTechId] = useState('');
+
+  const uploadCertification = (techId: string) => {
+    setSelectedTechId(techId);
+    setOpenCertModal(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -481,14 +500,109 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician }: {
                 <p className="text-zinc-600">{tech.email}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="secondary" size="sm">Upload Certification</Button>
+                <Button variant="secondary" size="sm" onClick={() => uploadCertification(tech.id)}>Upload Certification</Button>
                 <Button variant="danger" size="sm" onClick={() => onRemoveTechnician(tech.id)}>Remove</Button>
               </div>
             </Card>
           ))}
         </div>
       )}
+      <CertificationUploadModal openCertModal={openCertModal} setOpenCertModal={setOpenCertModal} selectedTechId={selectedTechId} />
     </div>
+  );
+}
+
+interface CertificationUploadModalProps {
+  openCertModal: boolean;
+  setOpenCertModal: (open: boolean) => void;
+  selectedTechId: string;
+}
+
+function CertificationUploadModal({ openCertModal, setOpenCertModal, selectedTechId }: CertificationUploadModalProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [expiryDate, setExpiryDate] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const { showToast } = useToast();
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file || !selectedTechId) {
+      showToast('Validation failed', 'Please select a file and technician.', 'error');
+      return;
+    }
+    setUploading(true);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/technicians/certifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          technicianId: selectedTechId,
+          expiryDate: expiryDate || null,
+          file: base64,
+        }),
+      });
+      if (res.ok) {
+        showToast('Success', 'Certification uploaded successfully.', 'success');
+        setOpenCertModal(false);
+        setFile(null);
+        setExpiryDate('');
+      } else {
+        const err = await res.json();
+        showToast('Upload failed', err.error || 'Failed to upload certification', 'error');
+      }
+      setUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <>
+      {openCertModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-navy">Upload Certification</h3>
+              <Button variant="secondary" size="sm" onClick={() => setOpenCertModal(false)}>
+                ✕
+              </Button>
+            </div>
+            <form onSubmit={handleUpload} className="space-y-4">
+<input
+                type="file"
+                id="cert-file"
+                accept="image/*,.pdf"
+                aria-label="Select certification file (PDF or image)"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                className="file-input file-input-bordered w-full"
+                required
+              />
+              <FormInput
+                id="cert-expiry"
+                label="Expiry Date (optional)"
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+              />
+              <div className="flex gap-3 pt-2">
+                <Button type="submit" disabled={uploading || !file} className="flex-1">
+                  {uploading ? 'Uploading...' : 'Upload'}
+                </Button>
+                <Button type="button" onClick={() => setOpenCertModal(false)} disabled={uploading} variant="secondary">
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -571,6 +685,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                         width={600}
                         height={300}
                         className="h-40 w-full rounded-2xl border object-cover"
+                        unoptimized
                       />
                     ))}
                   </div>
@@ -592,6 +707,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
   const [notes, setNotes] = useState('');
   const [technicianId, setTechnicianId] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
@@ -604,8 +720,9 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
     }
     setPhotoUploading(true);
     const uploadedUrls: string[] = [];
+    const previewUrls: string[] = [];
     for (const file of selectedFiles) {
-      const filePath = `logbook/${companyId}/${Date.now()}-${file.name}`;
+      const filePath = `private/${companyId}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage
         .from('logbook-photos')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
@@ -616,10 +733,11 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
         return;
       }
 
-      const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
-      uploadedUrls.push(publicData.publicUrl);
+      uploadedUrls.push(filePath);
+      previewUrls.push(URL.createObjectURL(file));
     }
     setPhotoUrls(uploadedUrls);
+    setPhotoPreviewUrls(previewUrls);
     showToast('Upload complete', `${uploadedUrls.length} photo(s) attached to this entry.`, 'success');
     setPhotoUploading(false);
   };
@@ -665,6 +783,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
       setNotes('');
       setTechnicianId('');
       setPhotoUrls([]);
+      setPhotoPreviewUrls([]);
       const fileInput = document.getElementById('entry-photo') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
       showToast('Entry saved', 'Logbook entry saved successfully.', 'success');
@@ -745,10 +864,10 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: { companyId: str
           }}
         />
         {photoUploading ? <p className="mt-2 text-sm text-zinc-500">Uploading photo...</p> : null}
-        {!photoUploading && photoUrls.length > 0 ? (
+        {!photoUploading && photoPreviewUrls.length > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-3">
-            {photoUrls.map((url) => (
-              <Image key={url} src={url} alt="Uploaded job photo preview" width={600} height={300} className="h-32 w-full rounded-xl border object-cover" />
+            {photoPreviewUrls.map((url) => (
+              <Image key={url} src={url} alt="Uploaded job photo preview" width={600} height={300} className="h-32 w-full rounded-xl border object-cover" unoptimized />
             ))}
           </div>
         ) : null}
@@ -1064,4 +1183,3 @@ function SettingsTab({ company, subscription, onSubscribe, onManageSubscription,
     </div>
   );
 }
-

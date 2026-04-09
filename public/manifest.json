@@ -1,20 +1,38 @@
 {
   "name": "PestTrek",
-  "short_name": "PestTrek",
-  "start_url": "/",
+  "short_name": "PestTrek", 
+  "description": "Pest control logbook & compliance app for technicians",
+  "start_url": "/dashboard",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#2563EB",
   "background_color": "#F8F9FA",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "/file.svg",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/file.svg",
+      "src": "/icon-192.png", 
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/weathers-logo.png",
+      "sizes": "512x512", 
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/weathers-logo.png",
       "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -26,21 +26,33 @@ type LogbookEntry = {
   signature?: string;
 };
 
+function isRenderableImageSrc(value: string): boolean {
+  return (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('blob:') ||
+    value.startsWith('data:') ||
+    value.startsWith('/')
+  );
+}
+
 function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
   if (Array.isArray(photos) && photos.length > 0) {
-    return photos.map((photo) => photo.url).filter(Boolean).slice(0, 4);
+    return photos.map((photo) => photo.url).filter((url) => Boolean(url) && isRenderableImageSrc(url)).slice(0, 4);
   }
-  if (Array.isArray(photoUrls) && photoUrls.length > 0) return photoUrls.slice(0, 4);
+  if (Array.isArray(photoUrls) && photoUrls.length > 0) {
+    return photoUrls.filter((url) => isRenderableImageSrc(url)).slice(0, 4);
+  }
   if (!photoUrl) return [];
   try {
     const parsed = JSON.parse(photoUrl);
     if (Array.isArray(parsed)) {
-      return parsed.filter((value): value is string => typeof value === 'string').slice(0, 4);
+      return parsed.filter((value): value is string => typeof value === 'string' && isRenderableImageSrc(value)).slice(0, 4);
     }
   } catch {
     // Not JSON; treat as single URL.
   }
-  return [photoUrl];
+  return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
 const treatments = [
@@ -65,6 +77,7 @@ export default function TechnicianPage() {
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -206,15 +219,18 @@ export default function TechnicianPage() {
     if (!files || files.length === 0) return;
     const selectedFiles = Array.from(files).slice(0, 4);
     if (isPreviewMode) {
-      setPhotoUrls(selectedFiles.map((file) => URL.createObjectURL(file)));
+      const previewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+      setPhotoUrls(previewUrls);
+      setPhotoPreviewUrls(previewUrls);
       showToast('Preview mode', 'Using local preview image only.', 'info');
       return;
     }
     if (!profile) return;
     setPhotoUploading(true);
     const uploadedUrls: string[] = [];
+    const previewUrls: string[] = [];
     for (const file of selectedFiles) {
-      const filePath = `${profile.id}/${Date.now()}-${file.name}`;
+      const filePath = `private/${profile.companyId}/${profile.id}/${Date.now()}-${file.name}`;
       const { error } = await supabase.storage
         .from('logbook-photos')
         .upload(filePath, file, { cacheControl: '3600', upsert: false });
@@ -225,10 +241,11 @@ export default function TechnicianPage() {
         return;
       }
 
-      const { data: publicData } = supabase.storage.from('logbook-photos').getPublicUrl(filePath);
-      uploadedUrls.push(publicData.publicUrl);
+      uploadedUrls.push(filePath);
+      previewUrls.push(URL.createObjectURL(file));
     }
     setPhotoUrls(uploadedUrls);
+    setPhotoPreviewUrls(previewUrls);
     setPhotoUploading(false);
   };
 
@@ -258,6 +275,7 @@ export default function TechnicianPage() {
       setTreatment(treatments[0]);
       setNotes('');
       setPhotoUrls([]);
+      setPhotoPreviewUrls([]);
       clearSignature();
       showToast('Preview mode', 'Entry saved locally in preview mode.', 'success');
       setSubmitting(false);
@@ -297,6 +315,7 @@ export default function TechnicianPage() {
       setTreatment(treatments[0]);
       setNotes('');
       setPhotoUrls([]);
+      setPhotoPreviewUrls([]);
       clearSignature();
     } else {
       const err = await res.json();
@@ -414,11 +433,11 @@ export default function TechnicianPage() {
                     <span className="spinner-dark"></span> Uploading photo...
                   </p>
                 )}
-                {photoUrls.length > 0 && !photoUploading && (
+                {photoPreviewUrls.length > 0 && !photoUploading && (
                   <div className="mt-2 space-y-2">
-                    <p className="text-sm text-green-600">✓ {photoUrls.length} photo(s) uploaded successfully.</p>
+                    <p className="text-sm text-green-600">✓ {photoPreviewUrls.length} photo(s) uploaded successfully.</p>
                     <div className="grid grid-cols-2 gap-2">
-                      {photoUrls.map((url) => (
+                      {photoPreviewUrls.map((url) => (
                         <Image key={url} src={url} alt="Uploaded job photo preview" width={400} height={200} className="h-24 w-full rounded-lg border object-cover" unoptimized />
                       ))}
                     </div>

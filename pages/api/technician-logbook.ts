@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
 
 type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
@@ -26,6 +27,20 @@ const prismaLogbook = prisma.logbookEntry as unknown as {
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   const message = String(error);
   return message.includes('LogbookPhoto') || message.includes('photos');
+}
+
+async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(entry: T): Promise<T> {
+  const signedPhotos = await createSignedPhotoUrls(entry.photos.map((photo) => photo.url));
+  const signedPrimaryPhoto = entry.photoUrl ? await createSignedPhotoUrl(entry.photoUrl) : null;
+
+  return {
+    ...entry,
+    photoUrl: signedPrimaryPhoto,
+    photos: entry.photos.map((photo, index) => ({
+      ...photo,
+      url: signedPhotos[index] || photo.url,
+    })),
+  };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -69,7 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       entries = fallback.map((entry) => ({ ...entry, photos: [] }));
     }
-    return res.status(200).json(entries);
+    return res.status(200).json(await Promise.all(entries.map((entry) => signEntryPhotos(entry))));
   }
 
   if (req.method === 'POST') {
@@ -130,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entry = { ...fallbackEntry, photos: [] };
     }
 
-    return res.status(201).json(entry);
+    return res.status(201).json(await signEntryPhotos(entry));
   }
 
   res.setHeader('Allow', ['GET', 'POST']);

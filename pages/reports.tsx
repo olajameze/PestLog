@@ -29,21 +29,36 @@ type ReportEntry = {
   signature?: string;
 };
 
+function isRenderableImageSrc(value: string): boolean {
+  return (
+    value.startsWith('http://') ||
+    value.startsWith('https://') ||
+    value.startsWith('blob:') ||
+    value.startsWith('data:') ||
+    value.startsWith('/')
+  );
+}
+
 function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
-  if (Array.isArray(photos) && photos.length > 0) {
-    return photos.map((photo) => photo.url).filter(Boolean).slice(0, 4);
+  const candidateUrls = [
+    ...(Array.isArray(photos) ? photos.map((photo) => photo.url) : []),
+    ...(Array.isArray(photoUrls) ? photoUrls : []),
+  ];
+
+  if (candidateUrls.length > 0) {
+    return Array.from(new Set(candidateUrls.filter((url) => Boolean(url) && isRenderableImageSrc(url)))).slice(0, 4);
   }
-  if (Array.isArray(photoUrls) && photoUrls.length > 0) return photoUrls.slice(0, 4);
+
   if (!photoUrl) return [];
   try {
     const parsed = JSON.parse(photoUrl);
     if (Array.isArray(parsed)) {
-      return parsed.filter((value): value is string => typeof value === 'string').slice(0, 4);
+      return parsed.filter((value): value is string => typeof value === 'string' && isRenderableImageSrc(value)).slice(0, 4);
     }
   } catch {
     // Not JSON; treat as single URL.
   }
-  return [photoUrl];
+  return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
 type Certification = {

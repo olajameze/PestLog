@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { createSignedPhotoUrl, createSignedPhotoUrls, getPublicPhotoUrl } from '../../lib/supabase-admin';
 
 type ReportPhotoRecord = { url: string };
 type ReportEntryRecord = {
@@ -22,6 +23,47 @@ const prismaLogbook = prisma.logbookEntry as unknown as {
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   const message = String(error);
   return message.includes('LogbookPhoto') || message.includes('photos');
+}
+
+async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(entry: T): Promise<T & { photoUrls: string[] }> {
+  const photoUrlsFromPrimary = (() => {
+    if (!entry.photoUrl) return [];
+    try {
+      const parsed = JSON.parse(entry.photoUrl);
+      return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+    } catch {
+      return [entry.photoUrl];
+    }
+  })();
+
+  const rawPhotoValues = [
+    ...entry.photos.map((photo) => photo.url),
+    ...photoUrlsFromPrimary,
+  ];
+
+  const uniquePhotoValues = Array.from(new Set(rawPhotoValues.filter(Boolean)));
+  const signedUniquePhotoValues = await createSignedPhotoUrls(uniquePhotoValues);
+  const signedMap = new Map(uniquePhotoValues.map((value, index) => [value, signedUniquePhotoValues[index] || value]));
+  const signedPrimaryPhoto = entry.photoUrl ? await createSignedPhotoUrl(entry.photoUrl) : null;
+  const signedPhotoUrls = photoUrlsFromPrimary.map((value) => signedMap.get(value) || value);
+
+  const signedPhotos =
+    entry.photos.length > 0
+      ? entry.photos.map((photo) => ({
+          ...photo,
+          url: signedMap.get(photo.url) || photo.url,
+        }))
+      : [];
+
+  const publicPhotoUrls = await Promise.all(photoUrlsFromPrimary.map((value) => getPublicPhotoUrl(value)));
+
+  return {
+    ...entry,
+    photoUrl: signedPrimaryPhoto,
+    photoUrls: publicPhotoUrls,
+    photos: signedPhotos,
+  };
+
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -124,7 +166,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   return res.status(200).json({
     companyName: company.name || company.email,
-    entries,
+    entries: await Promise.all(entries.map((entry) => signEntryPhotos(entry))),
     certifications,
   });
 }
