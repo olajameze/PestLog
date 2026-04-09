@@ -57,6 +57,7 @@ export async function createSignedPhotoUrl(pathOrUrl: string): Promise<string> {
   return getPublicPhotoUrl(pathOrUrl);
 }
 
+
 export async function getPublicPhotoUrl(pathOrUrl: string): Promise<string> {
   const path = extractStoragePath(pathOrUrl);
   if (!path) return pathOrUrl;
@@ -68,3 +69,6 @@ export async function getPublicPhotoUrl(pathOrUrl: string): Promise<string> {
 export async function createSignedPhotoUrls(pathsOrUrls: string[]): Promise<string[]> {
   return Promise.all(pathsOrUrls.map((value) => createSignedPhotoUrl(value)));
 }
+
+
+
