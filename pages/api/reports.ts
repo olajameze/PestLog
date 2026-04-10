@@ -17,10 +17,6 @@ type ReportEntryRecord = {
   photos: ReportPhotoRecord[];
 };
 
-const prismaLogbook = prisma.logbookEntry as unknown as {
-  findMany: (args: unknown) => Promise<ReportEntryRecord[]>;
-};
-
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   const message = String(error);
   return message.includes('LogbookPhoto') || message.includes('photos');
@@ -108,10 +104,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let entries: ReportEntryRecord[];
   try {
-    entries = await prismaLogbook.findMany({
+    entries = await prisma.logbookEntry.findMany({
       where: {
         companyId: company.id,
-        technicianId,
+        logbookEntryTechnicians: {
+          some: {
+            technicianId
+          }
+        },
         date: {
           gte: startDate,
           lte: endDate,
@@ -133,12 +133,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         signature: true,
       },
     });
+
   } catch (error) {
     if (!shouldFallbackFromPhotosRelation(error)) throw error;
     const fallback = await prisma.logbookEntry.findMany({
       where: {
         companyId: company.id,
-        technicianId,
+        logbookEntryTechnicians: {
+          some: {
+            technicianId
+          }
+        },
         date: {
           gte: startDate,
           lte: endDate,

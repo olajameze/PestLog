@@ -1,4 +1,5 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import type { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
@@ -7,7 +8,6 @@ type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
   id: string;
   companyId: string;
-  technicianId: string;
   date: Date;
   clientName: string;
   address: string;
@@ -15,13 +15,15 @@ type LogbookEntryWithPhotos = {
   notes: string | null;
   photoUrl: string | null;
   signature: string | null;
+  rooms: Prisma.JsonValue | null;
+  baitBoxesPlaced: string | null;
+  poisonUsed: string | null;
+  startTime: Date | null;
+  endTime: Date | null;
+  status: string;
+  logbookEntryTechnicians: { technician: { name: string } }[];
   createdAt: Date;
   photos: LogbookPhotoRecord[];
-};
-
-const prismaLogbook = prisma.logbookEntry as unknown as {
-  findMany: (args: unknown) => Promise<LogbookEntryWithPhotos[]>;
-  create: (args: unknown) => Promise<LogbookEntryWithPhotos>;
 };
 
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
@@ -57,37 +59,81 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'GET') {
-      const { companyId } = req.query;
+      const { companyId, search } = req.query;
+      const whereBase: Prisma.LogbookEntryWhereInput = { companyId: companyId as string };
+      const where: Prisma.LogbookEntryWhereInput = search
+        ? {
+            ...whereBase,
+            OR: [
+              { clientName: { contains: search as string, mode: 'insensitive' } },
+              { address: { contains: search as string, mode: 'insensitive' } },
+            ],
+          }
+        : whereBase;
+
       const company = await prisma.company.findFirst({
         where: { id: companyId as string, email: user.email },
       });
       if (!company) {
         return res.status(403).json({ error: 'Forbidden' });
       }
-      let entries: LogbookEntryWithPhotos[];
+
+      let entries;
       try {
-        entries = await prismaLogbook.findMany({
-          where: { companyId: companyId as string },
+        entries = await prisma.logbookEntry.findMany({
+          where,
           orderBy: { date: 'desc' },
           include: {
             photos: {
               select: { url: true },
               orderBy: { createdAt: 'asc' },
             },
+            logbookEntryTechnicians: {
+              include: {
+                technician: true,
+              },
+            },
           },
-        });
+        }) as unknown as LogbookEntryWithPhotos[];
       } catch (error) {
         if (!shouldFallbackFromPhotosRelation(error)) throw error;
         const fallback = await prisma.logbookEntry.findMany({
-          where: { companyId: companyId as string },
+          where,
           orderBy: { date: 'desc' },
         });
-        entries = fallback.map((entry) => ({ ...entry, photos: [] }));
+        entries = fallback.map((entry) => ({
+          ...entry,
+          photos: [],
+          logbookEntryTechnicians: [],
+          rooms: null,
+          baitBoxesPlaced: null,
+          poisonUsed: null,
+          startTime: null,
+          endTime: null,
+          status: 'open',
+        })) as LogbookEntryWithPhotos[];
       }
       return res.status(200).json(await Promise.all(entries.map((entry) => signEntryPhotos(entry))));
     } else if (req.method === 'POST') {
-      const { companyId, date, clientName, address, treatment, notes, technicianId, photoUrl, photoUrls } = req.body;
-      if (!companyId || !date || !clientName || !address || !treatment || !technicianId) {
+      const {
+        companyId,
+        date,
+        clientName,
+        address,
+        treatment,
+        notes,
+        technicianIds,
+        rooms,
+        baitBoxesPlaced,
+        poisonUsed,
+        startTime,
+        endTime,
+        status,
+        photoUrl,
+        photoUrls,
+      } = req.body;
+
+      if (!companyId || !date || !clientName || !address || !treatment || !Array.isArray(technicianIds) || technicianIds.length === 0) {
         return res.status(400).json({ error: 'Missing required fields for logbook entry' });
       }
 
@@ -95,6 +141,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (Number.isNaN(parsedDate.getTime())) {
         return res.status(400).json({ error: 'Invalid date value' });
       }
+      const parsedStartTime = startTime ? new Date(startTime) : null;
+      const parsedEndTime = endTime ? new Date(endTime) : null;
+      const parsedRooms = Array.isArray(rooms) ? rooms : undefined;
+
       const normalizedPhotoUrls = Array.isArray(photoUrls)
         ? photoUrls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0).slice(0, 4)
         : [];
@@ -108,24 +158,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!company) {
         return res.status(403).json({ error: 'Forbidden' });
       }
-      const technician = await prisma.technician.findFirst({
-        where: { id: technicianId, companyId },
+      const technicians = await prisma.technician.findMany({
+        where: { id: { in: technicianIds as string[] }, companyId },
       });
-      if (!technician) {
-        return res.status(400).json({ error: 'Invalid technician' });
+      if (technicians.length !== technicianIds.length) {
+        return res.status(400).json({ error: 'Invalid technician(s)' });
       }
       let entry: LogbookEntryWithPhotos;
       try {
-        entry = await prismaLogbook.create({
+        const newEntry = await prisma.logbookEntry.create({
           data: {
             companyId,
-            technicianId: technician.id,
             date: parsedDate,
             clientName,
             address,
             treatment,
             notes,
             photoUrl: primaryPhotoUrl,
+            rooms: parsedRooms,
+            baitBoxesPlaced,
+            poisonUsed,
+            startTime: parsedStartTime,
+            endTime: parsedEndTime,
+            status: status || "open",
             photos: normalizedPhotoUrls.length > 0
               ? {
                   create: normalizedPhotoUrls.map((url) => ({ url })),
@@ -137,23 +192,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               select: { url: true },
               orderBy: { createdAt: 'asc' },
             },
+            logbookEntryTechnicians: {
+              include: {
+                technician: true,
+              },
+            },
           },
         });
+        await prisma.logbookEntryTechnician.createMany({
+          data: technicianIds.map((techId: string) => ({
+            logbookEntryId: (newEntry as unknown as { id: string }).id,
+            technicianId: techId,
+          })),
+        });
+        entry = newEntry as unknown as LogbookEntryWithPhotos;
       } catch (error) {
         if (!shouldFallbackFromPhotosRelation(error)) throw error;
         const fallbackEntry = await prisma.logbookEntry.create({
           data: {
             companyId,
-            technicianId: technician.id,
             date: parsedDate,
             clientName,
             address,
             treatment,
             notes,
             photoUrl: primaryPhotoUrl,
+            rooms: parsedRooms,
+            baitBoxesPlaced,
+            poisonUsed,
+            startTime: parsedStartTime,
+            endTime: parsedEndTime,
+            status: status || "open",
           },
         });
-        entry = { ...fallbackEntry, photos: [] };
+        await prisma.logbookEntryTechnician.createMany({
+          data: technicianIds.map((techId: string) => ({
+            logbookEntryId: fallbackEntry.id,
+            technicianId: techId,
+          })),
+        });
+        entry = {
+          ...fallbackEntry,
+          photos: [],
+          logbookEntryTechnicians: [],
+        } as LogbookEntryWithPhotos;
       }
       return res.status(201).json(await signEntryPhotos(entry));
     } else {

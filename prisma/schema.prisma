@@ -7,28 +7,28 @@ datasource db {
 }
 
 model Company {
-  id                 String        @id @default(cuid())
+  id                 String         @id @default(cuid())
   name               String?
-  email              String        @unique
-  stripeCustomerId   String?       @unique
-  subscriptionStatus String        @default("trial")
+  email              String         @unique
+  stripeCustomerId   String?        @unique
+  subscriptionStatus String         @default("trial")
   trialEndsAt        DateTime?
-  plan               String?       @default("trial")
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  plan               String?        @default("trial")
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
   technicians        Technician[]
   logbookEntries     LogbookEntry[]
 }
 
 model Technician {
-  id            String          @id @default(cuid())
-  name          String
-  email         String
-  companyId     String
-  createdAt     DateTime        @default(now())
-  company       Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  certifications Certification[]
-  logbookEntries LogbookEntry[]
+  id                      String                   @id @default(cuid())
+  name                    String
+  email                   String
+  companyId               String
+  createdAt               DateTime                 @default(now())
+  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  certifications          Certification[]
+  logbookEntryTechnicians LogbookEntryTechnician[]
 }
 
 model Certification {
@@ -41,26 +41,42 @@ model Certification {
 }
 
 model LogbookEntry {
-  id           String     @id @default(cuid())
-  companyId    String
-  technicianId String
-  date         DateTime
-  clientName   String
-  address      String
-  treatment    String
-  notes        String?
-  photoUrl     String?
-  photos       LogbookPhoto[]
-  signature    String?
-  createdAt    DateTime   @default(now())
-  company      Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  id                      String                   @id @default(cuid())
+  companyId               String
+  date                    DateTime
+  clientName              String
+  address                 String
+  treatment               String
+  notes                   String?
+  photoUrl                String?
+  photos                  LogbookPhoto[]
+  signature               String?
+  rooms                   Json? // ["Kitchen", "Garage"]
+  baitBoxesPlaced         String? // "Yes, 6 boxes"
+  poisonUsed              String? // "Bromadiolone"
+  startTime               DateTime?
+  endTime                 DateTime?
+  status                  String                   @default("open")
+  logbookEntryTechnicians LogbookEntryTechnician[]
+  createdAt               DateTime                 @default(now())
+  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model LogbookEntryTechnician {
+  id             String       @id @default(cuid())
+  logbookEntryId String
+  technicianId   String
+  createdAt      DateTime     @default(now())
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
+  technician     Technician   @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+
+  @@unique([logbookEntryId, technicianId])
 }
 
 model LogbookPhoto {
-  id             String      @id @default(cuid())
+  id             String       @id @default(cuid())
   logbookEntryId String
   url            String
-  createdAt      DateTime    @default(now())
+  createdAt      DateTime     @default(now())
   logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
 }

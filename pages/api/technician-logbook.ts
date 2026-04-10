@@ -19,10 +19,7 @@ type LogbookEntryWithPhotos = {
   photos: LogbookPhotoRecord[];
 };
 
-const prismaLogbook = prisma.logbookEntry as unknown as {
-  findMany: (args: unknown) => Promise<LogbookEntryWithPhotos[]>;
-  create: (args: unknown) => Promise<LogbookEntryWithPhotos>;
-};
+
 
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   const message = String(error);
@@ -64,10 +61,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    let entries: LogbookEntryWithPhotos[];
+    let entries;
     try {
-      entries = await prismaLogbook.findMany({
-        where: { technicianId: technician.id },
+        entries = await prisma.logbookEntry.findMany({
+        where: {
+          logbookEntryTechnicians: {
+            some: {
+              technicianId: technician.id
+            }
+          }
+        },
         orderBy: { date: 'desc' },
         include: {
           photos: {
@@ -75,14 +78,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             orderBy: { createdAt: 'asc' },
           },
         },
-      });
+      }) as unknown as LogbookEntryWithPhotos[];
+
     } catch (error) {
       if (!shouldFallbackFromPhotosRelation(error)) throw error;
       const fallback = await prisma.logbookEntry.findMany({
-        where: { technicianId: technician.id },
+        where: {
+          logbookEntryTechnicians: {
+            some: {
+              technicianId: technician.id
+            }
+          }
+        },
         orderBy: { date: 'desc' },
       });
-      entries = fallback.map((entry) => ({ ...entry, photos: [] }));
+      entries = fallback.map((entry) => ({ ...entry, photos: [] })) as unknown as LogbookEntryWithPhotos[];
     }
     return res.status(200).json(await Promise.all(entries.map((entry) => signEntryPhotos(entry))));
   }
@@ -101,12 +111,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? JSON.stringify(normalizedPhotoUrls)
       : normalizedPhotoUrls[0] || (typeof photoUrl === 'string' && photoUrl.trim().length > 0 ? photoUrl : null);
 
-    let entry: LogbookEntryWithPhotos;
+    let entry;
     try {
-      entry = await prismaLogbook.create({
+      const newEntry = await prisma.logbookEntry.create({
         data: {
           companyId: technician.companyId,
-          technicianId: technician.id,
           date: new Date(date),
           clientName,
           address,
@@ -119,20 +128,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }
             : undefined,
           signature,
+          logbookEntryTechnicians: {
+            create: [{ technicianId: technician.id }]
+          }
         },
         include: {
           photos: {
             select: { url: true },
             orderBy: { createdAt: 'asc' },
           },
+          logbookEntryTechnicians: {
+            include: {
+              technician: true,
+            },
+          },
         },
       });
+      entry = newEntry as unknown as LogbookEntryWithPhotos;
     } catch (error) {
       if (!shouldFallbackFromPhotosRelation(error)) throw error;
       const fallbackEntry = await prisma.logbookEntry.create({
         data: {
           companyId: technician.companyId,
-          technicianId: technician.id,
           date: new Date(date),
           clientName,
           address,
@@ -140,9 +157,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           notes,
           photoUrl: primaryPhotoUrl,
           signature,
+          logbookEntryTechnicians: {
+            create: [{ technicianId: technician.id }]
+          }
         },
       });
-      entry = { ...fallbackEntry, photos: [] };
+      entry = { ...fallbackEntry, photos: [], logbookEntryTechnicians: [] } as unknown as LogbookEntryWithPhotos;
     }
 
     return res.status(201).json(await signEntryPhotos(entry));

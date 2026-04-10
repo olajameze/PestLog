@@ -48,6 +48,13 @@ interface LogbookEntry {
   photoUrls?: string[];
   photos?: { url: string }[];
   signature?: string;
+  rooms?: string[];
+  baitBoxesPlaced?: string;
+  poisonUsed?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: string;
+  logbookEntryTechnicians?: { technician: { name: string } }[];
 }
 
 function isRenderableImageSrc(value: string): boolean {
@@ -741,6 +748,8 @@ function LogbookTab({ companyId, technicians }: { companyId: string; technicians
 
 function LogbookEntries({ companyId, technicians }: { companyId: string; technicians: Technician[] }) {
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
+  const [filteredEntries, setFilteredEntries] = useState<LogbookEntry[]>([]);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -752,29 +761,97 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
       if (res.ok) {
         const data = await res.json();
         setEntries(data);
+        setFilteredEntries(data);
       }
       setLoading(false);
     };
     fetchEntries();
   }, [companyId]);
 
+  useEffect(() => {
+    const lowerSearch = search.toLowerCase();
+    setFilteredEntries(entries.filter(entry => 
+      entry.clientName.toLowerCase().includes(lowerSearch) || 
+      entry.address.toLowerCase().includes(lowerSearch)
+    ));
+  }, [search, entries]);
+
   const exportToPDF = async () => {
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-    doc.text(`${companyId} Pest Control Log`, 10, 10);
-    entries.forEach((entry, index) => {
-      doc.text(`${entry.date}: ${entry.clientName} (${entry.address}) - ${entry.treatment}`, 10, 20 + index * 10);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    
+    // Cover page
+    doc.setFontSize(20);
+    doc.text('PestTrek Compliance Report', 105, 50, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(new Date().toLocaleDateString(), 105, 70, { align: 'center' });
+    doc.text(`Company ID: ${companyId}`, 105, 85, { align: 'center' });
+    doc.addPage();
+    
+    let y = 20;
+    filteredEntries.forEach((entry, index) => {
+      if (y > 250) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFontSize(14);
+      doc.text(`${index + 1}. ${entry.clientName}`, 15, y);
+      y += 5;
+      doc.setFontSize(10);
+      doc.text(`Address: ${entry.address}`, 15, y);
+      y += 4;
+      doc.text(`Date: ${new Date(entry.date).toLocaleDateString()}`, 15, y);
+      y += 4;
+      doc.text(`Treatment: ${entry.treatment}`, 15, y);
+      if (entry.rooms) doc.text(`Rooms: ${entry.rooms.join(', ')}`, 15, y + 4);
+      y += 4;
+      if (entry.baitBoxesPlaced) doc.text(`Bait Boxes: ${entry.baitBoxesPlaced}`, 15, y);
+      y += 4;
+      if (entry.poisonUsed) doc.text(`Poison: ${entry.poisonUsed}`, 15, y);
+      y += 4;
+      if (entry.status) doc.text(`Status: ${entry.status}`, 15, y);
+      y += 8;
+      if (entry.notes) {
+        const notesLines = doc.splitTextToSize(entry.notes, 170);
+        doc.text(notesLines, 15, y);
+        y += notesLines.length * 4 + 5;
+      } else {
+        y += 5;
+      }
+      if (parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0) {
+        y += 20; // Space for photos
+      }
     });
-    doc.save(`pesttrek-logbook-${Date.now()}.pdf`);
+    
+    doc.save(`pesttrek-compliance-${Date.now()}.pdf`);
+  };
+
+
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setSearch(e.target.value);
   };
 
   if (loading) return <div>Loading entries...</div>;
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-navy">Logbook Entries</h2>
-        <Button onClick={exportToPDF} variant="secondary">📥 Export PDF</Button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-navy">Logbook Entries</h2>
+          <p className="text-zinc-600">{filteredEntries.length} entries</p>
+        </div>
+        <div className="flex gap-3">
+          <FormInput
+            label="Search clients/address"
+            id="search"
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search..."
+            className="max-w-md"
+          />
+          <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
+        </div>
       </div>
       <Card>
         <AddLogbookEntryForm companyId={companyId} technicians={technicians} onAdd={(entry) => setEntries([entry, ...entries])} />

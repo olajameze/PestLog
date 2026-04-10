@@ -33,12 +33,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const { date, clientName, address, treatment, notes, photoUrls, signature } = req.body;
-    if (!date || !clientName || !address || !treatment) {
+    const entry = await prisma.logbookEntry.findUnique({
+      where: { id },
+      select: { companyId: true }
+    });
+    if (!entry || entry.companyId !== company.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { date, clientName, address, treatment, notes, technicianIds, rooms, baitBoxesPlaced, poisonUsed, startTime, endTime, status, photoUrls, signature } = req.body;
+    if (!date || !clientName || !address || !treatment || !technicianIds || !Array.isArray(technicianIds) || technicianIds.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const entry = await prisma.logbookEntry.update({
+    // Delete old join records
+    await prisma.logbookEntryTechnician.deleteMany({
+      where: { logbookEntryId: id }
+    });
+
+    // Create new join records
+    const technicians = await prisma.technician.findMany({
+      where: { id: { in: technicianIds as string[] }, companyId: company.id },
+    });
+    if (technicians.length !== technicianIds.length) {
+      return res.status(400).json({ error: 'Invalid technician(s)' });
+    }
+    await prisma.logbookEntryTechnician.createMany({
+      data: technicianIds.map((techId: string) => ({
+        logbookEntryId: id,
+        technicianId: techId,
+      })),
+    });
+
+    // Update entry
+    const updatedEntry = await prisma.logbookEntry.update({
       where: { id },
       data: {
         date: new Date(date),
@@ -48,12 +76,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes,
         photoUrl: photoUrls?.length > 1 ? JSON.stringify(photoUrls) : photoUrls?.[0] || null,
         signature,
+        rooms: Array.isArray(rooms) ? rooms : undefined,
+        baitBoxesPlaced,
+        poisonUsed,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
+        status: status || "open",
       },
     });
-    return res.status(200).json(entry);
+    return res.status(200).json(updatedEntry);
   }
 
   if (req.method === 'DELETE') {
+    const entry = await prisma.logbookEntry.findUnique({
+      where: { id },
+      select: { companyId: true }
+    });
+    if (!entry || entry.companyId !== company.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
     await prisma.logbookEntry.delete({
       where: { id },
     });
