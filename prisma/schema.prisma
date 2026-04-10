@@ -54,12 +54,28 @@ model LogbookEntry {
   rooms                   Json? // ["Kitchen", "Garage"]
   baitBoxesPlaced         String? // "Yes, 6 boxes"
   poisonUsed              String? // "Bromadiolone"
+  followUpDate              DateTime?
+  internalNotes             String?
+  productAmount             String?
+  recommendation            String?
+  baitStations              BaitStation[]
   startTime               DateTime?
   endTime                 DateTime?
   status                  String                   @default("open")
   logbookEntryTechnicians LogbookEntryTechnician[]
   createdAt               DateTime                 @default(now())
   company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+model BaitStation {
+  id             String       @id @default(cuid())
+  logbookEntryId String
+  stationId      String
+  location       String
+  baitType       String?
+  amount         String?
+  createdAt      DateTime     @default(now())
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
 }
 
 model LogbookEntryTechnician {

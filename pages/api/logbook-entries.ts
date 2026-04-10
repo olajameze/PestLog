@@ -24,6 +24,11 @@ type LogbookEntryWithPhotos = {
   logbookEntryTechnicians: { technician: { name: string } }[];
   createdAt: Date;
   photos: LogbookPhotoRecord[];
+  followUpDate?: Date | null;
+  internalNotes?: string | null;
+  productAmount?: string | null;
+  recommendation?: string | null;
+  baitStations?: { stationId: string; location: string; baitType?: string; amount?: string }[];
 };
 
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
@@ -93,6 +98,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 technician: true,
               },
             },
+            baitStations: {
+              select: {
+                stationId: true,
+                location: true,
+                baitType: true,
+                amount: true
+              }
+            },
           },
         }) as unknown as LogbookEntryWithPhotos[];
       } catch (error) {
@@ -105,6 +118,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ...entry,
           photos: [],
           logbookEntryTechnicians: [],
+          followUpDate: null,
+          internalNotes: null,
+          productAmount: null,
+          recommendation: null,
+          baitStations: [],
           rooms: null,
           baitBoxesPlaced: null,
           poisonUsed: null,
@@ -123,6 +141,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         treatment,
         notes,
         technicianIds,
+        baitStations,
+        followUpDate,
+        internalNotes,
+        productAmount,
+        recommendation,
         rooms,
         baitBoxesPlaced,
         poisonUsed,
@@ -144,6 +167,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const parsedStartTime = startTime ? new Date(startTime) : null;
       const parsedEndTime = endTime ? new Date(endTime) : null;
       const parsedRooms = Array.isArray(rooms) ? rooms : undefined;
+      const parsedFollowUpDate = followUpDate ? new Date(followUpDate) : undefined;
+      const parsedInternalNotes = internalNotes ?? undefined;
+      const parsedProductAmount = productAmount ?? undefined;
+      const parsedRecommendation = recommendation ?? undefined;
 
       const normalizedPhotoUrls = Array.isArray(photoUrls)
         ? photoUrls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0).slice(0, 4)
@@ -167,7 +194,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let entry: LogbookEntryWithPhotos;
       try {
         // Build a clean data object to avoid accidental undefined/null issues
-        const entryData: any = {
+      const entryData: any = {
           companyId,
           date: parsedDate,
           clientName,
@@ -180,8 +207,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           poisonUsed,
           startTime: parsedStartTime,
           endTime: parsedEndTime,
+          followUpDate: parsedFollowUpDate,
+          internalNotes: parsedInternalNotes,
+          productAmount: parsedProductAmount,
+          recommendation: parsedRecommendation,
           status: status || "open",
         };
+
+        if (Array.isArray(baitStations) && baitStations.length > 0) {
+          entryData.baitStations = baitStations.map((bs: any) => ({
+            stationId: bs.stationId,
+            location: bs.location,
+            baitType: bs.baitType,
+            amount: bs.amount,
+          }));
+        }
 
         if (normalizedPhotoUrls.length > 0) {
           entryData.photos = {
