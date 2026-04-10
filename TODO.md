@@ -1,15 +1,17 @@
-**✅ Backend Complete** (schema/API fixed)
+# Frontend Logbook Form Update - Progress Tracker
 
-**Frontend Status**:
-- [x] LogbookEntries: Search + display new fields + edit/delete
-- [x] AddLogbookEntryForm: Multi-tech, rooms, bait/poison/times/status
-- [x] PDF enhanced pro layout
-- [x] Types updated
+## Steps (0/10 complete)
 
-**Final Verification**:
-1. `npx prisma migrate dev --name logbook_final`
-2. `npm run dev`
-3. Test all features
+### 1. Update LogbookEntry interface [ ]
+### 2. Add state variables to AddLogbookEntryForm [ ]
+### 3. Add FormInputs for new fields [ ]
+### 4. Create BaitStation type [ ]
+### 5. Add baitStations state + dynamic form [ ]
+### 6. Update handleSubmit POST payload [ ]
+### 7. Add validation for new fields [ ]
+### 8. Update LogbookEntries display for new fields [ ]
+### 9. Test form submission [ ]
+### 10. Run tsc/build [ ]
 
-**Done!** 🎉
+**Status**: Ready for edits on pages/dashboard.tsx
 

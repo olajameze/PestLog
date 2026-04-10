@@ -37,6 +37,13 @@ interface Subscription {
   plan?: string;
 }
 
+interface BaitStationForm {
+  stationId: string;
+  location: string;
+  baitType?: string;
+  amount?: string;
+}
+
 interface LogbookEntry {
   id: string;
   date: string;
@@ -55,6 +62,11 @@ interface LogbookEntry {
   endTime?: string;
   status?: string;
   logbookEntryTechnicians?: { technician: { name: string } }[];
+  followUpDate?: string;
+  internalNotes?: string;
+  productAmount?: string;
+  recommendation?: string;
+  baitStations?: BaitStationForm[];
 }
 
 function isRenderableImageSrc(value: string): boolean {
@@ -903,8 +915,27 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [treatment, setTreatment] = useState('');
   const [notes, setNotes] = useState('');
   const [technicianId, setTechnicianId] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
+  const [productAmount, setProductAmount] = useState('');
+  const [recommendation, setRecommendation] = useState('');
+  const [baitStations, setBaitStations] = useState<BaitStationForm[]>([]);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+
+  const addBaitStation = () => {
+    setBaitStations([...baitStations, { stationId: '', location: '', baitType: '', amount: '' }]);
+  };
+
+  const updateBaitStation = (index: number, field: keyof BaitStationForm, value: string) => {
+    const newStations = [...baitStations];
+    newStations[index] = { ...newStations[index], [field]: value } as BaitStationForm;
+    setBaitStations(newStations);
+  };
+
+  const removeBaitStation = (index: number) => {
+    setBaitStations(baitStations.filter((_, i) => i !== index));
+  };
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -912,27 +943,57 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
         showToast('Missing fields', 'Please fill all required fields', 'error');
         return;
       }
+      
+      // Filter out empty bait stations
+      const validBaitStations = baitStations.filter(station => 
+        station.stationId.trim() && station.location.trim()
+      );
+
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('Sending logbook payload:', { companyId, date, clientName, address, treatment, notes, technicianId });
+      
+      const payload = {
+        companyId,
+        date,
+        clientName,
+        address,
+        treatment,
+        notes: notes || undefined,
+        technicianIds: [technicianId],
+        followUpDate: followUpDate || undefined,
+        internalNotes: internalNotes || undefined,
+        productAmount: productAmount || undefined,
+        recommendation: recommendation || undefined,
+        ...(validBaitStations.length > 0 && { baitStations: validBaitStations }),
+      };
+      
+      console.log('Sending logbook payload:', payload);
+      
       const res = await fetch('/api/logbook-entries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianIds: [technicianId] }),
+        body: JSON.stringify(payload),
       });
+      
       if (res.ok) {
         const entry = await res.json();
         onAdd(entry);
+        // Reset form
         setDate('');
         setClientName('');
         setAddress('');
         setTreatment('');
         setNotes('');
         setTechnicianId('');
-        showToast('Entry saved', 'Logbook entry saved successfully.', 'success');
+        setFollowUpDate('');
+        setInternalNotes('');
+        setProductAmount('');
+        setRecommendation('');
+        setBaitStations([]);
+        showToast('Entry saved', 'Logbook entry saved successfully with new fields!', 'success');
       } else {
         const error = await res.json();
         console.error('Logbook API error:', error);
@@ -958,6 +1019,65 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       />
       <div className="md:col-span-2">
         <FormInput label="Notes" id="entry-notes" as="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Treatment substances, observations..." />
+      </div>
+      <FormInput label="Follow-up Date" id="follow-up-date" type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+      <div className="md:col-span-2">
+        <FormInput label="Internal Notes" id="internal-notes" as="textarea" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal use only..." />
+      </div>
+      <FormInput label="Product Amount" id="product-amount" value={productAmount} onChange={(e) => setProductAmount(e.target.value)} placeholder="e.g. 2kg" />
+      <div className="md:col-span-2">
+        <FormInput label="Recommendation" id="recommendation" as="textarea" value={recommendation} onChange={(e) => setRecommendation(e.target.value)} placeholder="Recommendations for client..." />
+      </div>
+      <div className="md:col-span-2 mb-6 p-4 bg-gray-50 rounded-xl">
+        <label className="form-label block mb-3 font-semibold">Bait Stations</label>
+        {baitStations.length === 0 ? (
+          <Button type="button" variant="secondary" onClick={addBaitStation} size="sm">
+            + Add Bait Station
+          </Button>
+        ) : (
+          <div className="space-y-3">
+            {baitStations.map((station, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-white rounded-lg border shadow-sm">
+                <FormInput 
+                  label="Station ID" 
+                  value={station.stationId} 
+                  onChange={(e) => updateBaitStation(index, 'stationId', e.target.value)}
+                  placeholder="BS001"
+                />
+                <FormInput 
+                  label="Location" 
+                  value={station.location} 
+                  onChange={(e) => updateBaitStation(index, 'location', e.target.value)}
+                  placeholder="Kitchen"
+                />
+                <FormInput 
+                  label="Bait Type" 
+                  value={station.baitType || ''} 
+                  onChange={(e) => updateBaitStation(index, 'baitType', e.target.value)}
+                  placeholder="Wax block"
+                />
+                <FormInput 
+                  label="Amount" 
+                  value={station.amount || ''} 
+                  onChange={(e) => updateBaitStation(index, 'amount', e.target.value)}
+                  placeholder="50g"
+                />
+                <Button 
+                  type="button" 
+                  variant="danger" 
+                  size="sm" 
+                  onClick={() => removeBaitStation(index)}
+                  className="md:col-span-4"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button type="button" variant="secondary" onClick={addBaitStation} size="sm">
+              + Add Another Bait Station
+            </Button>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="form-group">
