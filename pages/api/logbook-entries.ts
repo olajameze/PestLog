@@ -166,27 +166,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       let entry: LogbookEntryWithPhotos;
       try {
+        // Build a clean data object to avoid accidental undefined/null issues
+        const entryData: any = {
+          companyId,
+          date: parsedDate,
+          clientName,
+          address,
+          treatment,
+          notes,
+          photoUrl: primaryPhotoUrl,
+          rooms: parsedRooms,
+          baitBoxesPlaced,
+          poisonUsed,
+          startTime: parsedStartTime,
+          endTime: parsedEndTime,
+          status: status || "open",
+          signature,
+        };
+
+        if (normalizedPhotoUrls.length > 0) {
+          entryData.photos = {
+            create: normalizedPhotoUrls.map((url) => ({ url })),
+          };
+        }
+
         const newEntry = await prisma.logbookEntry.create({
-          data: {
-            companyId,
-            date: parsedDate,
-            clientName,
-            address,
-            treatment,
-            notes,
-            photoUrl: primaryPhotoUrl,
-            rooms: parsedRooms,
-            baitBoxesPlaced,
-            poisonUsed,
-            startTime: parsedStartTime,
-            endTime: parsedEndTime,
-            status: status || "open",
-            photos: normalizedPhotoUrls.length > 0
-              ? {
-                  create: normalizedPhotoUrls.map((url) => ({ url })),
-                }
-              : undefined,
-          },
+          data: entryData,
           include: {
             photos: {
               select: { url: true },
@@ -194,20 +199,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
             logbookEntryTechnicians: {
               include: {
-                technician: true,
-              },
-            },
+                technician: {
+                  select: { name: true }
+                }
+              }
+            }
           },
         });
         await prisma.logbookEntryTechnician.createMany({
           data: technicianIds.map((techId: string) => ({
-            logbookEntryId: (newEntry as unknown as { id: string }).id,
+            logbookEntryId: newEntry.id,
             technicianId: techId,
           })),
         });
         entry = newEntry as unknown as LogbookEntryWithPhotos;
       } catch (error) {
-        if (!shouldFallbackFromPhotosRelation(error)) throw error;
+        if (!shouldFallbackFromPhotosRelation(error)) {
+          const err = error as any;
+          const code = (err?.code as string) || '';
+          const message = String(err ?? 'Logbook creation error');
+          if (code.startsWith('P') || message.toLowerCase().includes('prisma')) {
+            return res.status(400).json({ error: 'Logbook creation failed', details: message });
+          }
+          throw error;
+        }
         const fallbackEntry = await prisma.logbookEntry.create({
           data: {
             companyId,
