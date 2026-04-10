@@ -921,7 +921,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianId }),
+        body: JSON.stringify({ companyId, date, clientName, address, treatment, notes, technicianIds: [technicianId] }),
       });
       if (res.ok) {
         const entry = await res.json();
