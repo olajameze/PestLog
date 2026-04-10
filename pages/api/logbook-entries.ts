@@ -181,7 +181,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           startTime: parsedStartTime,
           endTime: parsedEndTime,
           status: status || "open",
-          signature,
         };
 
         if (normalizedPhotoUrls.length > 0) {
