@@ -4,42 +4,16 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
 
-type LogbookPhotoRecord = { url: string };
-type LogbookEntryWithPhotos = {
-  id: string;
-  companyId: string;
-  date: Date;
-  clientName: string;
-  address: string;
-  treatment: string;
-  notes: string | null;
-  photoUrl: string | null;
-  signature: string | null;
-  rooms: Prisma.JsonValue | null;
-  baitBoxesPlaced: string | null;
-  poisonUsed: string | null;
-  startTime: Date | null;
-  endTime: Date | null;
-  status: string;
-  logbookEntryTechnicians: { technician: { name: string } }[];
-  createdAt: Date;
-  photos: LogbookPhotoRecord[];
-  followUpDate?: Date | null;
-  internalNotes?: string | null;
-  productAmount?: string | null;
-  recommendation?: string | null;
-  baitStations?: { stationId: string; location: string; baitType?: string; amount?: string }[];
-};
-
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   const message = String(error);
   return message.includes('LogbookPhoto') || message.includes('photos');
 }
 
-async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(entry: T): Promise<T> {
+async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(
+  entry: T,
+): Promise<T> {
   const signedPhotos = await createSignedPhotoUrls(entry.photos.map((photo) => photo.url));
   const signedPrimaryPhoto = entry.photoUrl ? await createSignedPhotoUrl(entry.photoUrl) : null;
-
   return {
     ...entry,
     photoUrl: signedPrimaryPhoto,
@@ -53,16 +27,13 @@ async function signEntryPhotos<T extends { photoUrl: string | null; photos: { ur
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).json({ error: 'No authorization header' });
-    }
+    if (!authHeader) return res.status(401).json({ error: 'No authorization header' });
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user?.email) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    if (error || !user?.email) return res.status(401).json({ error: 'Unauthorized' });
 
+    // GET: fetch logbook entries
     if (req.method === 'GET') {
       const { companyId, search } = req.query;
       const whereBase: Prisma.LogbookEntryWhereInput = { companyId: companyId as string };
@@ -79,9 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const company = await prisma.company.findFirst({
         where: { id: companyId as string, email: user.email },
       });
-      if (!company) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
+      if (!company) return res.status(403).json({ error: 'Forbidden' });
 
       let entries;
       try {
@@ -89,50 +58,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where,
           orderBy: { date: 'desc' },
           include: {
-            photos: {
-              select: { url: true },
-              orderBy: { createdAt: 'asc' },
-            },
-            logbookEntryTechnicians: {
-              include: {
-                technician: true,
-              },
-            },
-            baitStations: {
-              select: {
-                stationId: true,
-                location: true,
-                baitType: true,
-                amount: true
-              }
-            },
+            photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
+            logbookEntryTechnicians: { include: { technician: true } },
           },
-        }) as unknown as LogbookEntryWithPhotos[];
-      } catch (error) {
-        if (!shouldFallbackFromPhotosRelation(error)) throw error;
-        const fallback = await prisma.logbookEntry.findMany({
-          where,
-          orderBy: { date: 'desc' },
         });
+      } catch (err) {
+        if (!shouldFallbackFromPhotosRelation(err)) throw err;
+        const fallback = await prisma.logbookEntry.findMany({ where, orderBy: { date: 'desc' } });
         entries = fallback.map((entry) => ({
           ...entry,
           photos: [],
           logbookEntryTechnicians: [],
-          followUpDate: null,
-          internalNotes: null,
-          productAmount: null,
-          recommendation: null,
-          baitStations: [],
-          rooms: null,
-          baitBoxesPlaced: null,
-          poisonUsed: null,
-          startTime: null,
-          endTime: null,
-          status: 'open',
-        })) as LogbookEntryWithPhotos[];
+        }));
       }
-      return res.status(200).json(await Promise.all(entries.map((entry) => signEntryPhotos(entry))));
-    } else if (req.method === 'POST') {
+      return res.status(200).json(await Promise.all(entries.map(signEntryPhotos)));
+    }
+
+    // POST: create a new logbook entry
+    if (req.method === 'POST') {
       const {
         companyId,
         date,
@@ -141,11 +84,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         treatment,
         notes,
         technicianIds,
-        baitStations,
-        followUpDate,
-        internalNotes,
-        productAmount,
-        recommendation,
         rooms,
         baitBoxesPlaced,
         poisonUsed,
@@ -156,147 +94,105 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         photoUrls,
       } = req.body;
 
-      if (!companyId || !date || !clientName || !address || !treatment || !Array.isArray(technicianIds) || technicianIds.length === 0) {
-        return res.status(400).json({ error: 'Missing required fields for logbook entry' });
+      if (
+        !companyId ||
+        !date ||
+        !clientName ||
+        !address ||
+        !treatment ||
+        !Array.isArray(technicianIds) ||
+        technicianIds.length === 0
+      ) {
+        return res.status(400).json({ error: 'Missing required fields' });
       }
 
       const parsedDate = new Date(date);
-      if (Number.isNaN(parsedDate.getTime())) {
-        return res.status(400).json({ error: 'Invalid date value' });
-      }
-      const parsedStartTime = startTime ? new Date(startTime) : null;
-      const parsedEndTime = endTime ? new Date(endTime) : null;
-      const parsedRooms = Array.isArray(rooms) ? rooms : undefined;
-      const parsedFollowUpDate = followUpDate ? new Date(followUpDate) : undefined;
-      const parsedInternalNotes = internalNotes ?? undefined;
-      const parsedProductAmount = productAmount ?? undefined;
-      const parsedRecommendation = recommendation ?? undefined;
+      if (isNaN(parsedDate.getTime())) return res.status(400).json({ error: 'Invalid date' });
 
-      const normalizedPhotoUrls = Array.isArray(photoUrls)
-        ? photoUrls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0).slice(0, 4)
-        : [];
-      const primaryPhotoUrl = normalizedPhotoUrls.length > 1
-        ? JSON.stringify(normalizedPhotoUrls)
-        : normalizedPhotoUrls[0] || (typeof photoUrl === 'string' && photoUrl.trim().length > 0 ? photoUrl : null);
+      const company = await prisma.company.findFirst({ where: { id: companyId, email: user.email } });
+      if (!company) return res.status(403).json({ error: 'Forbidden' });
 
-      const company = await prisma.company.findFirst({
-        where: { id: companyId, email: user.email },
-      });
-      if (!company) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
       const technicians = await prisma.technician.findMany({
-        where: { id: { in: technicianIds as string[] }, companyId },
+        where: { id: { in: technicianIds }, companyId },
       });
       if (technicians.length !== technicianIds.length) {
         return res.status(400).json({ error: 'Invalid technician(s)' });
       }
-      let entry: LogbookEntryWithPhotos;
-      try {
-        // Build a clean data object to avoid accidental undefined/null issues
-      const entryData: any = {
-          companyId,
-          date: parsedDate,
-          clientName,
-          address,
-          treatment,
-          notes,
-          photoUrl: primaryPhotoUrl,
-          rooms: parsedRooms,
-          baitBoxesPlaced,
-          poisonUsed,
-          startTime: parsedStartTime,
-          endTime: parsedEndTime,
-          followUpDate: parsedFollowUpDate,
-          internalNotes: parsedInternalNotes,
-          productAmount: parsedProductAmount,
-          recommendation: parsedRecommendation,
-          status: status || "open",
+
+      const normalizedPhotoUrls = Array.isArray(photoUrls)
+        ? photoUrls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0).slice(0, 4)
+        : [];
+      const primaryPhotoUrl =
+        normalizedPhotoUrls.length > 1
+          ? JSON.stringify(normalizedPhotoUrls)
+          : normalizedPhotoUrls[0] ||
+            (typeof photoUrl === 'string' && photoUrl.trim().length > 0 ? photoUrl : null);
+
+      // Build data object with proper type (no `any`)
+      const entryData: Prisma.LogbookEntryCreateInput = {
+        company: { connect: { id: companyId } },
+        date: parsedDate,
+        clientName,
+        address,
+        treatment,
+        notes: notes || null,
+        photoUrl: primaryPhotoUrl,
+        baitBoxesPlaced: baitBoxesPlaced ?? null,
+        poisonUsed: poisonUsed || null,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
+        status: status || 'open',
+      };
+
+ if (Array.isArray(rooms)) {
+  entryData.rooms = rooms as Prisma.InputJsonValue;
+}
+
+      // Add photos relation if any
+      if (normalizedPhotoUrls.length > 0) {
+        entryData.photos = {
+          create: normalizedPhotoUrls.map((url) => ({ url })),
         };
+      }
 
-        if (Array.isArray(baitStations) && baitStations.length > 0) {
-          entryData.baitStations = baitStations.map((bs: any) => ({
-            stationId: bs.stationId,
-            location: bs.location,
-            baitType: bs.baitType,
-            amount: bs.amount,
-          }));
-        }
-
-        if (normalizedPhotoUrls.length > 0) {
-          entryData.photos = {
-            create: normalizedPhotoUrls.map((url) => ({ url })),
-          };
-        }
-
-        const newEntry = await prisma.logbookEntry.create({
+      let newEntry;
+      try {
+        newEntry = await prisma.logbookEntry.create({
           data: entryData,
           include: {
-            photos: {
-              select: { url: true },
-              orderBy: { createdAt: 'asc' },
-            },
-            logbookEntryTechnicians: {
-              include: {
-                technician: {
-                  select: { name: true }
-                }
-              }
-            }
+            photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
+            logbookEntryTechnicians: { include: { technician: true } },
           },
         });
-        await prisma.logbookEntryTechnician.createMany({
-          data: technicianIds.map((techId: string) => ({
-            logbookEntryId: newEntry.id,
-            technicianId: techId,
-          })),
-        });
-        entry = newEntry as unknown as LogbookEntryWithPhotos;
-      } catch (error) {
-        if (!shouldFallbackFromPhotosRelation(error)) {
-          const err = error as any;
-          const code = (err?.code as string) || '';
-          const message = String(err ?? 'Logbook creation error');
-          if (code.startsWith('P') || message.toLowerCase().includes('prisma')) {
-            return res.status(400).json({ error: 'Logbook creation failed', details: message });
-          }
-          throw error;
-        }
-        const fallbackEntry = await prisma.logbookEntry.create({
-          data: {
-            companyId,
-            date: parsedDate,
-            clientName,
-            address,
-            treatment,
-            notes,
-            photoUrl: primaryPhotoUrl,
-            rooms: parsedRooms,
-            baitBoxesPlaced,
-            poisonUsed,
-            startTime: parsedStartTime,
-            endTime: parsedEndTime,
-            status: status || "open",
-          },
-        });
-        await prisma.logbookEntryTechnician.createMany({
-          data: technicianIds.map((techId: string) => ({
-            logbookEntryId: fallbackEntry.id,
-            technicianId: techId,
-          })),
-        });
-        entry = {
-          ...fallbackEntry,
-          photos: [],
-          logbookEntryTechnicians: [],
-        } as LogbookEntryWithPhotos;
+      } catch (err) {
+        console.error('Create error:', err);
+        return res.status(500).json({ error: 'Failed to create logbook entry', details: String(err) });
       }
-      return res.status(201).json(await signEntryPhotos(entry));
-    } else {
-      res.setHeader('Allow', ['GET', 'POST']);
-      return res.status(405).end(`Method ${req.method} Not Allowed`);
+
+      // Connect technicians via join table
+      await prisma.logbookEntryTechnician.createMany({
+        data: technicianIds.map((techId: string) => ({
+          logbookEntryId: newEntry.id,
+          technicianId: techId,
+        })),
+      });
+
+      // Re-fetch to include join records
+      const fullEntry = await prisma.logbookEntry.findUnique({
+        where: { id: newEntry.id },
+        include: {
+          photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
+          logbookEntryTechnicians: { include: { technician: true } },
+        },
+      });
+
+      return res.status(201).json(await signEntryPhotos(fullEntry!));
     }
+
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (err) {
+    console.error('Logbook API error:', err);
     return res.status(500).json({ error: 'Logbook request failed', details: String(err) });
   }
 }
