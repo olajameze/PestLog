@@ -150,11 +150,24 @@ export default function ReportsPage() {
     loadOwnerData();
   }, [isPreviewMode, router]);
 
-  const fetchReport = async () => {
-    if (!selectedTechnician || !startDate || !endDate) {
-      showToast('Missing filters', 'Select a technician and date range first.', 'error');
-      return;
-    }
+    const [search, setSearch] = useState('');
+
+    const fetchReport = async () => {
+      if (!selectedTechnician || !startDate || !endDate) {
+        showToast('Missing filters', 'Select a technician and date range first.', 'error');
+        return;
+      }
+
+      let apiUrl = `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`;
+      if (search.trim()) {
+        apiUrl += `&search=${encodeURIComponent(search.trim())}`;
+      }
+
+      setFetching(true);
+      const { data: { session: fetchSession } } = await supabase.auth.getSession();
+      const res = await fetch(apiUrl, {
+        headers: { Authorization: `Bearer ${fetchSession?.access_token}` },
+      });
 
     if (isPreviewMode) {
       const selectedName = technicians.find((t) => t.id === selectedTechnician)?.name || 'Technician';
@@ -198,21 +211,21 @@ export default function ReportsPage() {
 
     setFetching(true);
     const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(
+    const previewRes = await fetch(
       `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`,
       {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       }
     );
 
-    if (!res.ok) {
-      const error = await res.json();
+    if (!previewRes.ok) {
+      const error = await previewRes.json();
       showToast('Report failed', error.error || 'Failed to load report', 'error');
       setFetching(false);
       return;
     }
 
-    const result = await res.json();
+    const result = await previewRes.json();
     setReport(result);
     setFetching(false);
   };
@@ -314,7 +327,7 @@ export default function ReportsPage() {
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-5">
             <div className="form-group sm:col-span-1">
               <label htmlFor="technician-select" className="form-label">Technician</label>
               <select
@@ -327,6 +340,17 @@ export default function ReportsPage() {
                   <option key={tech.id} value={tech.id}>{tech.name}</option>
                 ))}
               </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="search" className="form-label">Search</label>
+              <input
+                id="search"
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Client or address..."
+                className="form-input"
+              />
             </div>
             <div className="form-group">
               <label htmlFor="start-date" className="form-label">Start Date</label>

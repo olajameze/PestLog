@@ -788,6 +788,20 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
     ));
   }, [search, entries]);
 
+  const fetchImageAsBase64 = async (url: string): Promise<string> => {
+    try {
+      const response = await fetch(url);
+      const buffer = await response.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+      const mime = response.headers.get('content-type') || 'image/jpeg';
+      return `data:${mime};base64,${base64}`;
+    } catch {
+      return '';
+    }
+  };
+
   const exportToPDF = async () => {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -801,7 +815,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
     doc.addPage();
     
     let y = 20;
-    filteredEntries.forEach((entry, index) => {
+    for (const [index, entry] of filteredEntries.entries()) {
       if (y > 250) {
         doc.addPage();
         y = 20;
@@ -830,19 +844,40 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
       } else {
         y += 5;
       }
-      if (parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0) {
-        y += 20; // Space for photos
+
+      // Add images
+      const photoUrls = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
+      if (photoUrls.length > 0) {
+        y += 5;
+        doc.text('Photos:', 15, y);
+        y += 8;
+        for (const [photoIndex, photoUrl] of photoUrls.slice(0, 4).entries()) {
+          if (y > 250) {
+            doc.addPage();
+            y = 20;
+          }
+          try {
+            const base64 = await fetchImageAsBase64(photoUrl);
+            if (base64) {
+              doc.addImage(base64, 'JPEG', 15, y, 60, 45);
+              doc.text(`Photo ${photoIndex + 1}`, 80, y + 10);
+            }
+          } catch (error) {
+            doc.text(`Photo ${photoIndex + 1} (unavailable)`, 15, y);
+          }
+          y += 50;
+        }
+        y += 5;
       }
-    });
+    }
     
     doc.save(`pesttrek-compliance-${Date.now()}.pdf`);
   };
 
 
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setSearch(e.target.value);
-  };
+
+
 
   if (loading) return <div>Loading entries...</div>;
 
@@ -853,18 +888,10 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
           <h2 className="text-2xl font-bold text-navy">Logbook Entries</h2>
           <p className="text-zinc-600">{filteredEntries.length} entries</p>
         </div>
-        <div className="flex gap-3">
-          <FormInput
-            label="Search clients/address"
-            id="search"
-            value={search}
-            onChange={handleSearchChange}
-            placeholder="Search..."
-            className="max-w-md"
-          />
-          <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
+          <div className="flex gap-3">
+            <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
+          </div>
         </div>
-      </div>
       <Card>
         <AddLogbookEntryForm companyId={companyId} technicians={technicians} onAdd={(entry) => setEntries([entry, ...entries])} />
       </Card>

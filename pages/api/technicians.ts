@@ -30,10 +30,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       const company = await prisma.company.findUnique({
         where: { email: user.email },
+        include: { technicians: true },
       });
       if (!company) {
         return res.status(400).json({ error: 'No company found' });
       }
+
+      // Trial plan limit: max 2 technicians
+      if (company.plan === 'trial' && company.technicians.length >= 2) {
+        return res.status(403).json({ 
+          error: 'Free trial limited to 2 technicians. Upgrade to Pro or Business to add more.' 
+        });
+      }
+
       const technician = await prisma.technician.create({
         data: {
           name,

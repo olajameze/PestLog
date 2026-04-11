@@ -1,8 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls, getPublicPhotoUrl } from '../../lib/supabase-admin';
 import { checkPlan } from '../../lib/planGuard';
+
+type LogbookEntryWhereInput = Prisma.LogbookEntryWhereInput;
 
 type ReportPhotoRecord = { url: string };
 type ReportEntryRecord = {
@@ -14,7 +17,7 @@ type ReportEntryRecord = {
   notes: string | null;
   photoUrl: string | null;
   signature: string | null;
-  photos: ReportPhotoRecord[];
+  photos?: ReportPhotoRecord[];
 };
 
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
@@ -22,7 +25,7 @@ function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   return message.includes('LogbookPhoto') || message.includes('photos');
 }
 
-async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(entry: T): Promise<T & { photoUrls: string[] }> {
+async function signEntryPhotos(entry: ReportEntryRecord & { photos?: ReportPhotoRecord[] }): Promise<ReportEntryRecord & { photos?: ReportPhotoRecord[]; photoUrls?: string[] }> {
   const photoUrlsFromPrimary = (() => {
     if (!entry.photoUrl) return [];
     try {
@@ -34,7 +37,7 @@ async function signEntryPhotos<T extends { photoUrl: string | null; photos: { ur
   })();
 
   const rawPhotoValues = [
-    ...entry.photos.map((photo) => photo.url),
+    ...(entry.photos || []).map((photo) => photo.url),
     ...photoUrlsFromPrimary,
   ];
 
@@ -44,8 +47,8 @@ async function signEntryPhotos<T extends { photoUrl: string | null; photos: { ur
   const signedPrimaryPhoto = entry.photoUrl ? await createSignedPhotoUrl(entry.photoUrl) : null;
 
   const signedPhotos =
-    entry.photos.length > 0
-      ? entry.photos.map((photo) => ({
+    (entry.photos || []).length > 0
+      ? entry.photos!.map((photo) => ({
           ...photo,
           url: signedMap.get(photo.url) || photo.url,
         }))
@@ -59,7 +62,6 @@ async function signEntryPhotos<T extends { photoUrl: string | null; photos: { ur
     photoUrls: publicPhotoUrls,
     photos: signedPhotos,
   };
-
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -94,6 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const technicianId = req.query.technicianId as string;
+  const search = (req.query.search as string) || '';
   if (!technicianId) {
     return res.status(400).json({ error: 'Technician ID required' });
   }
@@ -102,21 +105,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
   endDate.setHours(23, 59, 59, 999);
 
+  // Base where clause (no `as const` – use plain object)
+  const baseWhereClause = {
+    companyId: company.id,
+    logbookEntryTechnicians: {
+      some: {
+        technicianId,
+      },
+    },
+    date: {
+      gte: startDate,
+      lte: endDate,
+    },
+  };
+
+  // Search clause
+  let whereClause: LogbookEntryWhereInput = baseWhereClause;
+  if (search.trim()) {
+    const searchClause: LogbookEntryWhereInput = {
+      OR: [
+        { clientName: { contains: search, mode: 'insensitive' } },
+        { address: { contains: search, mode: 'insensitive' } },
+      ],
+    };
+    whereClause = {
+      AND: [baseWhereClause, searchClause],
+    };
+  }
+
   let entries: ReportEntryRecord[];
   try {
     entries = await prisma.logbookEntry.findMany({
-      where: {
-        companyId: company.id,
-        logbookEntryTechnicians: {
-          some: {
-            technicianId
-          }
-        },
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
+      where: whereClause,
       orderBy: { date: 'desc' },
       select: {
         id: true,
@@ -133,22 +153,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         signature: true,
       },
     });
-
   } catch (error) {
     if (!shouldFallbackFromPhotosRelation(error)) throw error;
     const fallback = await prisma.logbookEntry.findMany({
-      where: {
-        companyId: company.id,
-        logbookEntryTechnicians: {
-          some: {
-            technicianId
-          }
-        },
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
+      where: baseWhereClause,
       orderBy: { date: 'desc' },
       select: {
         id: true,
