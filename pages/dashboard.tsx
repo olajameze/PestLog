@@ -1040,24 +1040,28 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
               <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-white rounded-lg border shadow-sm">
                 <FormInput 
                   label="Station ID" 
+                  id={`station-id-${index}`}
                   value={station.stationId} 
                   onChange={(e) => updateBaitStation(index, 'stationId', e.target.value)}
                   placeholder="BS001"
                 />
                 <FormInput 
                   label="Location" 
+                  id={`station-location-${index}`}
                   value={station.location} 
                   onChange={(e) => updateBaitStation(index, 'location', e.target.value)}
                   placeholder="Kitchen"
                 />
                 <FormInput 
                   label="Bait Type" 
+                  id={`station-bait-type-${index}`}
                   value={station.baitType || ''} 
                   onChange={(e) => updateBaitStation(index, 'baitType', e.target.value)}
                   placeholder="Wax block"
                 />
                 <FormInput 
                   label="Amount" 
+                  id={`station-amount-${index}`}
                   value={station.amount || ''} 
                   onChange={(e) => updateBaitStation(index, 'amount', e.target.value)}
                   placeholder="50g"
