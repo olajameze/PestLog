@@ -79,14 +79,12 @@ model BaitStation {
 }
 
 model LogbookEntryTechnician {
-  id             String       @id @default(cuid())
   logbookEntryId String
   technicianId   String
-  createdAt      DateTime     @default(now())
-  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
-  technician     Technician   @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id])
+  technician     Technician   @relation(fields: [technicianId], references: [id])
 
-  @@unique([logbookEntryId, technicianId])
+  @@id([logbookEntryId, technicianId])
 }
 
 model LogbookPhoto {
