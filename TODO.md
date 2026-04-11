@@ -9,5 +9,8 @@
 - [ ] **Step 6: Test dashboard functionality** - Ensure form inputs still work
 - [ ] **Step 7: Complete task** - Submit final result
 
-**Current Status:** Added `id` props to dynamic bait station FormInputs. Remaining errors indicate TS cache issue or other files.
+**Current Status:** 
+- ✅ Fixed FormInput `id` TypeScript errors (added to all bait stations)
+- 🔄 Running `npx prisma db push` to sync database schema (adds missing `followUpDate` column)
+- After completion: Restart TS Server (Ctrl+Shift+P → "TypeScript: Restart TS Server")
 
