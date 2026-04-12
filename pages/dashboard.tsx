@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
@@ -893,7 +893,20 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
           </div>
         </div>
       <Card>
-        <AddLogbookEntryForm companyId={companyId} technicians={technicians} onAdd={(entry) => setEntries([entry, ...entries])} />
+        <AddLogbookEntryForm
+          companyId={companyId}
+          technicians={technicians}
+          onAdd={(entry) => {
+            setEntries((prevEntries) => [entry, ...prevEntries]);
+            setFilteredEntries((prevFiltered) => {
+              if (!search.trim()) return [entry, ...prevFiltered];
+              const lowerSearch = search.toLowerCase();
+              return entry.clientName.toLowerCase().includes(lowerSearch) || entry.address.toLowerCase().includes(lowerSearch)
+                ? [entry, ...prevFiltered]
+                : prevFiltered;
+            });
+          }}
+        />
       </Card>
       {entries.length === 0 ? (
         <Card className="text-center py-12">
@@ -946,9 +959,118 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [internalNotes, setInternalNotes] = useState('');
   const [productAmount, setProductAmount] = useState('');
   const [recommendation, setRecommendation] = useState('');
+  const [rooms, setRooms] = useState('');
+  const [baitBoxesPlaced, setBaitBoxesPlaced] = useState('');
+  const [poisonUsed, setPoisonUsed] = useState('');
   const [baitStations, setBaitStations] = useState<BaitStationForm[]>([]);
+  const [signatureDataUrl, setSignatureDataUrl] = useState('');
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawing = useRef(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+
+  const getCanvasPoint = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
+  };
+
+  const clearSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setSignatureDataUrl('');
+  };
+
+  const beginSignature = (x: number, y: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    isDrawing.current = true;
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const continueSignature = (x: number, y: number) => {
+    if (!isDrawing.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const finishSignature = (pointerId?: number) => {
+    if (!isDrawing.current) return;
+    isDrawing.current = false;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (pointerId != null && canvas.hasPointerCapture && canvas.releasePointerCapture) {
+      if (canvas.hasPointerCapture(pointerId)) {
+        canvas.releasePointerCapture(pointerId);
+      }
+    }
+    setSignatureDataUrl(canvas.toDataURL('image/png'));
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const coords = getCanvasPoint(event.clientX, event.clientY);
+    if (!coords) return;
+    beginSignature(coords.x, coords.y);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const coords = getCanvasPoint(event.clientX, event.clientY);
+    if (!coords) return;
+    continueSignature(coords.x, coords.y);
+    event.preventDefault();
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    finishSignature(event.pointerId);
+    event.preventDefault();
+  };
+
+  const handlePointerCancel = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    finishSignature(event.pointerId);
+    event.preventDefault();
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    const coords = getCanvasPoint(touch.clientX, touch.clientY);
+    if (!coords) return;
+    beginSignature(coords.x, coords.y);
+    event.preventDefault();
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const touch = event.touches[0];
+    if (!touch) return;
+    const coords = getCanvasPoint(touch.clientX, touch.clientY);
+    if (!coords) return;
+    continueSignature(coords.x, coords.y);
+    event.preventDefault();
+  };
+
+  const handleTouchEnd = () => {
+    finishSignature();
+  };
 
   const addBaitStation = () => {
     setBaitStations([...baitStations, { stationId: '', location: '', baitType: '', amount: '' }]);
@@ -987,14 +1109,16 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
         treatment,
         notes: notes || undefined,
         technicianIds: [technicianId],
+        rooms: rooms ? rooms.split(',').map((room) => room.trim()).filter(Boolean) : undefined,
+        baitBoxesPlaced: baitBoxesPlaced || undefined,
+        poisonUsed: poisonUsed || undefined,
         followUpDate: followUpDate || undefined,
         internalNotes: internalNotes || undefined,
         productAmount: productAmount || undefined,
         recommendation: recommendation || undefined,
+        signature: signatureDataUrl || undefined,
         ...(validBaitStations.length > 0 && { baitStations: validBaitStations }),
       };
-      
-      console.log('Sending logbook payload:', payload);
       
       const res = await fetch('/api/logbook-entries', {
         method: 'POST',
@@ -1019,6 +1143,9 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
         setInternalNotes('');
         setProductAmount('');
         setRecommendation('');
+        setRooms('');
+        setBaitBoxesPlaced('');
+        setPoisonUsed('');
         setBaitStations([]);
         showToast('Entry saved', 'Logbook entry saved successfully with new fields!', 'success');
       } else {
@@ -1035,6 +1162,9 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       <FormInput label="Client Name" id="entry-client-name" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client name" required />
       <FormInput label="Address" id="entry-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Job address" required />
       <FormInput label="Treatment" id="entry-treatment" value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. Rodent control" required />
+      <FormInput label="Rooms (comma separated)" id="entry-rooms" value={rooms} onChange={(e) => setRooms(e.target.value)} placeholder="Kitchen, Garage, Basement" />
+      <FormInput label="Bait Boxes Placed" id="entry-bait-boxes" value={baitBoxesPlaced} onChange={(e) => setBaitBoxesPlaced(e.target.value)} placeholder="Yes, 6 boxes" />
+      <FormInput label="Poison Used" id="entry-poison-used" value={poisonUsed} onChange={(e) => setPoisonUsed(e.target.value)} placeholder="e.g. Bromadiolone" />
       <FormInput
         label="Technician"
         id="entry-technician"
@@ -1098,7 +1228,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
                   variant="danger" 
                   size="sm" 
                   onClick={() => removeBaitStation(index)}
-                  className="md:col-span-4"
+                  className="self-start"
                 >
                   Remove
                 </Button>
@@ -1122,9 +1252,34 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
           />
         </div>
         <div className="form-group">
-          <label className="form-label">E-Signature</label>
-          <canvas className="w-full h-32 border rounded-lg bg-white" />
+          <div className="flex items-center justify-between">
+            <label className="form-label mb-0">E-Signature</label>
+            {signatureDataUrl && (
+              <button type="button" onClick={clearSignature} className="text-sm text-red-600 hover:text-red-800 font-medium">
+                Clear Signature
+              </button>
+            )}
+          </div>
+          <div className="rounded-lg border-2 border-gray-300 overflow-hidden bg-white shadow-sm">
+            <canvas
+              ref={canvasRef}
+              width={800}
+              height={200}
+              className="signature-canvas w-full touch-none"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerCancel}
+              onPointerCancel={handlePointerCancel}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            />
+          </div>
           <p className="text-xs text-gray-500 mt-1">Draw signature (optional)</p>
+          {signatureDataUrl && (
+            <img src={signatureDataUrl} alt="Signature preview" className="mt-3 h-24 w-full max-w-xs rounded-2xl border border-gray-200 object-contain" />
+          )}
         </div>
       </div>
       <div className="md:col-span-2 pt-2">

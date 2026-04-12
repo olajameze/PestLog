@@ -1,24 +1,29 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma.js';
 
 async function main() {
   try {
-    // Fix boolean false to empty string; preserve other strings/null
     const result = await prisma.$queryRaw`
       UPDATE "LogbookEntry" 
-      SET "baitBoxesPlaced" = '' 
-      WHERE "baitBoxesPlaced" = false
+      SET "baitBoxesPlaced" = CASE 
+        WHEN "baitBoxesPlaced" = false THEN ''
+        WHEN "baitBoxesPlaced" = true THEN 'Yes'
+        ELSE "baitBoxesPlaced"
+      END,
+      "poisonUsed" = CASE 
+        WHEN "poisonUsed" = false THEN ''
+        WHEN "poisonUsed" = true THEN 'Yes'
+        ELSE "poisonUsed"
+      END
     `;
-    console.log('Data migration result:', result);
+    console.log('Migration result:', result);
 
-    // Verify no booleans remain
     const remaining = await prisma.$queryRaw`
-      SELECT COUNT(*) as count 
-      FROM "LogbookEntry" 
-      WHERE "baitBoxesPlaced" = true OR "baitBoxesPlaced" = false
+      SELECT 
+        COUNT(CASE WHEN "baitBoxesPlaced" = true OR "baitBoxesPlaced" = false THEN 1 END) as baitBoxes_boolean,
+        COUNT(CASE WHEN "poisonUsed" = true OR "poisonUsed" = false THEN 1 END) as poison_boolean
+      FROM "LogbookEntry"
     `;
-    console.log('Remaining boolean records:', remaining);
+    console.log('Remaining booleans:', remaining);
 
     console.log('Migration complete!');
   } catch (error) {

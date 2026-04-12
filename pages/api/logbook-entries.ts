@@ -1,12 +1,49 @@
+import { Prisma } from '@prisma/client';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import type { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
 
+type RawLogbookEntryFallback = {
+  id: string;
+  companyId: string;
+  date: Date;
+  clientName: string;
+  address: string;
+  treatment: string;
+  notes: string | null;
+  photoUrl: string | null;
+  signature: string | null;
+  rooms: unknown;
+  baitBoxesPlaced: string | null;
+  poisonUsed: string | null;
+  followUpDate: Date | null;
+  internalNotes: string | null;
+  productAmount: string | null;
+  recommendation: string | null;
+  startTime: Date | null;
+  endTime: Date | null;
+  status: string;
+  createdAt: Date;
+};
+
 function shouldFallbackFromPhotosRelation(error: unknown): boolean {
   const message = String(error);
   return message.includes('LogbookPhoto') || message.includes('photos');
+}
+
+function shouldFallbackFromJsonParse(error: unknown): boolean {
+  const message = String(error);
+  return message.includes('Unexpected end of JSON input') || message.includes('JSON');
+}
+
+function tryParseJson(value: unknown) {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 }
 
 async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(
@@ -63,10 +100,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
       } catch (err) {
-        if (!shouldFallbackFromPhotosRelation(err)) throw err;
-        const fallback = await prisma.logbookEntry.findMany({ where, orderBy: { date: 'desc' } });
+        if (!shouldFallbackFromPhotosRelation(err) && !shouldFallbackFromJsonParse(err)) throw err;
+
+        const searchTerm = typeof req.query.search === 'string' && req.query.search.trim().length > 0
+          ? `%${req.query.search.trim()}%`
+          : null;
+
+        const fallbackQuery = searchTerm
+          ? Prisma.sql`
+              SELECT id, company_id AS "companyId", date, client_name AS "clientName", address, treatment,
+                     notes, photo_url AS "photoUrl", signature, rooms, bait_boxes_placed AS "baitBoxesPlaced",
+                     poison_used AS "poisonUsed", follow_up_date AS "followUpDate", internal_notes AS "internalNotes",
+                     product_amount AS "productAmount", recommendation, start_time AS "startTime", end_time AS "endTime",
+                     status, created_at AS "createdAt"
+              FROM "LogbookEntry"
+              WHERE company_id = ${companyId} AND (client_name ILIKE ${searchTerm} OR address ILIKE ${searchTerm})
+              ORDER BY date DESC
+            `
+          : Prisma.sql`
+              SELECT id, company_id AS "companyId", date, client_name AS "clientName", address, treatment,
+                     notes, photo_url AS "photoUrl", signature, rooms, bait_boxes_placed AS "baitBoxesPlaced",
+                     poison_used AS "poisonUsed", follow_up_date AS "followUpDate", internal_notes AS "internalNotes",
+                     product_amount AS "productAmount", recommendation, start_time AS "startTime", end_time AS "endTime",
+                     status, created_at AS "createdAt"
+              FROM "LogbookEntry"
+              WHERE company_id = ${companyId}
+              ORDER BY date DESC
+            `;
+
+        const fallback = await prisma.$queryRaw<RawLogbookEntryFallback[]>(fallbackQuery);
         entries = fallback.map((entry) => ({
           ...entry,
+          rooms: tryParseJson(entry.rooms),
           photos: [],
           logbookEntryTechnicians: [],
         }));
@@ -92,6 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status,
         photoUrl,
         photoUrls,
+        signature,
       } = req.body;
 
       if (
@@ -137,6 +203,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         treatment,
         notes: notes || null,
         photoUrl: primaryPhotoUrl,
+        signature: typeof signature === 'string' && signature.trim().length > 0 ? signature : null,
         baitBoxesPlaced: baitBoxesPlaced ?? null,
         poisonUsed: poisonUsed ?? null,
         startTime: startTime ? new Date(startTime) : null,
@@ -144,9 +211,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: status || 'open',
       };
 
- if (Array.isArray(rooms)) {
-  entryData.rooms = rooms as Prisma.InputJsonValue;
-}
+      if (Array.isArray(rooms)) {
+        entryData.rooms = rooms as Prisma.InputJsonValue;
+      } else if (typeof rooms === 'string' && rooms.trim()) {
+        const parsedRooms = tryParseJson(rooms);
+        if (Array.isArray(parsedRooms)) {
+          entryData.rooms = parsedRooms as Prisma.InputJsonValue;
+        } else {
+          entryData.rooms = rooms.split(',').map((room) => room.trim()).filter(Boolean) as Prisma.InputJsonValue;
+        }
+      }
 
       // Add photos relation if any
       if (normalizedPhotoUrls.length > 0) {

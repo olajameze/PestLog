@@ -186,33 +186,54 @@ export default function TechnicianPage() {
   const handlePointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    isDrawing.current = true;
+    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
+    isDrawing.current = true;
     ctx.strokeStyle = '#1E293B';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return;
     const canvas = canvasRef.current;
-    if (!canvas || !isDrawing.current) return;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const rect = canvas.getBoundingClientRect();
     ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
     ctx.stroke();
+    event.preventDefault();
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDrawing.current) return;
     isDrawing.current = false;
     const canvas = canvasRef.current;
     if (!canvas) return;
+    if (canvas.hasPointerCapture && canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
     setSignatureDataUrl(canvas.toDataURL('image/png'));
+    event.preventDefault();
+  };
+
+  const handlePointerCancel = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return;
+    isDrawing.current = false;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (canvas.hasPointerCapture && canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+    setSignatureDataUrl(canvas.toDataURL('image/png'));
+    event.preventDefault();
   };
 
   const handlePhotoChange = async (files: FileList | null) => {
@@ -478,11 +499,12 @@ export default function TechnicianPage() {
                   ref={canvasRef}
                   width={800}
                   height={200}
-                  className="signature-canvas w-full touch-none"
+                  className="signature-canvas w-full"
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
-                  onPointerLeave={handlePointerUp}
+                  onPointerLeave={handlePointerCancel}
+                  onPointerCancel={handlePointerCancel}
                 />
               </div>
               <p className="mt-2 text-xs sm:text-sm text-gray-500">👆 Use your finger or mouse to draw your signature above</p>

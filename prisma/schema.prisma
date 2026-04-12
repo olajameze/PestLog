@@ -52,8 +52,8 @@ model LogbookEntry {
   photos                  LogbookPhoto[]
   signature               String?
   rooms                   Json? // ["Kitchen", "Garage"]
-  baitBoxesPlaced         Boolean? // true for yes/placed
-  poisonUsed              Boolean? // true for used
+  baitBoxesPlaced         String? // "Yes, 6 boxes" or "No"
+  poisonUsed              String? // "Bromadiolone" or "No"
   followUpDate              DateTime?
   internalNotes             String?
   productAmount             String?

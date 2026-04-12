@@ -17,6 +17,9 @@ type ReportEntryRecord = {
   notes: string | null;
   photoUrl: string | null;
   signature: string | null;
+  rooms?: Prisma.JsonValue | null;
+  baitBoxesPlaced?: string | null;
+  poisonUsed?: string | null;
   photos?: ReportPhotoRecord[];
 };
 
@@ -145,6 +148,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         address: true,
         treatment: true,
         notes: true,
+        rooms: true,
+        baitBoxesPlaced: true,
+        poisonUsed: true,
         photoUrl: true,
         photos: {
           select: { url: true },
@@ -165,6 +171,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         address: true,
         treatment: true,
         notes: true,
+        rooms: true,
+        baitBoxesPlaced: true,
+        poisonUsed: true,
         photoUrl: true,
         signature: true,
       },
