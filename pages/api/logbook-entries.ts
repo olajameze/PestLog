@@ -138,7 +138,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notes: notes || null,
         photoUrl: primaryPhotoUrl,
         baitBoxesPlaced: baitBoxesPlaced ?? null,
-        poisonUsed: poisonUsed || null,
+        poisonUsed: poisonUsed ?? null,
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
         status: status || 'open',
