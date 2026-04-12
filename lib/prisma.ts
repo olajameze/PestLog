@@ -1,8 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { normalizePostgresUrlForPrisma } from './normalizePostgresUrl';
 
-const connectionString = process.env.POSTGRES_PRISMA_URL;
+const connectionString = process.env.POSTGRES_PRISMA_URL
+  ? normalizePostgresUrlForPrisma(process.env.POSTGRES_PRISMA_URL)
+  : undefined;
 const isProduction = process.env.NODE_ENV === 'production';
 
 if (!isProduction) {
@@ -12,7 +15,9 @@ if (!isProduction) {
 }
 
 if (!connectionString) {
-  throw new Error('Missing database connection string. Set POSTGRES_PRISMA_URL in your .env file.');
+  throw new Error(
+    'Missing database connection string. Set POSTGRES_PRISMA_URL in your .env file. For Prisma CLI (db push), also set POSTGRES_URL_NON_POOLING — see .env.example.',
+  );
 }
 
 const globalForPrisma = globalThis as unknown as {

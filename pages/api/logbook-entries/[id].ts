@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { supabase } from '../../../lib/supabase';
-import { checkPlan } from '../../../lib/planGuard';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -97,13 +96,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Remove old stations for this entry and insert new ones
       await prisma.baitStation.deleteMany({ where: { logbookEntryId: id } });
       await prisma.baitStation.createMany({
-        data: baitStations.map((bs: any) => ({
-          logbookEntryId: id,
-          stationId: bs.stationId,
-          location: bs.location,
-          baitType: bs.baitType,
-          amount: bs.amount,
-        })),
+        data: baitStations.map(
+          (bs: {
+            stationId: string;
+            location: string;
+            baitType?: string | null;
+            amount?: string | null;
+          }) => ({
+            logbookEntryId: id,
+            stationId: bs.stationId,
+            location: bs.location,
+            baitType: bs.baitType,
+            amount: bs.amount,
+          }),
+        ),
       });
     }
     return res.status(200).json(updatedEntry);

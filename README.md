@@ -28,8 +28,8 @@ A compliance logbook SaaS for pest control businesses.
 
 1. Clone the repo
 2. Install dependencies: `npm install`
-3. Set up environment variables (see .env)
-4. Run Prisma migrations: `npx prisma migrate dev`
+3. Copy `.env.example` to `.env` and set variables (especially `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` for Supabase)
+4. Apply the schema: `npx prisma db push` (or `npx prisma migrate dev` once you have migrations)
 5. Run the development server: `npm run dev`
 
 ## Deployment
@@ -38,9 +38,10 @@ Deployed on Vercel with custom domain jgdev.org.
 
 ## Environment Variables
 
-Set the following in your .env or Vercel environment:
+Set the following in your `.env` or Vercel environment:
 
-- DATABASE_URL
+- `POSTGRES_PRISMA_URL` (pooled; used by the Next.js app)
+- `POSTGRES_URL_NON_POOLING` (session/direct; used by Prisma CLI — avoids pooler prepared-statement errors)
 - NEXT_PUBLIC_SUPABASE_URL
 - NEXT_PUBLIC_SUPABASE_ANON_KEY
 - SUPABASE_SERVICE_ROLE_KEY

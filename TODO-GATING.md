@@ -1,34 +1,33 @@
-# PestTrek Plan-Based Feature Gating - Backend Phase
-Progress: 0/6 ✅
+# PestTrek Plan-Based Feature Gating
 
-## Backend Steps
+Progress: backend ✅ · ongoing QA for Stripe flows
 
-### 1. Prisma Schema [PENDING]
-- [ ] Add `plan String? @default("trial")` to Company
-- [ ] `npx prisma migrate dev --name add_company_plan`
-- [ ] `npx prisma generate`
+## Backend (implemented)
 
-### 2. Create lib/planGuard.ts [PENDING]
-- [ ] Export `checkPlan(plan: string|null, allowed: string[]): boolean`
+### 1. Prisma schema
+- [x] `Company.plan` — `String? @default("trial")` in `prisma/schema.prisma`
+- [x] Run `npx prisma migrate dev` or `npx prisma db push` after schema changes; then `npx prisma generate`
 
-### 3. Update create-checkout-session.ts [PENDING]
-- [ ] `client_reference_id: \`${company.id}:${plan}\``
+### 2. `lib/planGuard.ts`
+- [x] `checkPlan(companyPlan: string | null, allowedPlans: string[]): boolean`
 
-### 4. Update stripe-webhook.ts [PENDING]
-- [ ] Parse ref → [companyId, plan]
-- [ ] `prisma.company.update({plan})`
+### 3. `pages/api/create-checkout-session.ts`
+- [x] `client_reference_id: \`${company.id}:${selectedPlan}\``
 
-### 5. Test APIs [PENDING]
-```bash
-npm run dev
-curl /api/create-checkout-session  # plan param
-# Stripe webhook test (ngrok)
-```
+### 4. `pages/api/stripe-webhook.ts`
+- [x] Parse `client_reference_id` → company id + plan; update `prisma.company`
 
-### 6. Frontend Gating [LATER]
-dashboard.tsx conditional rendering
+### 5. API / UI usage
+- [x] Plan checks in `pages/api/reports.ts`, certifications routes, `pages/dashboard.tsx`, etc.
+- [ ] Manual: test checkout + webhook (Stripe test mode / ngrok as needed)
 
-**Rules:** No UI/layout changes - conditional logic only.
+## Frontend gating
 
-**Status:** Backend gating infrastructure
+- [x] `dashboard.tsx` uses `checkPlan` for feature visibility (alongside subscription status where applicable)
 
+**Rule:** Prefer conditional logic only; avoid unrelated layout churn when extending gating.
+
+## Database & Prisma (Supabase)
+
+- Set **`POSTGRES_PRISMA_URL`** (pooled, `:6543`) for the app; **`POSTGRES_URL_NON_POOLING`** (session `:5432`, from Supabase Connect) for **`npx prisma db push`** / migrate — avoids PgBouncer prepared-statement errors.
+- See **`.env.example`** and `prisma.config.ts`.

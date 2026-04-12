@@ -2,6 +2,12 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
+import { normalizePostgresUrlForPrisma } from "./lib/normalizePostgresUrl";
+
+/** Pooled URL (e.g. Supabase transaction mode :6543) — used by the app via lib/prisma.ts */
+const poolUrl = process.env["POSTGRES_PRISMA_URL"] ?? "";
+/** Session or direct DB URL (e.g. Supabase :5432 on pooler) — required for stable `db push` / migrate */
+const directUrl = process.env["POSTGRES_URL_NON_POOLING"] ?? "";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -9,6 +15,8 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["POSTGRES_PRISMA_URL"],
+    // Prisma CLI must not use transaction-pooled connections; they can hit
+    // "prepared statement sN already exists" on PgBouncer.
+    url: directUrl || normalizePostgresUrlForPrisma(poolUrl),
   },
 });
