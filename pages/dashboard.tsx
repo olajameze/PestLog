@@ -1042,6 +1042,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [baitStations, setBaitStations] = useState<BaitStationForm[]>([]);
   const [signatureDataUrl, setSignatureDataUrl] = useState('');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const isDrawing = useRef(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
@@ -1176,6 +1177,29 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
 
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
+
+    const photoFiles = photoInputRef.current?.files
+      ? Array.from(photoInputRef.current.files).slice(0, 4)
+      : [];
+    const uploadedPhotoPaths: string[] = [];
+
+    if (photoFiles.length > 0) {
+      for (let i = 0; i < photoFiles.length; i++) {
+        const file = photoFiles[i]!;
+        const safeName = file.name.replace(/[^\w.\-]+/g, '_') || 'photo.jpg';
+        const filePath = `private/${companyId}/${technicianId}/${Date.now()}-${i}-${safeName}`;
+        const { error } = await supabase.storage
+          .from('logbook-photos')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+        if (error) {
+          showToast('Photo upload failed', error.message, 'error');
+          setLoading(false);
+          return;
+        }
+        uploadedPhotoPaths.push(filePath);
+      }
+    }
     
     const payload = {
       companyId,
@@ -1193,6 +1217,10 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       productAmount: productAmount || undefined,
       recommendation: recommendation || undefined,
       signature: signatureDataUrl || undefined,
+      ...(uploadedPhotoPaths.length > 0 && {
+        photoUrls: uploadedPhotoPaths,
+        photoUrl: uploadedPhotoPaths[0],
+      }),
       ...(validBaitStations.length > 0 && { baitStations: validBaitStations }),
     };
     
@@ -1222,6 +1250,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       setBaitBoxesPlaced('');
       setPoisonUsed('');
       setBaitStations([]);
+      if (photoInputRef.current) photoInputRef.current.value = '';
       showToast('Entry saved', 'Logbook entry saved successfully!', 'success');
     } else {
       const error = await res.json();
@@ -1280,7 +1309,14 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="form-group">
           <label htmlFor="logbook-photos" className="form-label">Photos (optional, up to 4)</label>
-          <input id="logbook-photos" type="file" multiple accept="image/*" className="form-input" />
+          <input
+            ref={photoInputRef}
+            id="logbook-photos"
+            type="file"
+            multiple
+            accept="image/*"
+            className="form-input"
+          />
         </div>
         <div className="form-group">
           <div className="flex items-center justify-between">
