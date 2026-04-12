@@ -7,17 +7,25 @@ datasource db {
 }
 
 model Company {
-  id                 String         @id @default(cuid())
-  name               String?
-  email              String         @unique
-  stripeCustomerId   String?        @unique
-  subscriptionStatus String         @default("trial")
-  trialEndsAt        DateTime?
-  plan               String?        @default("trial")
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  technicians        Technician[]
-  logbookEntries     LogbookEntry[]
+  id                      String         @id @default(cuid())
+  name                    String?
+  email                   String         @unique
+  phone                   String?
+  address                 String?
+  website                 String?
+  vatNumber               String?
+  requireSignature        Boolean        @default(false)
+  requirePhotos           Boolean        @default(false)
+  defaultReportRangeDays  Int?           @default(30)
+  notificationPreferences Json?
+  stripeCustomerId        String?        @unique
+  subscriptionStatus      String         @default("trial")
+  trialEndsAt             DateTime?
+  plan                    String?        @default("trial")
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  technicians             Technician[]
+  logbookEntries          LogbookEntry[]
 }
 
 model Technician {

@@ -158,7 +158,7 @@ export default function Dashboard() {
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
-  const [savingCompanyName, setSavingCompanyName] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -384,16 +384,28 @@ export default function Dashboard() {
     }
   };
 
-  const handleUpdateCompanyName = async (name: string) => {
+  const handleUpdateCompanySettings = async (settings: {
+    name: string;
+    phone?: string;
+    address?: string;
+    website?: string;
+    vatNumber?: string;
+    requireSignature: boolean;
+    requirePhotos: boolean;
+    defaultReportRangeDays: number;
+    notificationPreferences: {
+      trialExpiry: boolean;
+      renewal: boolean;
+      certificationExpiry: boolean;
+    };
+  }) => {
     if (!company) return;
-    const trimmed = name.trim();
-    if (!trimmed || trimmed === company.name) return;
 
-    setSavingCompanyName(true);
+    setSavingSettings(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/auth/signin');
-      setSavingCompanyName(false);
+      setSavingSettings(false);
       return;
     }
 
@@ -403,18 +415,18 @@ export default function Dashboard() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ name: trimmed }),
+      body: JSON.stringify(settings),
     });
 
     const data = await res.json();
     if (res.ok) {
       setCompany(data);
-      showToast('Saved', 'Company name updated successfully.', 'success');
+      showToast('Saved', 'Company settings updated successfully.', 'success');
     } else {
-      setAppError(data.error || 'Unable to update company name.');
-      showToast('Save failed', data.error || 'Unable to update company name.', 'error');
+      setAppError(data.error || 'Unable to update company settings.');
+      showToast('Save failed', data.error || 'Unable to update company settings.', 'error');
     }
-    setSavingCompanyName(false);
+    setSavingSettings(false);
   };
 
   const handleAddTechnician = async (name: string, email: string) => {
@@ -529,8 +541,8 @@ export default function Dashboard() {
                   subscription={subscription} 
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
-                  onUpdateCompanyName={handleUpdateCompanyName}
-                  savingCompanyName={savingCompanyName}
+                  onUpdateCompanySettings={handleUpdateCompanySettings}
+                  savingSettings={savingSettings}
                   checkoutLoading={loadingCheckout} 
                   portalLoading={loadingPortal} 
                 />
@@ -556,7 +568,7 @@ export default function Dashboard() {
       />
 
       {/* Plan Modal */}
-{showPlanModal && (
+      {showPlanModal && (
         <PlanModal
           onClose={() => setShowPlanModal(false)}
           onSubscribe={handleSubscribe}
@@ -1227,9 +1239,6 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
         <FormInput label="Internal Notes" id="internal-notes" as="textarea" value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} placeholder="Internal use only..." />
       </div>
       <FormInput label="Product Amount" id="product-amount" value={productAmount} onChange={(e) => setProductAmount(e.target.value)} placeholder="e.g. 2kg" />
-      <div className="md:col-span-2">
-        <FormInput label="Recommendation" id="recommendation" as="textarea" value={recommendation} onChange={(e) => setRecommendation(e.target.value)} placeholder="Recommendations for client..." />
-      </div>
       <div className="md:col-span-2 mb-6 p-4 bg-gray-50 rounded-xl">
         <label className="form-label block mb-3 font-semibold">Bait Stations</label>
         {baitStations.length === 0 ? (
@@ -1341,13 +1350,34 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   );
 }
 
-function SettingsTab({ company, subscription, onSubscribe, onManageSubscription, onUpdateCompanyName, savingCompanyName, checkoutLoading, portalLoading }: {
+function SettingsTab({
+  company,
+  subscription,
+  onSubscribe,
+  onManageSubscription,
+  onUpdateCompanyName,
+  onUpdateCompanySettings,
+  savingCompanyName,
+  savingSettings,
+  checkoutLoading,
+  portalLoading,
+}: {
   company: Company;
   subscription: Subscription | null;
   onSubscribe: () => void;
   onManageSubscription: () => void;
   onUpdateCompanyName: (name: string) => void;
+  onUpdateCompanySettings: (settings: {
+    phone?: string;
+    address?: string;
+    website?: string;
+    vatNumber?: string;
+    requireSignature?: boolean;
+    defaultReportRange?: string;
+    // add more settings fields as needed
+  }) => Promise<void>;
   savingCompanyName: boolean;
+  savingSettings: boolean;
   checkoutLoading: boolean;
   portalLoading: boolean;
 }) {
