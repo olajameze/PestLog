@@ -22,14 +22,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, plan: true },
+    select: { id: true, subscriptionStatus: true, trialEndsAt: true },
   });
   if (!company) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  if (!checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise'])) {
-    return res.status(403).json({ error: 'Pro plan required' });
+  const isSubscriptionValid =
+    company.subscriptionStatus === 'active' ||
+    (company.subscriptionStatus === 'trial' && company.trialEndsAt && company.trialEndsAt.getTime() > Date.now());
+
+  if (!isSubscriptionValid) {
+    return res.status(403).json({ error: 'Subscription required or trial expired' });
   }
 
   if (req.method === 'PUT') {

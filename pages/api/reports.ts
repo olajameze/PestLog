@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, name: true, email: true, plan: true },
+    select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true },
   });
 
   if (!company) {
@@ -89,7 +89,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Plan gating: Pro+ only
-  if (!checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise'])) {
+  const hasPremiumAccess = company.plan
+    ? checkPlan(company.plan, ['pro', 'business', 'enterprise'])
+    : company.subscriptionStatus === 'active';
+
+  if (!hasPremiumAccess) {
     return res.status(403).json({ error: 'Pro plan required for compliance reports' });
   }
 
@@ -162,7 +166,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     if (!shouldFallbackFromPhotosRelation(error)) throw error;
     const fallback = await prisma.logbookEntry.findMany({
-      where: baseWhereClause,
+      where: whereClause,
       orderBy: { date: 'desc' },
       select: {
         id: true,

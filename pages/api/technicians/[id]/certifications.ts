@@ -24,15 +24,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, plan: true },
+    select: { id: true, plan: true, subscriptionStatus: true },
   });
 
   if (!company) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
+  const hasPremiumAccess = company.plan
+    ? checkPlan(company.plan, ['pro', 'business', 'enterprise'])
+    : company.subscriptionStatus === 'active';
+
   // Plan gating for cert viewing (Pro+)
-  if (!checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise'])) {
+  if (!hasPremiumAccess) {
     return res.status(403).json({ error: 'Pro plan required to view certifications' });
   }
 

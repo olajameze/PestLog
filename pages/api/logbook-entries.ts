@@ -46,6 +46,29 @@ function tryParseJson(value: unknown) {
   }
 }
 
+function normalizeRoomsValue(value: unknown): Prisma.InputJsonValue | undefined {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map((room) => (typeof room === 'string' ? room.trim() : String(room).trim()))
+      .filter((room) => room.length > 0);
+    return normalized.length > 0 ? normalized : undefined;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+
+    const parsed = tryParseJson(trimmed);
+    if (Array.isArray(parsed)) {
+      return normalizeRoomsValue(parsed);
+    }
+
+    return trimmed.split(',').map((room) => room.trim()).filter((room) => room.length > 0);
+  }
+
+  return undefined;
+}
+
 async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(
   entry: T,
 ): Promise<T> {
@@ -108,30 +131,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const fallbackQuery = searchTerm
           ? Prisma.sql`
-              SELECT id, company_id AS "companyId", date, client_name AS "clientName", address, treatment,
-                     notes, photo_url AS "photoUrl", signature, rooms, bait_boxes_placed AS "baitBoxesPlaced",
-                     poison_used AS "poisonUsed", follow_up_date AS "followUpDate", internal_notes AS "internalNotes",
-                     product_amount AS "productAmount", recommendation, start_time AS "startTime", end_time AS "endTime",
-                     status, created_at AS "createdAt"
+              SELECT "id", "companyId", "date", "clientName", "address", "treatment",
+                     "notes", "photoUrl", "signature", "rooms", "baitBoxesPlaced",
+                     "poisonUsed", "followUpDate", "internalNotes", "productAmount", "recommendation",
+                     "startTime", "endTime", "status", "createdAt"
               FROM "LogbookEntry"
-              WHERE company_id = ${companyId} AND (client_name ILIKE ${searchTerm} OR address ILIKE ${searchTerm})
-              ORDER BY date DESC
+              WHERE "companyId" = ${companyId} AND ("clientName" ILIKE ${searchTerm} OR "address" ILIKE ${searchTerm})
+              ORDER BY "date" DESC
             `
           : Prisma.sql`
-              SELECT id, company_id AS "companyId", date, client_name AS "clientName", address, treatment,
-                     notes, photo_url AS "photoUrl", signature, rooms, bait_boxes_placed AS "baitBoxesPlaced",
-                     poison_used AS "poisonUsed", follow_up_date AS "followUpDate", internal_notes AS "internalNotes",
-                     product_amount AS "productAmount", recommendation, start_time AS "startTime", end_time AS "endTime",
-                     status, created_at AS "createdAt"
+              SELECT "id", "companyId", "date", "clientName", "address", "treatment",
+                     "notes", "photoUrl", "signature", "rooms", "baitBoxesPlaced",
+                     "poisonUsed", "followUpDate", "internalNotes", "productAmount", "recommendation",
+                     "startTime", "endTime", "status", "createdAt"
               FROM "LogbookEntry"
-              WHERE company_id = ${companyId}
-              ORDER BY date DESC
+              WHERE "companyId" = ${companyId}
+              ORDER BY "date" DESC
             `;
 
         const fallback = await prisma.$queryRaw<RawLogbookEntryFallback[]>(fallbackQuery);
         entries = fallback.map((entry) => ({
           ...entry,
-          rooms: tryParseJson(entry.rooms),
+          rooms: normalizeRoomsValue(entry.rooms) ?? undefined,
           photos: [],
           logbookEntryTechnicians: [],
         }));
@@ -211,15 +232,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: status || 'open',
       };
 
-      if (Array.isArray(rooms)) {
-        entryData.rooms = rooms as Prisma.InputJsonValue;
-      } else if (typeof rooms === 'string' && rooms.trim()) {
-        const parsedRooms = tryParseJson(rooms);
-        if (Array.isArray(parsedRooms)) {
-          entryData.rooms = parsedRooms as Prisma.InputJsonValue;
-        } else {
-          entryData.rooms = rooms.split(',').map((room) => room.trim()).filter(Boolean) as Prisma.InputJsonValue;
-        }
+      const normalizedRooms = normalizeRoomsValue(rooms);
+      if (normalizedRooms) {
+        entryData.rooms = normalizedRooms;
       }
 
       // Add photos relation if any

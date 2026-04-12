@@ -12,6 +12,7 @@ interface FormInputProps {
   as?: 'input' | 'select' | 'textarea';
   options?: { value: string; label: string }[];
   className?: string;
+  readOnly?: boolean;
 }
 
 export default function FormInput({
@@ -26,6 +27,7 @@ export default function FormInput({
   as = 'input',
   options,
   className = '',
+  readOnly = false,
 }: FormInputProps) {
   const baseClasses = 'form-input w-full border border-zinc-300 rounded-xl px-4 py-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-offset-0 transition-all placeholder-zinc-400';
 
@@ -43,6 +45,7 @@ export default function FormInput({
         onChange={onChange}
         placeholder={placeholder}
         required={required}
+        readOnly={readOnly}
         className={`${baseClasses} ${className}`}
         rows={as === 'textarea' ? 4 : undefined}
       >

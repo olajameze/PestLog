@@ -24,9 +24,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const company = await prisma.company.findUnique({
+  let company = await prisma.company.findUnique({
     where: { email: user.email },
   });
+
+  if (!company) {
+    const technician = await prisma.technician.findFirst({
+      where: { email: user.email },
+      include: { company: true },
+    });
+    company = technician?.company ?? null;
+  }
 
   if (!company || !company.stripeCustomerId) {
     return res.status(400).json({ error: 'No Stripe customer configured for this account.' });

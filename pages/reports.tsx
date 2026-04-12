@@ -99,6 +99,7 @@ export default function ReportsPage() {
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadOwnerData = async () => {
@@ -232,6 +233,36 @@ export default function ReportsPage() {
     const result = await res.json();
     setReport(result);
     setFetching(false);
+  };
+
+  const deleteReportEntry = async (entryId: string) => {
+    if (!confirm('Delete this job from the report? This cannot be undone.')) return;
+    setDeletingEntryId(entryId);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/logbook-entries/${entryId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Failed to delete report entry' }));
+      showToast('Delete failed', error.error || 'Failed to delete report entry', 'error');
+      setDeletingEntryId(null);
+      return;
+    }
+
+    setReport((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        entries: prev.entries.filter((entry) => entry.id !== entryId),
+      };
+    });
+    showToast('Deleted', 'Job removed from report successfully.', 'success');
+    setDeletingEntryId(null);
   };
 
   const downloadPdf = async () => {
@@ -539,7 +570,17 @@ export default function ReportsPage() {
                           <p className="text-sm text-gray-600">{entry.address}</p>
                           <p className="text-xs sm:text-sm text-gray-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
                         </div>
-                        <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                          <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
+                          <button
+                            type="button"
+                            onClick={() => deleteReportEntry(entry.id)}
+                            disabled={deletingEntryId === entry.id}
+                            className="btn btn-danger btn-sm"
+                          >
+                            {deletingEntryId === entry.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm text-gray-600">
                         {entry.rooms && (

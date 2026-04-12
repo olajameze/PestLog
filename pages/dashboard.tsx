@@ -158,6 +158,7 @@ export default function Dashboard() {
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [savingCompanyName, setSavingCompanyName] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
@@ -171,7 +172,9 @@ export default function Dashboard() {
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
 
-  const isPro = company ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) : false;
+  const isPro = company
+    ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) || company.subscriptionStatus === 'active'
+    : false;
 
     const handleCertUpload = async () => {
       if (!selectedTechId || !certFile || !company) {
@@ -381,6 +384,39 @@ export default function Dashboard() {
     }
   };
 
+  const handleUpdateCompanyName = async (name: string) => {
+    if (!company) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === company.name) return;
+
+    setSavingCompanyName(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      setSavingCompanyName(false);
+      return;
+    }
+
+    const res = await fetch('/api/company', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ name: trimmed }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      setCompany(data);
+      showToast('Saved', 'Company name updated successfully.', 'success');
+    } else {
+      setAppError(data.error || 'Unable to update company name.');
+      showToast('Save failed', data.error || 'Unable to update company name.', 'error');
+    }
+    setSavingCompanyName(false);
+  };
+
   const handleAddTechnician = async (name: string, email: string) => {
     if (isPreviewMode) {
       setTechnicians((prev) => [...prev, { id: `preview-${Date.now()}`, name, email }]);
@@ -493,6 +529,8 @@ export default function Dashboard() {
                   subscription={subscription} 
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
+                  onUpdateCompanyName={handleUpdateCompanyName}
+                  savingCompanyName={savingCompanyName}
                   checkoutLoading={loadingCheckout} 
                   portalLoading={loadingPortal} 
                 />
@@ -862,7 +900,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
               doc.addImage(base64, 'JPEG', 15, y, 60, 45);
               doc.text(`Photo ${photoIndex + 1}`, 80, y + 10);
             }
-          } catch (error) {
+          } catch {
             doc.text(`Photo ${photoIndex + 1} (unavailable)`, 15, y);
           }
           y += 50;
@@ -888,10 +926,17 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
           <h2 className="text-2xl font-bold text-navy">Logbook Entries</h2>
           <p className="text-zinc-600">{filteredEntries.length} entries</p>
         </div>
-          <div className="flex gap-3">
-            <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
-          </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search entries..."
+            className="form-input w-full sm:w-72 border-zinc-300 rounded-xl px-4 py-3"
+          />
+          <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
         </div>
+      </div>
       <Card>
         <AddLogbookEntryForm
           companyId={companyId}
@@ -1278,7 +1323,14 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
           </div>
           <p className="text-xs text-gray-500 mt-1">Draw signature (optional)</p>
           {signatureDataUrl && (
-            <img src={signatureDataUrl} alt="Signature preview" className="mt-3 h-24 w-full max-w-xs rounded-2xl border border-gray-200 object-contain" />
+            <Image
+              src={signatureDataUrl}
+              alt="Signature preview"
+              width={600}
+              height={240}
+              className="mt-3 h-24 w-full max-w-xs rounded-2xl border border-gray-200 object-contain"
+              unoptimized
+            />
           )}
         </div>
       </div>
@@ -1289,23 +1341,68 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   );
 }
 
-function SettingsTab({ company, subscription, onSubscribe, onManageSubscription, checkoutLoading, portalLoading }: {
+function SettingsTab({ company, subscription, onSubscribe, onManageSubscription, onUpdateCompanyName, savingCompanyName, checkoutLoading, portalLoading }: {
   company: Company;
   subscription: Subscription | null;
   onSubscribe: () => void;
   onManageSubscription: () => void;
+  onUpdateCompanyName: (name: string) => void;
+  savingCompanyName: boolean;
   checkoutLoading: boolean;
   portalLoading: boolean;
 }) {
+  const [companyName, setCompanyName] = useState(company.name || '');
+
+  const currentPlanLabel = subscription?.plan ? subscription.plan.toUpperCase() : 'TRIAL';
+  const trialEndsAtLabel = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString() : 'Not available';
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl sm:text-3xl font-bold text-navy">Settings</h2>
       <Card className="space-y-6 p-8">
         <h3 className="text-xl font-bold text-navy">Company & Billing</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="Company Name" id="settings-company-name" value={company.name || ''} onChange={() => {}} />
-          <FormInput label="Billing Email" id="settings-billing-email" type="email" value={company.email} onChange={() => {}} />
+          <FormInput
+            label="Company Name"
+            id="settings-company-name"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+          />
+          <FormInput
+            label="Billing Email"
+            id="settings-billing-email"
+            type="email"
+            value={company.email}
+            onChange={() => {}}
+            readOnly
+          />
         </div>
+        <Button
+          onClick={() => onUpdateCompanyName(companyName)}
+          disabled={savingCompanyName || !companyName.trim() || companyName.trim() === company.name}
+        >
+          {savingCompanyName ? 'Saving...' : 'Save company name'}
+        </Button>
+
+        <div className="grid gap-4 sm:grid-cols-3 mt-6">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Subscription status</p>
+            <p className="mt-2 font-semibold text-slate-900">{subscription?.status || 'Unknown'}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Current plan</p>
+            <p className="mt-2 font-semibold text-slate-900">{currentPlanLabel}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Trial ends</p>
+            <p className="mt-2 font-semibold text-slate-900">{trialEndsAtLabel}</p>
+          </div>
+        </div>
+
+        <div className="text-sm text-slate-600">
+          Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
+        </div>
+
         <div className="flex flex-wrap gap-3">
           <Button onClick={onSubscribe} disabled={checkoutLoading} className="bg-gradient-to-r from-blue-500 to-purple-600">
             {checkoutLoading ? 'Loading...' : 'Choose Plan & Upgrade'}

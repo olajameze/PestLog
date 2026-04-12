@@ -17,10 +17,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'GET') {
-      // Get user's company
-      const company = await prisma.company.findUnique({
+      // Get user's company or company via technician account
+      let company = await prisma.company.findUnique({
         where: { email: user.email },
       });
+
+      if (!company) {
+        const technician = await prisma.technician.findFirst({
+          where: { email: user.email },
+          include: { company: true },
+        });
+        company = technician?.company ?? null;
+      }
+
       return res.status(200).json(company);
     } else if (req.method === 'POST') {
       const { name } = req.body;
@@ -33,6 +42,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         create: {
           name: name.trim(),
           email: user.email,
+          subscriptionStatus: 'trial',
+          plan: 'trial',
           trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         },
         update: {

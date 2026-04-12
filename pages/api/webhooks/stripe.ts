@@ -23,7 +23,12 @@ function toAppSubscriptionStatus(status: Stripe.Subscription.Status): string {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const companyId = session.client_reference_id;
+  const clientReference = session.client_reference_id;
+  if (!clientReference) {
+    return;
+  }
+
+  const [companyId, plan] = clientReference.split(':');
   if (!companyId) {
     return;
   }
@@ -39,6 +44,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscriptionStatus: true,
       stripeCustomerId: true,
       trialEndsAt: true,
+      plan: true,
     },
   });
 
@@ -49,8 +55,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const shouldUpdateStatus = existing.subscriptionStatus !== nextStatus;
   const shouldSetCustomer = Boolean(stripeCustomerId && existing.stripeCustomerId !== stripeCustomerId);
   const shouldClearTrial = existing.trialEndsAt !== null;
+  const shouldUpdatePlan = plan && ['pro', 'business'].includes(plan) && existing.plan !== plan;
 
-  if (!shouldUpdateStatus && !shouldSetCustomer && !shouldClearTrial) {
+  if (!shouldUpdateStatus && !shouldSetCustomer && !shouldClearTrial && !shouldUpdatePlan) {
     return;
   }
 
@@ -60,6 +67,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       subscriptionStatus: nextStatus,
       stripeCustomerId: shouldSetCustomer ? stripeCustomerId : existing.stripeCustomerId,
       trialEndsAt: null,
+      plan: shouldUpdatePlan ? (plan as 'pro' | 'business') : existing.plan,
     },
   });
 }
