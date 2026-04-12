@@ -176,53 +176,80 @@ export default function Dashboard() {
     ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) || company.subscriptionStatus === 'active'
     : false;
 
-    const handleCertUpload = async () => {
-      if (!selectedTechId || !certFile || !company) {
-        showToast('Invalid upload', 'Select technician and file', 'error');
-        return;
-      }
+  const handleUpdateCompanyName = async (name: string) => {
+    if (!company) return;
+    setSavingSettings(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      setSavingSettings(false);
+      return;
+    }
+    const res = await fetch('/api/company', {
+      method: 'PATCH', // Use PATCH for partial update
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setCompany((prev) => prev ? { ...prev, name } : prev);
+      showToast('Saved', 'Company name updated.', 'success');
+    } else {
+      showToast('Error', data.error || 'Failed to update company name.', 'error');
+    }
+    setSavingSettings(false);
+  };
 
-      setCertLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        setCertLoading(false);
-        return;
-      }
+  const handleCertUpload = async () => {
+    if (!selectedTechId || !certFile || !company) {
+      showToast('Invalid upload', 'Select technician and file', 'error');
+      return;
+    }
 
-      const formData = {
-        technicianId: selectedTechId,
-        expiryDate: certExpiry || undefined,
-        file: certFile.dataUrl,
-      };
-
-      const res = await fetch('/api/technicians/certifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        showToast('Success', 'Certification uploaded', 'success');
-        setShowCertModal(false);
-        setCertFile(null);
-        setCertExpiry('');
-        // Refresh certs
-        const certRes = await fetch(`/api/technicians/${selectedTechId}/certifications`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (certRes.ok) {
-          setTechnicianCerts(await certRes.json());
-        }
-      } else {
-        const err = await res.json();
-        showToast('Upload failed', err.error || 'Try again', 'error');
-        console.error('Cert upload error:', err);
-      }
+    setCertLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       setCertLoading(false);
+      return;
+    }
+
+    const formData = {
+      technicianId: selectedTechId,
+      expiryDate: certExpiry || undefined,
+      file: certFile.dataUrl,
     };
+
+    const res = await fetch('/api/technicians/certifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (res.ok) {
+      showToast('Success', 'Certification uploaded', 'success');
+      setShowCertModal(false);
+      setCertFile(null);
+      setCertExpiry('');
+      // Refresh certs
+      const certRes = await fetch(`/api/technicians/${selectedTechId}/certifications`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (certRes.ok) {
+        setTechnicianCerts(await certRes.json());
+      }
+    } else {
+      const err = await res.json();
+      showToast('Upload failed', err.error || 'Try again', 'error');
+      console.error('Cert upload error:', err);
+    }
+    setCertLoading(false);
+  };
 
   const loadTechCerts = async (techId: string) => {
     if (!company?.id) return;
@@ -541,7 +568,9 @@ export default function Dashboard() {
                   subscription={subscription} 
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
+                  onUpdateCompanyName={handleUpdateCompanyName}
                   onUpdateCompanySettings={handleUpdateCompanySettings}
+                  savingCompanyName={savingSettings}
                   savingSettings={savingSettings}
                   checkoutLoading={loadingCheckout} 
                   portalLoading={loadingPortal} 
@@ -664,7 +693,7 @@ export default function Dashboard() {
   );
 }
 
-// ========== Sub-Components (keep your existing implementations) ==========
+// ========== Sub-Components ==========
 function CompanySetupTab() {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -721,7 +750,6 @@ function CompanySetupTab() {
   );
 }
 
-// TechniciansTab component (simplified – keep your full implementation)
 interface Certification {
   id: string;
   fileUrl: string;
@@ -803,7 +831,6 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
   );
 }
 
-// LogbookTab and LogbookEntries (keep your existing full implementation)
 function LogbookTab({ companyId, technicians }: { companyId: string; technicians: Technician[] }) {
   return <LogbookEntries companyId={companyId} technicians={technicians} />;
 }
@@ -856,7 +883,6 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     
-    // Cover page
     doc.setFontSize(20);
     doc.text('PestTrek Compliance Report', 105, 50, { align: 'center' });
     doc.setFontSize(12);
@@ -895,7 +921,6 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
         y += 5;
       }
 
-      // Add images
       const photoUrls = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
       if (photoUrls.length > 0) {
         y += 5;
@@ -923,11 +948,6 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
     
     doc.save(`pesttrek-compliance-${Date.now()}.pdf`);
   };
-
-
-
-
-
 
   if (loading) return <div>Loading entries...</div>;
 
@@ -1143,75 +1163,72 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
     setBaitStations(baitStations.filter((_, i) => i !== index));
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!companyId || !date || !clientName || !address || !treatment || !technicianId) {
-        showToast('Missing fields', 'Please fill all required fields', 'error');
-        return;
-      }
-      
-      // Filter out empty bait stations
-      const validBaitStations = baitStations.filter(station => 
-        station.stationId.trim() && station.location.trim()
-      );
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!companyId || !date || !clientName || !address || !treatment || !technicianId) {
+      showToast('Missing fields', 'Please fill all required fields', 'error');
+      return;
+    }
+    
+    const validBaitStations = baitStations.filter(station => 
+      station.stationId.trim() && station.location.trim()
+    );
 
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const payload = {
-        companyId,
-        date,
-        clientName,
-        address,
-        treatment,
-        notes: notes || undefined,
-        technicianIds: [technicianId],
-        rooms: rooms ? rooms.split(',').map((room) => room.trim()).filter(Boolean) : undefined,
-        baitBoxesPlaced: baitBoxesPlaced || undefined,
-        poisonUsed: poisonUsed || undefined,
-        followUpDate: followUpDate || undefined,
-        internalNotes: internalNotes || undefined,
-        productAmount: productAmount || undefined,
-        recommendation: recommendation || undefined,
-        signature: signatureDataUrl || undefined,
-        ...(validBaitStations.length > 0 && { baitStations: validBaitStations }),
-      };
-      
-      const res = await fetch('/api/logbook-entries', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      
-      if (res.ok) {
-        const entry = await res.json();
-        onAdd(entry);
-        // Reset form
-        setDate('');
-        setClientName('');
-        setAddress('');
-        setTreatment('');
-        setNotes('');
-        setTechnicianId('');
-        setFollowUpDate('');
-        setInternalNotes('');
-        setProductAmount('');
-        setRecommendation('');
-        setRooms('');
-        setBaitBoxesPlaced('');
-        setPoisonUsed('');
-        setBaitStations([]);
-        showToast('Entry saved', 'Logbook entry saved successfully with new fields!', 'success');
-      } else {
-        const error = await res.json();
-        console.error('Logbook API error:', error);
-        showToast('Save failed', error.error || 'Error adding entry', 'error');
-      }
-      setLoading(false);
+    setLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    const payload = {
+      companyId,
+      date,
+      clientName,
+      address,
+      treatment,
+      notes: notes || undefined,
+      technicianIds: [technicianId],
+      rooms: rooms ? rooms.split(',').map((room) => room.trim()).filter(Boolean) : undefined,
+      baitBoxesPlaced: baitBoxesPlaced || undefined,
+      poisonUsed: poisonUsed || undefined,
+      followUpDate: followUpDate || undefined,
+      internalNotes: internalNotes || undefined,
+      productAmount: productAmount || undefined,
+      recommendation: recommendation || undefined,
+      signature: signatureDataUrl || undefined,
+      ...(validBaitStations.length > 0 && { baitStations: validBaitStations }),
     };
+    
+    const res = await fetch('/api/logbook-entries', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    
+    if (res.ok) {
+      const entry = await res.json();
+      onAdd(entry);
+      setDate('');
+      setClientName('');
+      setAddress('');
+      setTreatment('');
+      setNotes('');
+      setTechnicianId('');
+      setFollowUpDate('');
+      setInternalNotes('');
+      setProductAmount('');
+      setRecommendation('');
+      setRooms('');
+      setBaitBoxesPlaced('');
+      setPoisonUsed('');
+      setBaitStations([]);
+      showToast('Entry saved', 'Logbook entry saved successfully!', 'success');
+    } else {
+      const error = await res.json();
+      showToast('Save failed', error.error || 'Error adding entry', 'error');
+    }
+    setLoading(false);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1249,69 +1266,27 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
           <div className="space-y-3">
             {baitStations.map((station, index) => (
               <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 bg-white rounded-lg border shadow-sm">
-                <FormInput 
-                  label="Station ID" 
-                  id={`station-id-${index}`}
-                  value={station.stationId} 
-                  onChange={(e) => updateBaitStation(index, 'stationId', e.target.value)}
-                  placeholder="BS001"
-                />
-                <FormInput 
-                  label="Location" 
-                  id={`station-location-${index}`}
-                  value={station.location} 
-                  onChange={(e) => updateBaitStation(index, 'location', e.target.value)}
-                  placeholder="Kitchen"
-                />
-                <FormInput 
-                  label="Bait Type" 
-                  id={`station-bait-type-${index}`}
-                  value={station.baitType || ''} 
-                  onChange={(e) => updateBaitStation(index, 'baitType', e.target.value)}
-                  placeholder="Wax block"
-                />
-                <FormInput 
-                  label="Amount" 
-                  id={`station-amount-${index}`}
-                  value={station.amount || ''} 
-                  onChange={(e) => updateBaitStation(index, 'amount', e.target.value)}
-                  placeholder="50g"
-                />
-                <Button 
-                  type="button" 
-                  variant="danger" 
-                  size="sm" 
-                  onClick={() => removeBaitStation(index)}
-                  className="self-start"
-                >
-                  Remove
-                </Button>
+                <FormInput label="Station ID" id={`station-id-${index}`} value={station.stationId} onChange={(e) => updateBaitStation(index, 'stationId', e.target.value)} placeholder="BS001" />
+                <FormInput label="Location" id={`station-location-${index}`} value={station.location} onChange={(e) => updateBaitStation(index, 'location', e.target.value)} placeholder="Kitchen" />
+                <FormInput label="Bait Type" id={`station-bait-type-${index}`} value={station.baitType || ''} onChange={(e) => updateBaitStation(index, 'baitType', e.target.value)} placeholder="Wax block" />
+                <FormInput label="Amount" id={`station-amount-${index}`} value={station.amount || ''} onChange={(e) => updateBaitStation(index, 'amount', e.target.value)} placeholder="50g" />
+                <Button type="button" variant="danger" size="sm" onClick={() => removeBaitStation(index)} className="self-start">Remove</Button>
               </div>
             ))}
-            <Button type="button" variant="secondary" onClick={addBaitStation} size="sm">
-              + Add Another Bait Station
-            </Button>
+            <Button type="button" variant="secondary" onClick={addBaitStation} size="sm">+ Add Another Bait Station</Button>
           </div>
         )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="form-group">
           <label htmlFor="logbook-photos" className="form-label">Photos (optional, up to 4)</label>
-          <input
-            id="logbook-photos"
-            type="file"
-            multiple
-            accept="image/*"
-            className="form-input"
-          />
+          <input id="logbook-photos" type="file" multiple accept="image/*" className="form-input" />
         </div>
         <div className="form-group">
           <div className="flex items-center justify-between">
             <label className="form-label mb-0">E-Signature</label>
             {signatureDataUrl && (
-              <button type="button" onClick={clearSignature} className="text-sm text-red-600 hover:text-red-800 font-medium">
-                Clear Signature
-              </button>
+              <button type="button" onClick={clearSignature} className="text-sm text-red-600 hover:text-red-800 font-medium">Clear Signature</button>
             )}
           </div>
           <div className="rounded-lg border-2 border-gray-300 overflow-hidden bg-white shadow-sm">
@@ -1332,14 +1307,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
           </div>
           <p className="text-xs text-gray-500 mt-1">Draw signature (optional)</p>
           {signatureDataUrl && (
-            <Image
-              src={signatureDataUrl}
-              alt="Signature preview"
-              width={600}
-              height={240}
-              className="mt-3 h-24 w-full max-w-xs rounded-2xl border border-gray-200 object-contain"
-              unoptimized
-            />
+            <Image src={signatureDataUrl} alt="Signature preview" width={600} height={240} className="mt-3 h-24 w-full max-w-xs rounded-2xl border border-gray-200 object-contain" unoptimized />
           )}
         </div>
       </div>
@@ -1350,37 +1318,47 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   );
 }
 
+// 1. Updated the interface to match handleUpdateCompanySettings exactly
+interface SettingsTabProps {
+  company: Company;
+  subscription: Subscription | null;
+  onSubscribe: () => void;
+  onManageSubscription: () => void;
+  onUpdateCompanyName: (name: string) => void;
+  onUpdateCompanySettings?: (settings: {
+    name: string;
+    phone?: string;
+    address?: string;
+    website?: string;
+    vatNumber?: string;
+    requireSignature: boolean;
+    requirePhotos: boolean;
+    defaultReportRangeDays: number;
+    notificationPreferences: {
+      trialExpiry: boolean;
+      renewal: boolean;
+      certificationExpiry: boolean;
+    };
+  }) => Promise<void>;
+  savingCompanyName: boolean;
+  savingSettings: boolean;
+  checkoutLoading: boolean;
+  portalLoading: boolean;
+}
+
 function SettingsTab({
   company,
   subscription,
   onSubscribe,
   onManageSubscription,
   onUpdateCompanyName,
-  onUpdateCompanySettings,
+  // We omit onUpdateCompanySettings and savingSettings from destructuring 
+  // here so they don't trigger "unused variable" lint errors, 
+  // but they remain defined in the SettingsTabProps interface above.
   savingCompanyName,
-  savingSettings,
   checkoutLoading,
   portalLoading,
-}: {
-  company: Company;
-  subscription: Subscription | null;
-  onSubscribe: () => void;
-  onManageSubscription: () => void;
-  onUpdateCompanyName: (name: string) => void;
-  onUpdateCompanySettings: (settings: {
-    phone?: string;
-    address?: string;
-    website?: string;
-    vatNumber?: string;
-    requireSignature?: boolean;
-    defaultReportRange?: string;
-    // add more settings fields as needed
-  }) => Promise<void>;
-  savingCompanyName: boolean;
-  savingSettings: boolean;
-  checkoutLoading: boolean;
-  portalLoading: boolean;
-}) {
+}: SettingsTabProps) { // <--- Fixed: Using the interface here fixes the lint error
   const [companyName, setCompanyName] = useState(company.name || '');
 
   const currentPlanLabel = subscription?.plan ? subscription.plan.toUpperCase() : 'TRIAL';
@@ -1403,7 +1381,7 @@ function SettingsTab({
             id="settings-billing-email"
             type="email"
             value={company.email}
-            onChange={() => {}}
+            onChange={() => {}} 
             readOnly
           />
         </div>
