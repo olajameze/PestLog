@@ -220,8 +220,8 @@ export default function Dashboard() {
     const data = await res.json();
     if (res.ok) {
       await supabase.auth.signOut();
-      showToast('Account deleted', 'Your account has been deleted.', 'success');
-      router.push('/auth/signin');
+      showToast('Account deleted', 'Your account and all data have been deleted. Sign up again to create a new account.', 'success');
+      router.push('/auth/signup');
     } else {
       showToast('Delete failed', data?.error || 'Unable to delete account.', 'error');
     }
@@ -627,7 +627,7 @@ export default function Dashboard() {
       <ConfirmDialog
         open={showDeleteAccountConfirm}
         title="Delete account"
-        description="This will cancel your subscription and permanently delete your account and all company data. This cannot be undone."
+        description="This will cancel your subscription and permanently delete your account and all company data. If you want to use PestTrek again, you will need to sign up again. This cannot be undone."
         confirmLabel={deletingAccount ? 'Deleting...' : 'Delete account'}
         cancelLabel="Cancel"
         onCancel={() => setShowDeleteAccountConfirm(false)}
