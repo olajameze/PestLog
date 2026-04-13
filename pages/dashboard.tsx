@@ -6,6 +6,7 @@ import Sidebar from '../components/sidebar';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
+import SettingsTab from '../components/settings/SettingsTab';
 import { useToast } from '../components/ui/ToastProvider';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { checkPlan } from '../lib/planGuard';
@@ -19,6 +20,18 @@ interface Company {
   id: string;
   name?: string;
   email: string;
+  phone?: string | null;
+  address?: string | null;
+  website?: string | null;
+  vatNumber?: string | null;
+  requireSignature: boolean;
+  requirePhotos: boolean;
+  defaultReportRangeDays?: number | null;
+  notificationPreferences?: {
+    trialExpiry?: boolean;
+    renewal?: boolean;
+    certificationExpiry?: boolean;
+  } | null;
   subscriptionStatus: string;
   trialEndsAt?: string | null;
   plan?: string;
@@ -162,6 +175,8 @@ export default function Dashboard() {
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [selectedTechId, setSelectedTechId] = useState('');
   const [showCertModal, setShowCertModal] = useState(false);
   const [technicianCerts, setTechnicianCerts] = useState<Certification[]>([]);
@@ -176,31 +191,43 @@ export default function Dashboard() {
     ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) || company.subscriptionStatus === 'active'
     : false;
 
-  const handleUpdateCompanyName = async (name: string) => {
-    if (!company) return;
-    setSavingSettings(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      router.push('/auth/signin');
-      setSavingSettings(false);
+  const handleRequestDeleteAccount = () => {
+    setShowDeleteAccountConfirm(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Account deletion is disabled in preview mode.', 'info');
+      setShowDeleteAccountConfirm(false);
       return;
     }
-    const res = await fetch('/api/company', {
-      method: 'PATCH', // Use PATCH for partial update
+
+    setDeletingAccount(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setDeletingAccount(false);
+      router.push('/auth/signin');
+      return;
+    }
+
+    const res = await fetch('/api/account/delete', {
+      method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ name }),
     });
+
     const data = await res.json();
     if (res.ok) {
-      setCompany((prev) => prev ? { ...prev, name } : prev);
-      showToast('Saved', 'Company name updated.', 'success');
+      await supabase.auth.signOut();
+      showToast('Account deleted', 'Your account has been deleted.', 'success');
+      router.push('/auth/signin');
     } else {
-      showToast('Error', data.error || 'Failed to update company name.', 'error');
+      showToast('Delete failed', data?.error || 'Unable to delete account.', 'error');
     }
-    setSavingSettings(false);
+
+    setDeletingAccount(false);
+    setShowDeleteAccountConfirm(false);
   };
 
   const handleCertUpload = async () => {
@@ -437,7 +464,7 @@ export default function Dashboard() {
     }
 
     const res = await fetch('/api/company', {
-      method: 'POST',
+      method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
@@ -564,13 +591,14 @@ export default function Dashboard() {
               )}
               {currentTab === 'settings' && (
                 <SettingsTab 
+                  key={company.id}
                   company={company} 
                   subscription={subscription} 
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
-                  onUpdateCompanyName={handleUpdateCompanyName}
                   onUpdateCompanySettings={handleUpdateCompanySettings}
-                  savingCompanyName={savingSettings}
+                  onDeleteAccount={handleRequestDeleteAccount}
+                  deletingAccount={deletingAccount}
                   savingSettings={savingSettings}
                   checkoutLoading={loadingCheckout} 
                   portalLoading={loadingPortal} 
@@ -594,6 +622,16 @@ export default function Dashboard() {
             setConfirmRemoveId(null);
           }
         }}
+      />
+
+      <ConfirmDialog
+        open={showDeleteAccountConfirm}
+        title="Delete account"
+        description="This will cancel your subscription and permanently delete your account and all company data. This cannot be undone."
+        confirmLabel={deletingAccount ? 'Deleting...' : 'Delete account'}
+        cancelLabel="Cancel"
+        onCancel={() => setShowDeleteAccountConfirm(false)}
+        onConfirm={handleDeleteAccount}
       />
 
       {/* Plan Modal */}
@@ -1354,110 +1392,3 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   );
 }
 
-// 1. Updated the interface to match handleUpdateCompanySettings exactly
-interface SettingsTabProps {
-  company: Company;
-  subscription: Subscription | null;
-  onSubscribe: () => void;
-  onManageSubscription: () => void;
-  onUpdateCompanyName: (name: string) => void;
-  onUpdateCompanySettings?: (settings: {
-    name: string;
-    phone?: string;
-    address?: string;
-    website?: string;
-    vatNumber?: string;
-    requireSignature: boolean;
-    requirePhotos: boolean;
-    defaultReportRangeDays: number;
-    notificationPreferences: {
-      trialExpiry: boolean;
-      renewal: boolean;
-      certificationExpiry: boolean;
-    };
-  }) => Promise<void>;
-  savingCompanyName: boolean;
-  savingSettings: boolean;
-  checkoutLoading: boolean;
-  portalLoading: boolean;
-}
-
-function SettingsTab({
-  company,
-  subscription,
-  onSubscribe,
-  onManageSubscription,
-  onUpdateCompanyName,
-  // We omit onUpdateCompanySettings and savingSettings from destructuring 
-  // here so they don't trigger "unused variable" lint errors, 
-  // but they remain defined in the SettingsTabProps interface above.
-  savingCompanyName,
-  checkoutLoading,
-  portalLoading,
-}: SettingsTabProps) { // <--- Fixed: Using the interface here fixes the lint error
-  const [companyName, setCompanyName] = useState(company.name || '');
-
-  const currentPlanLabel = subscription?.plan ? subscription.plan.toUpperCase() : 'TRIAL';
-  const trialEndsAtLabel = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString() : 'Not available';
-
-  return (
-    <div className="space-y-6">
-      <h2 className="text-2xl sm:text-3xl font-bold text-navy">Settings</h2>
-      <Card className="space-y-6 p-8">
-        <h3 className="text-xl font-bold text-navy">Company & Billing</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput
-            label="Company Name"
-            id="settings-company-name"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-          />
-          <FormInput
-            label="Billing Email"
-            id="settings-billing-email"
-            type="email"
-            value={company.email}
-            onChange={() => {}} 
-            readOnly
-          />
-        </div>
-        <Button
-          onClick={() => onUpdateCompanyName(companyName)}
-          disabled={savingCompanyName || !companyName.trim() || companyName.trim() === company.name}
-        >
-          {savingCompanyName ? 'Saving...' : 'Save company name'}
-        </Button>
-
-        <div className="grid gap-4 sm:grid-cols-3 mt-6">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Subscription status</p>
-            <p className="mt-2 font-semibold text-slate-900">{subscription?.status || 'Unknown'}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Current plan</p>
-            <p className="mt-2 font-semibold text-slate-900">{currentPlanLabel}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Trial ends</p>
-            <p className="mt-2 font-semibold text-slate-900">{trialEndsAtLabel}</p>
-          </div>
-        </div>
-
-        <div className="text-sm text-slate-600">
-          Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={onSubscribe} disabled={checkoutLoading} className="bg-gradient-to-r from-blue-500 to-purple-600">
-            {checkoutLoading ? 'Loading...' : 'Choose Plan & Upgrade'}
-          </Button>
-          {subscription?.status === 'active' && (
-            <Button onClick={onManageSubscription} disabled={portalLoading}>
-              {portalLoading ? 'Opening Portal...' : 'Manage Subscription'}
-            </Button>
-          )}
-        </div>
-      </Card>
-    </div>
-  );
-}
