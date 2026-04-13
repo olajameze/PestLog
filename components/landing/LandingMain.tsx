@@ -103,7 +103,7 @@ export default function LandingMain() {
             {pricingPlans.map((plan) => (
               <article key={plan.name} className="interactive-surface flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <span className="inline-flex w-fit rounded-full border border-primary-200 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
-                  14-day free trial
+                  7-day free trial
                 </span>
                 <h3 className="mt-4 text-2xl font-bold text-navy">{plan.name}</h3>
                 <p className="mt-1 text-sm text-zinc-600">Best for: {plan.bestFor}</p>

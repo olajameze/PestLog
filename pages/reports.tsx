@@ -18,6 +18,8 @@ type Technician = {
   email: string;
 };
 
+
+
 type ReportEntry = {
   id: string;
   date: string;
@@ -94,6 +96,7 @@ export default function ReportsPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selectedTechnician, setSelectedTechnician] = useState('');
+  const [isOwner, setIsOwner] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [report, setReport] = useState<ReportResponse | null>(null);
@@ -102,7 +105,7 @@ export default function ReportsPage() {
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadOwnerData = async () => {
+    const loadUserData = async () => {
       if (isPreviewMode) {
         const mockTechs = [
           { id: 'tech-1', name: 'John Smith', email: 'john@preview.local' },
@@ -112,6 +115,7 @@ export default function ReportsPage() {
         setCompany({ id: 'preview-company', name: 'PestTrek Preview Co.', email: 'owner@preview.local' });
         setTechnicians(mockTechs);
         setSelectedTechnician(mockTechs[0].id);
+        setIsOwner(true);
         setLoading(false);
         return;
       }
@@ -122,62 +126,78 @@ export default function ReportsPage() {
         return;
       }
 
+      // Try owner/company access first
       const companyRes = await fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (!companyRes.ok) {
-        router.push('/dashboard');
-        return;
-      }
+      if (companyRes.ok) {
+        const companyData = await companyRes.json();
+        if (companyData) {
+          setCompany(companyData);
 
-      const companyData = await companyRes.json();
-      if (!companyData) {
-        router.push('/dashboard');
-        return;
-      }
+          const subRes = await fetch('/api/subscription', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
+            if (subData.status !== 'active' && trialExpired) {
+              router.push('/upgrade');
+              return;
+            }
+          }
 
-      setCompany(companyData);
-
-      const subRes = await fetch('/api/subscription', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (subRes.ok) {
-        const subData = await subRes.json();
-        const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
-        if (subData.status !== 'active' && trialExpired) {
-          router.push('/upgrade');
+          const techRes = await fetch('/api/technicians', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          const techData = await techRes.json();
+          setTechnicians(techData);
+          setSelectedTechnician(techData[0]?.id ?? '');
+          setIsOwner(true);
+          setLoading(false);
           return;
         }
       }
 
-      const techRes = await fetch('/api/technicians', {
+      // Fallback to technician mode
+      const techRes = await fetch('/api/technician-profile', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      if (!techRes.ok) {
+        router.push('/dashboard');
+        return;
+      }
       const techData = await techRes.json();
-      setTechnicians(techData);
-      setSelectedTechnician(techData[0]?.id ?? '');
+      setCompany({ 
+        id: techData.technician.companyId, 
+        name: techData.technician.companyName,
+        email: techData.technician.companyId // placeholder
+      });
+      setTechnicians([{ id: techData.technician.id, name: techData.technician.name, email: techData.technician.email }]);
+      setSelectedTechnician(techData.technician.id);
+      setIsOwner(false);
       setLoading(false);
     };
 
-    loadOwnerData();
+    loadUserData();
   }, [isPreviewMode, router]);
 
     const [search, setSearch] = useState('');
 
-    const fetchReport = async () => {
-      if (!selectedTechnician || !startDate || !endDate) {
-        showToast('Missing filters', 'Select a technician and date range first.', 'error');
-        return;
-      }
+  const fetchReport = async () => {
+    if (!selectedTechnician || !startDate || !endDate) {
+      showToast('Missing filters', 'Select a technician and date range first.', 'error');
+      return;
+    }
 
-      setFetching(true);
-      let apiUrl = `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`;
-      if (search.trim()) {
-        apiUrl += `&search=${encodeURIComponent(search.trim())}`;
-      }
+    setFetching(true);
+    let apiUrl = `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`;
+    if (search.trim()) {
+      apiUrl += `&search=${encodeURIComponent(search.trim())}`;
+    }
 
-      if (isPreviewMode) {
+    if (isPreviewMode) {
       const selectedName = technicians.find((t) => t.id === selectedTechnician)?.name || 'Technician';
       setReport({
         companyName: company?.name || 'PestTrek Preview Co.',
@@ -441,19 +461,28 @@ export default function ReportsPage() {
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
           <div className="grid gap-4 sm:grid-cols-5">
-            <div className="form-group sm:col-span-1">
-              <label htmlFor="technician-select" className="form-label">Technician</label>
-              <select
-                id="technician-select"
-                value={selectedTechnician}
-                onChange={(e) => setSelectedTechnician(e.target.value)}
-                className="form-select"
-              >
-                {technicians.map((tech) => (
-                  <option key={tech.id} value={tech.id}>{tech.name}</option>
-                ))}
-              </select>
-            </div>
+            {!isOwner ? (
+              <div className="form-group sm:col-span-1">
+                <label className="form-label">Technician</label>
+                <div className="form-input bg-slate-50 text-slate-700 px-3 py-2 rounded-xl">
+                  {technicians[0]?.name || 'Loading...'}
+                </div>
+              </div>
+            ) : (
+              <div className="form-group sm:col-span-1">
+                <label htmlFor="technician-select" className="form-label">Technician</label>
+                <select
+                  id="technician-select"
+                  value={selectedTechnician}
+                  onChange={(e) => setSelectedTechnician(e.target.value)}
+                  className="form-select"
+                >
+                  {technicians.map((tech) => (
+                    <option key={tech.id} value={tech.id}>{tech.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="form-group">
               <label htmlFor="search" className="form-label">Search</label>
               <input
@@ -508,10 +537,10 @@ export default function ReportsPage() {
         {report && (
           <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-navy">Report Results</h2>
-                <p className="mt-1 text-sm text-slate-600">Review the summary data before exporting the report as a PDF.</p>
-              </div>
+<div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-navy">{isOwner ? 'Company Report Results' : 'My Report Results'}</h2>
+              <p className="mt-1 text-sm text-slate-600">Review your logged jobs by client name or address. Export as PDF for compliance.</p>
+            </div>
               <button
                 type="button"
                 onClick={downloadPdf}

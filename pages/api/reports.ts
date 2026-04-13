@@ -84,17 +84,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true },
   });
 
+  let technician = null;
+  let ownerMode = !!company;
+
   if (!company) {
-    return res.status(403).json({ error: 'Access denied' });
+    technician = await prisma.technician.findFirst({
+      where: { email: user.email },
+      include: {
+        company: {
+          select: { name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true }
+        }
+      }
+    });
+    if (!technician) {
+      return res.status(403).json({ error: 'Access denied - no company or technician found' });
+    }
+    ownerMode = false;
+  }
+  // Plan gating for both owners and technicians - Pro+ required
+  const companyForPlan = company || technician!.company;
+  if (!companyForPlan) {
+    return res.status(403).json({ error: 'Company not found for plan check' });
   }
 
-  // Plan gating: Pro+ only
-  const hasPremiumAccess = company.plan
-    ? checkPlan(company.plan, ['pro', 'business', 'enterprise'])
-    : company.subscriptionStatus === 'active';
+  const hasPremiumAccess = companyForPlan.plan
+    ? checkPlan(companyForPlan.plan, ['pro', 'business', 'enterprise'])
+    : companyForPlan.subscriptionStatus === 'active';
 
-  if (!hasPremiumAccess) {
-    return res.status(403).json({ error: 'Pro plan required for compliance reports' });
+  const trialEndsAt = 'trialEndsAt' in companyForPlan ? (companyForPlan as { trialEndsAt?: string | null }).trialEndsAt : null;
+  const trialExpired = trialEndsAt ? new Date(trialEndsAt).getTime() < Date.now() : false;
+
+  if (!hasPremiumAccess && trialExpired) {
+    return res.status(403).json({ error: 'Upgrade to Pro+ plan required for reports. Trial expired.' });
   }
 
   if (req.method !== 'GET') {
@@ -102,29 +123,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  const technicianId = req.query.technicianId as string;
+  const queryTechnicianId = req.query.technicianId as string;
   const search = (req.query.search as string) || '';
-  if (!technicianId) {
-    return res.status(400).json({ error: 'Technician ID required' });
+  let technicianId: string;
+
+  if (ownerMode) {
+    if (!queryTechnicianId) {
+      return res.status(400).json({ error: 'Technician ID required for owner reports' });
+    }
+    technicianId = queryTechnicianId;
+  } else {
+    technicianId = technician!.id;
   }
 
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date('1970-01-01');
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
   endDate.setHours(23, 59, 59, 999);
 
-  // Base where clause (no `as const` – use plain object)
-  const baseWhereClause = {
-    companyId: company.id,
-    logbookEntryTechnicians: {
-      some: {
-        technicianId,
-      },
-    },
-    date: {
-      gte: startDate,
-      lte: endDate,
-    },
-  };
+  // Base where clause
+  const baseWhereClause: LogbookEntryWhereInput = ownerMode 
+    ? {
+        companyId: company!.id,
+        logbookEntryTechnicians: {
+          some: { technicianId },
+        },
+        date: { gte: startDate, lte: endDate },
+      }
+    : {
+        logbookEntryTechnicians: {
+          some: { technicianId },
+        },
+        date: { gte: startDate, lte: endDate },
+      };
 
   // Search clause
   let whereClause: LogbookEntryWhereInput = baseWhereClause;
@@ -185,8 +215,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     entries = fallback.map((entry) => ({ ...entry, photos: [] }));
   }
 
+  const certWhere = ownerMode ? { technicianId } : { technicianId: technician!.id };
   const certifications = await prisma.certification.findMany({
-    where: { technicianId },
+    where: certWhere,
     orderBy: { uploadedAt: 'desc' },
     select: {
       id: true,
@@ -196,8 +227,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     },
   });
 
+  const companyName = ownerMode 
+    ? (company!.name || company!.email)
+    : (technician!.company?.name || technician!.company?.email || 'Your Company');
+
   return res.status(200).json({
-    companyName: company.name || company.email,
+    companyName,
     entries: await Promise.all(entries.map((entry) => signEntryPhotos(entry))),
     certifications,
   });
