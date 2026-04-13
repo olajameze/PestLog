@@ -77,7 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteAuthError) {
       console.error('Supabase auth delete error:', deleteAuthError);
-      return res.status(500).json({ error: 'Failed to delete authentication account.' });
+      return res.status(500).json({
+        error: 'Failed to delete authentication account.',
+        details: deleteAuthError.message ?? deleteAuthError.toString(),
+      });
     }
 
     // Sign out
