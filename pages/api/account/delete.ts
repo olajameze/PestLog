@@ -53,6 +53,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Remove any technician assignment records before deleting the company.
+    // Technicians cascade from company deletion, but LogbookEntryTechnician must be cleared explicitly.
+    const technicianIds = await prisma.technician.findMany({
+      where: { companyId: company.id },
+      select: { id: true },
+    });
+
+    if (technicianIds.length > 0) {
+      await prisma.logbookEntryTechnician.deleteMany({
+        where: {
+          technicianId: { in: technicianIds.map((tech) => tech.id) },
+        },
+      });
+    }
+
     // Delete company (cascade techs, logbooks, certs, etc.)
     await prisma.company.delete({
       where: { id: company.id },

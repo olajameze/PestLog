@@ -89,8 +89,8 @@ model BaitStation {
 model LogbookEntryTechnician {
   logbookEntryId String
   technicianId   String
-  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id])
-  technician     Technician   @relation(fields: [technicianId], references: [id])
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
+  technician     Technician   @relation(fields: [technicianId], references: [id], onDelete: Cascade)
 
   @@id([logbookEntryId, technicianId])
 }
