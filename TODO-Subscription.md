@@ -4,7 +4,7 @@
 
 ## Requirements:
 1. Lock reports behind Pro+ plans for owners & technicians
-2. Trial: 14→7 days
+✅ Trial: 7 days (14→7 complete)
 3. Post-trial: Force upgrade
 4. Prompt ~2 days before trial end
 

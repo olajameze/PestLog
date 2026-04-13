@@ -118,7 +118,7 @@ vercel --prod
 | Download compliance reports | ✅ | `/reports` (PDF export) |
 | Stripe subscription (£35/mo) | ✅ | `/dashboard` → Settings |
 | Manage billing (portal) | ✅ | Stripe portal link |
-| Trial enforcement (14 days) | ✅ | Auto-redirect on expiry |
+Trial enforcement (7 days)
 | Settings / Company info | ✅ | `/dashboard` → Settings |
 
 ### Technician
@@ -176,7 +176,7 @@ vercel --prod
 | `/api/company` | GET | ✅ | Fetch company info |
 | `/api/technicians` | GET | ✅ | List technicians (owner) |
 | `/api/technician-info` | GET | ✅ | Technician profile |
-| `/api/create-checkout-session` | POST | ✅ | Stripe checkout (£35/mo, 14-day trial) |
+Stripe checkout (£35/mo, 7-day trial)
 | `/api/create-portal-session` | POST | ✅ | Stripe billing portal |
 | `/api/technician-logbook` | GET/POST | ✅ | Logbook entries + photo upload |
 | `/api/reports` | GET | ✅ | Compliance reports |
@@ -255,7 +255,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md#step-1-prepare-environment-variables) for deta
 ✅ Authentication - Email magic links work
 ✅ Dashboard - Multi-tab layout renders correctly
 ✅ Subscriptions - Stripe checkout session creates
-✅ Payments - £35/month with 14-day trial
+Payments - £35/month with 7-day trial
 ✅ Billing Portal - Stripe customer portal redirects
 ✅ Technician Logbook - Photo upload to Supabase works
 ✅ Compliance Reports - PDF export generates

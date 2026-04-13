@@ -48,7 +48,7 @@ npm run dev
 | **Logbook Entry** | - | ✅ | `/technician` |
 | **Photo Upload** | - | ✅ | `/technician` (Supabase storage) |
 | **Compliance Reports** | ✅ | - | `/reports` (PDF export) |
-| **Stripe Subscription** | ✅ | - | `/dashboard` → Settings (£35/mo, 14-day trial) |
+£35/mo, 7-day trial
 | **Offline Access** | ✅ | ✅ | `_offline.tsx` (PWA fallback) |
 | **Mobile Install** | ✅ | ✅ | PWA prompt on Chrome |
 

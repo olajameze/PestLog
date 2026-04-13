@@ -75,7 +75,7 @@ A production-ready Next.js application with:
 
 ✅ **Billing & Subscription**
 - Subscribe to "PestLog Monthly" (£35/month)
-- 14-day free trial
+7-day free trial
 - Manage subscription via Stripe portal
 - Access billing history
 - Upgrade/downgrade plans

@@ -19,7 +19,7 @@ A compliance logbook SaaS for pest control businesses. Helps prove technician ce
 2. Owner dashboard – manage technicians, upload certifications
 3. Technician logbook – log jobs with e‑signature
 4. Compliance report – PDF generation
-5. Subscription – Stripe Checkout with 14‑day free trial
+7-day free trial
 6. PWA – installable, offline fallback
 
 ## Design System
