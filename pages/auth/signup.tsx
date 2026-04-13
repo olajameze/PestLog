@@ -53,7 +53,7 @@ export default function SignUp() {
     <AuthLayout title="Start your free trial" subtitle="No credit card required. Get started in 2 minutes.">
       <div className="mb-5 flex justify-center">
         <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-          14-day free trial
+          7-day free trial
         </span>
       </div>
       <form className={`space-y-4 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignUp}>

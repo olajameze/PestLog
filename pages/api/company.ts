@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: user.email,
       subscriptionStatus: 'trial',
       plan: 'trial',
-      trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     },
     update: {
       name: name.trim(),

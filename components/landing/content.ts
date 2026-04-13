@@ -52,7 +52,7 @@ export const pricingPlans = [
 
 export const landingFaqs = [
   {
-    question: 'What happens after my 14-day free trial?',
+    question: 'What happens after my 7-day free trial?',
     answer: "You'll be prompted to enter payment details. No charges until the trial ends.",
   },
   {

@@ -135,7 +135,7 @@ const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe:
             <li>• PDF compliance reports</li>
             <li>• Technician certifications</li>
             <li>• PWA offline mode</li>
-            <li>• 14-day free trial</li>
+            <li>• 7-day free trial</li>
           </ul>
           <Button onClick={() => { onClose(); onSubscribe('pro'); }} className="w-full">Choose Pro (£25/mo)</Button>
         </div>
@@ -153,7 +153,7 @@ const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe:
           <Button variant="secondary" onClick={() => { onClose(); onSubscribe('business'); }} className="w-full">Choose Business (£40/mo)</Button>
         </div>
       </div>
-      <div className="text-center text-sm text-zinc-500 mb-4">All plans include 14-day free trial. No credit card required.</div>
+      <div className="text-center text-sm text-zinc-500 mb-4">All plans include 7-day free trial. No credit card required.</div>
       <div className="flex gap-3 justify-center">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
       </div>
@@ -566,7 +566,7 @@ export default function Dashboard() {
               {trialBanner ? (
                 <Card className="mb-6 border-blue-200 bg-blue-50">
                   <div className="p-4 text-blue-900">
-                    Your 14-day free trial ends on {trialBanner}. Upgrade to keep using PestTrek.
+                    Your 7-day free trial ends on {trialBanner}. Upgrade to keep using PestTrek.
                   </div>
                 </Card>
               ) : null}
