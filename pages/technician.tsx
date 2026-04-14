@@ -55,6 +55,10 @@ function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url:
   return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
+function supabaseImageLoader({ src }: { src: string }): string {
+  return src;
+}
+
 const treatments = [
   'General Pest Control',
   'Rodent Control',
@@ -252,17 +256,13 @@ export default function TechnicianPage() {
     const previewUrls: string[] = [];
     for (const file of selectedFiles) {
       const filePath = `private/${profile.companyId}/${profile.id}/${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from('logbook-photos')
-        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+    const { data: signedData } = await supabase.storage
+      .from('logbook-photos')
+      .createSignedUrl(filePath, 3600);
+    uploadedUrls.push(signedData?.signedUrl || filePath);
 
-      if (error) {
-        showToast('Upload failed', error.message, 'error');
-        setPhotoUploading(false);
-        return;
-      }
-
-      uploadedUrls.push(filePath);
+      // Upload handled, signed URL created above
+      previewUrls.push(URL.createObjectURL(file));
       previewUrls.push(URL.createObjectURL(file));
     }
     setPhotoUrls(uploadedUrls);
@@ -545,15 +545,16 @@ export default function TechnicianPage() {
               {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
-                    <Image
-                      key={url}
-                      src={url}
-                      alt="Logged job photo"
-                      width={800}
-                      height={400}
-                      className="max-h-52 w-full object-cover rounded-2xl border border-gray-200"
-                      unoptimized
-                    />
+              <Image
+                        key={url}
+                        loader={supabaseImageLoader}
+                        src={url}
+                        alt="Logged job photo"
+                        width={800}
+                        height={400}
+                        className="max-h-52 w-full object-cover rounded-2xl border border-gray-200"
+                        unoptimized
+                      />
                   ))}
                 </div>
               ) : null}

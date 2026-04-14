@@ -308,7 +308,17 @@ export default function Dashboard() {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     if (res.ok) {
-      setTechnicianCerts(await res.json());
+      const certs = await res.json();
+      // Add signed URLs
+      const signedPromises = certs.map(async (cert: Certification) => {
+        const path = cert.fileUrl; // already path
+        const { data } = await supabase.storage
+          .from('logbook-photos')
+          .createSignedUrl(path, 3600);
+        return { ...cert, signedUrl: data?.signedUrl || '' };
+      });
+      const certsWithSigned = await Promise.all(signedPromises);
+      setTechnicianCerts(certsWithSigned);
       setSelectedTechId(techId);
     }
   };
@@ -757,7 +767,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <a 
-                          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logbook-photos/${cert.fileUrl}`} 
+                          href={cert.signedUrl || cert.fileUrl} 
                           target="_blank" 
                           rel="noreferrer"
                           className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
@@ -837,6 +847,7 @@ function CompanySetupTab() {
 interface Certification {
   id: string;
   fileUrl: string;
+  signedUrl?: string;
   expiryDate?: string;
   uploadedAt: string;
 }
@@ -1128,7 +1139,10 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [internalNotes, setInternalNotes] = useState('');
   const [productAmount, setProductAmount] = useState('');
   const [recommendation, setRecommendation] = useState('');
-  const [rooms, setRooms] = useState('');
+  interface RoomForm {
+    name: string;
+  }
+  const [rooms, setRooms] = useState<RoomForm[]>([]);
   const [baitBoxesPlaced, setBaitBoxesPlaced] = useState('');
   const [poisonUsed, setPoisonUsed] = useState('');
   const [baitStations, setBaitStations] = useState<BaitStationForm[]>([]);
@@ -1256,6 +1270,20 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
     setBaitStations(baitStations.filter((_, i) => i !== index));
   };
 
+  const addRoom = () => {
+    setRooms([...rooms, { name: '' }]);
+  };
+
+  const updateRoom = (index: number, field: keyof RoomForm, value: string) => {
+    const newRooms = [...rooms];
+    newRooms[index] = { ...newRooms[index], [field]: value } as RoomForm;
+    setRooms(newRooms);
+  };
+
+  const removeRoom = (index: number) => {
+    setRooms(rooms.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyId || !date || !clientName || !address || !treatment || !technicianId) {
@@ -1301,7 +1329,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       treatment,
       notes: notes || undefined,
       technicianIds: [technicianId],
-      rooms: rooms ? rooms.split(',').map((room) => room.trim()).filter(Boolean) : undefined,
+      rooms: rooms.map(r => r.name).filter((name): name is string => Boolean(name?.trim())).map(name => name.trim()),
       baitBoxesPlaced: baitBoxesPlaced || undefined,
       poisonUsed: poisonUsed || undefined,
       followUpDate: followUpDate || undefined,
@@ -1338,7 +1366,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       setInternalNotes('');
       setProductAmount('');
       setRecommendation('');
-      setRooms('');
+              setRooms([]);
       setBaitBoxesPlaced('');
       setPoisonUsed('');
       setBaitStations([]);
@@ -1357,7 +1385,30 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       <FormInput label="Client Name" id="entry-client-name" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Client name" required />
       <FormInput label="Address" id="entry-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Job address" required />
       <FormInput label="Treatment" id="entry-treatment" value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. Rodent control" required />
-      <FormInput label="Rooms (comma separated)" id="entry-rooms" value={rooms} onChange={(e) => setRooms(e.target.value)} placeholder="Kitchen, Garage, Basement" />
+              <div className="md:col-span-2 mb-6 p-4 bg-gray-50 rounded-xl">
+                <label className="form-label block mb-3 font-semibold">Rooms</label>
+                {rooms.length === 0 ? (
+                  <Button type="button" variant="secondary" onClick={addRoom} size="sm">
+                    + Add Room
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    {rooms.map((room, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-white rounded-lg border shadow-sm">
+                        <FormInput 
+                          label="Room Name" 
+                          id={`room-${index}`}
+                          value={room.name} 
+                          onChange={(e) => updateRoom(index, 'name', e.target.value)} 
+                          placeholder="Kitchen" 
+                        />
+                        <Button type="button" variant="danger" size="sm" onClick={() => removeRoom(index)} className="self-start">Remove</Button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="secondary" onClick={addRoom} size="sm">+ Add Another Room</Button>
+                  </div>
+                )}
+              </div>
       <FormInput label="Bait Boxes Placed" id="entry-bait-boxes" value={baitBoxesPlaced} onChange={(e) => setBaitBoxesPlaced(e.target.value)} placeholder="Yes, 6 boxes" />
       <FormInput label="Poison Used" id="entry-poison-used" value={poisonUsed} onChange={(e) => setPoisonUsed(e.target.value)} placeholder="e.g. Bromadiolone" />
       <FormInput

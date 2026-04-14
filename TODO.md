@@ -1,12 +1,25 @@
-# PestTrek Task Progress: Enable Technician Reports Access
+# PestTrek Fixes TODO
 
-## Approved Plan Steps:
-- [x] 1. Create TODO.md with steps
-- [x] 2. Update pages/api/reports.ts for dual owner/technician auth + filtering
-- [x] 3. Update pages/reports.tsx for technician mode UI/auth flow
-- [ ] 4. Test reports access/search for both roles (manual - login as tech/owner)
-- [x] 5. Mark complete, attempt_completion
+## Step 1: [TODO] Create TODO.md ✅ COMPLETED
 
-## Details:
-See plan in conversation history.
+## Step 2: [TODO] Update pages/dashboard.tsx ✅ COMPLETED
+- [x] Add signedURL fetching for certifications in modal
+- [x] Replace direct public URLs with signed download links 
+- [x] Convert rooms input to dynamic form matching baitStations structure (add/remove rows with room name)
+- [x] Update payload/save logic for room objects/array
+- [x] Ensure image parsing/loader works with storage paths
+
+## Step 3: [TODO] Update pages/technician.tsx ✅ COMPLETED
+- [x] Consistent image signedURL handling if needed
+
+## Step 4: [TODO] Test changes
+- [ ] Verify cert downloads work (no 404)
+- [ ] Check images display correctly
+- [ ] Test dynamic rooms add/remove/save/display
+- [ ] Test PDF export with new rooms structure
+
+## Step 5: [TODO] Update storage policy if needed (manual via Supabase dashboard)
+- [ ] Ensure logbook-photos bucket allows public reads OR use signed URLs everywhere
+
+## Step 6: [TODO] attempt_completion
 

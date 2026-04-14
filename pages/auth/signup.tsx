@@ -32,6 +32,7 @@ export default function SignUp() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
         data: {
           businessName,
           fullName,
@@ -42,9 +43,9 @@ export default function SignUp() {
       setError(error.message);
       showToast('Sign up failed', error.message, 'error');
     } else {
-      setSuccessMessage('Account created. Check your email for the confirmation link.');
-      showToast('Account created', 'Check your email for a confirmation link.', 'success');
-      router.push('/auth/signin');
+      setSuccessMessage('Account created. Redirecting to your dashboard...');
+      showToast('Account created', 'Redirecting to your dashboard.', 'success');
+      router.push('/dashboard');
     }
     setLoading(false);
   };
