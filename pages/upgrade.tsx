@@ -146,7 +146,7 @@ export default function UpgradePage() {
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to PestTrek</h1>
-          <p className="text-sm sm:text-base text-gray-600">Choose a plan and start with a 7-day free trial for your team. Unlock Reports, Dashboard, and Pro features.</p>
+          <p className="text-sm sm:text-base text-gray-600">Choose a plan for your team. Unlock Reports, Dashboard, and Pro features.</p>
         </div>
 
         {/* Status Cards */}
@@ -167,17 +167,17 @@ export default function UpgradePage() {
               </p>
               {trialEndsDate && trialDaysLeft > 0 && (
                 <p className="text-sm text-gray-600">
-                  ✓ Trial ends in <strong>{trialDaysLeft}</strong> day{trialDaysLeft === 1 ? '' : 's'} <span className="text-gray-500">({trialEndsDate.toLocaleDateString()})</span>
+                  ✓ Access ends in <strong>{trialDaysLeft}</strong> day{trialDaysLeft === 1 ? '' : 's'} <span className="text-gray-500">({trialEndsDate.toLocaleDateString()})</span>
                   {trialDaysLeft <= 2 && (
                     <p className="mt-1 text-sm font-semibold text-orange-600">
-                      ⏰ Trial ending soon! Upgrade to Pro+ to keep using Reports.
+                      ⏰ Access ending soon! Upgrade now to retain full PestTrek access.
                     </p>
                   )}
                 </p>
               )}
               {subscription?.status !== 'active' && trialEndsDate && trialDaysLeft <= 0 && (
                 <p className="text-sm font-semibold text-red-600">
-                  ⚠️ Trial expired. Upgrade to Pro+ for Reports & Dashboard access.
+                  ⚠️ Access expired. Upgrade now to regain full PestTrek access.
                 </p>
               )}
             </div>
@@ -187,7 +187,6 @@ export default function UpgradePage() {
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
-            <div className="mb-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">7-day free trial</div>
             <h2 className="text-xl font-bold text-navy">Pro</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£25<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
             <button
@@ -195,12 +194,11 @@ export default function UpgradePage() {
               disabled={actionLoading}
               className="btn btn-primary mt-6 w-full"
             >
-              {actionLoading && selectedPlan === 'pro' ? 'Redirecting...' : 'Start Free Trial'}
+              {actionLoading && selectedPlan === 'pro' ? 'Redirecting...' : 'Choose Pro'}
             </button>
           </div>
 
           <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
-            <div className="mb-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">7-day free trial</div>
             <h2 className="text-xl font-bold text-navy">Business</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
             <button
@@ -208,12 +206,11 @@ export default function UpgradePage() {
               disabled={actionLoading}
               className="btn btn-primary mt-6 w-full"
             >
-              {actionLoading && selectedPlan === 'business' ? 'Redirecting...' : 'Start Free Trial'}
+              {actionLoading && selectedPlan === 'business' ? 'Redirecting...' : 'Choose Business'}
             </button>
           </div>
 
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="mb-2 inline-flex rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">7-day free trial</div>
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
             <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
             <a

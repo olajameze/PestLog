@@ -68,6 +68,10 @@ function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url:
   return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
+function supabaseImageLoader({ src }: { src: string }): string {
+  return src;
+}
+
 async function fetchImageAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
@@ -655,13 +659,13 @@ export default function ReportsPage() {
                             {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
                               <div key={url} className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
                                 <Image
+                                  loader={supabaseImageLoader}
                                   src={url}
                                   alt={`Job photo for ${entry.clientName}`}
                                   width={800}
                                   height={400}
                                   className="h-40 w-full object-cover"
                                   sizes="(max-width: 640px) 100vw, 50vw"
-                                  unoptimized
                                 />
                               </div>
                             ))}

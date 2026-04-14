@@ -111,6 +111,10 @@ function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url:
   return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
+function supabaseImageLoader({ src }: { src: string }): string {
+  return src;
+}
+
 type Tab = 'technicians' | 'logbook' | 'settings';
 
 // ========== PlanModal Component ==========
@@ -135,7 +139,6 @@ const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe:
             <li>• PDF compliance reports</li>
             <li>• Technician certifications</li>
             <li>• PWA offline mode</li>
-            <li>• 7-day free trial</li>
           </ul>
           <Button onClick={() => { onClose(); onSubscribe('pro'); }} className="w-full">Choose Pro (£25/mo)</Button>
         </div>
@@ -153,7 +156,7 @@ const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe:
           <Button variant="secondary" onClick={() => { onClose(); onSubscribe('business'); }} className="w-full">Choose Business (£40/mo)</Button>
         </div>
       </div>
-      <div className="text-center text-sm text-zinc-500 mb-4">All plans include 7-day free trial. No credit card required.</div>
+      <div className="text-center text-sm text-zinc-500 mb-4">Your subscription starts immediately.</div>
       <div className="flex gap-3 justify-center">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
       </div>
@@ -243,11 +246,26 @@ export default function Dashboard() {
       return;
     }
 
-    const formData = {
-      technicianId: selectedTechId,
-      expiryDate: certExpiry || undefined,
-      file: certFile.dataUrl,
-    };
+    const sanitizedFileName = certFile.file.name
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-zA-Z0-9-._]/g, '');
+    const filePath = `${selectedTechId}/cert-${Date.now()}-${sanitizedFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('logbook-photos')
+      .upload(filePath, certFile.file, {
+        cacheControl: '3600',
+        contentType: certFile.contentType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      showToast('Upload failed', uploadError.message, 'error');
+      console.error('Cert upload failed:', uploadError);
+      setCertLoading(false);
+      return;
+    }
 
     const res = await fetch('/api/technicians/certifications', {
       method: 'POST',
@@ -255,7 +273,11 @@ export default function Dashboard() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify(formData),
+      body: JSON.stringify({
+        technicianId: selectedTechId,
+        expiryDate: certExpiry || undefined,
+        fileUrl: filePath,
+      }),
     });
 
     if (res.ok) {
@@ -263,7 +285,6 @@ export default function Dashboard() {
       setShowCertModal(false);
       setCertFile(null);
       setCertExpiry('');
-      // Refresh certs
       const certRes = await fetch(`/api/technicians/${selectedTechId}/certifications`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -271,7 +292,7 @@ export default function Dashboard() {
         setTechnicianCerts(await certRes.json());
       }
     } else {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({ error: 'Server error' }));
       showToast('Upload failed', err.error || 'Try again', 'error');
       console.error('Cert upload error:', err);
     }
@@ -300,6 +321,13 @@ export default function Dashboard() {
           id: 'preview-company',
           name: 'PestTrek Preview Co.',
           email: 'owner@preview.local',
+          requireSignature: false,
+          requirePhotos: false,
+          notificationPreferences: {
+            trialExpiry: true,
+            renewal: true,
+            certificationExpiry: true,
+          },
           subscriptionStatus: 'active',
         });
         setTechnicians([
@@ -321,14 +349,11 @@ export default function Dashboard() {
       });
       const companyData = await res.json();
       if (!res.ok) {
-        setCompany(null);
-        setTechnicians([]);
         setAppError(companyData?.error || 'Unable to load company details.');
         showToast('Load failed', companyData?.error || 'Unable to load company details.', 'error');
-        return;
+      } else {
+        setCompany(companyData);
       }
-
-      setCompany(companyData);
       if (companyData) {
         const techRes = await fetch('/api/technicians', {
           headers: { Authorization: `Bearer ${session.access_token}` },
@@ -347,21 +372,39 @@ export default function Dashboard() {
           const subData = await subRes.json();
           setSubscription(subData);
           const now = Date.now();
-          const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < now;
+          const trialExpiresAt = subData.trialEndsAt ? new Date(subData.trialEndsAt) : null;
+          const trialExpired = !trialExpiresAt || trialExpiresAt.getTime() < now;
+
           if (subData.status !== 'active' && trialExpired) {
             router.push('/upgrade');
             return;
           }
-          if (subData.status !== 'active' && subData.trialEndsAt && new Date(subData.trialEndsAt).getTime() > now) {
-            setTrialBanner(new Date(subData.trialEndsAt).toLocaleDateString());
+
+          if (subData.status !== 'active' && trialExpiresAt && trialExpiresAt.getTime() > now) {
+            const daysLeft = Math.max(0, Math.ceil((trialExpiresAt.getTime() - now) / (1000 * 60 * 60 * 24)));
+            if (daysLeft <= 3) {
+              setTrialBanner(trialExpiresAt.toLocaleDateString());
+            } else {
+              setTrialBanner(null);
+            }
           } else {
             setTrialBanner(null);
           }
         }
       }
+
+      if (router.query.session_id) {
+        const cleanedQuery = { ...router.query };
+        delete cleanedQuery.session_id;
+        router.replace(
+          { pathname: router.pathname, query: cleanedQuery },
+          undefined,
+          { shallow: true }
+        );
+      }
     };
     getUser();
-  }, [isPreviewMode, router, showToast]);
+  }, [isPreviewMode, router, showToast, router.query.session_id]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -565,8 +608,11 @@ export default function Dashboard() {
               </div>
               {trialBanner ? (
                 <Card className="mb-6 border-blue-200 bg-blue-50">
-                  <div className="p-4 text-blue-900">
-                    Your 7-day free trial ends on {trialBanner}. Upgrade to keep using PestTrek.
+                  <div className="flex flex-col gap-4 p-4 text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+                    <div>Your current access ends on {trialBanner}. Upgrade now to retain full PestTrek access.</div>
+                    <Button variant="primary" onClick={() => router.push('/upgrade')}>
+                      Upgrade now
+                    </Button>
                   </div>
                 </Card>
               ) : null}
@@ -591,7 +637,7 @@ export default function Dashboard() {
               )}
               {currentTab === 'settings' && (
                 <SettingsTab 
-                  key={company.id}
+                  key={`${company.id}-${company.subscriptionStatus}-${company.plan ?? 'none'}`}
                   company={company} 
                   subscription={subscription} 
                   onSubscribe={() => setShowPlanModal(true)}
@@ -711,7 +757,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <a 
-                          href={`https://your-supabase-url.supabase.co/storage/v1/object/public/certifications-bucket/${cert.fileUrl}`} 
+                          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/logbook-photos/${cert.fileUrl}`} 
                           target="_blank" 
                           rel="noreferrer"
                           className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
@@ -1046,7 +1092,15 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                 {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 && (
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
-                      <Image key={url} src={url} alt="Job photo" width={600} height={300} className="h-40 w-full rounded-2xl border object-cover" unoptimized />
+                      <Image
+                        key={url}
+                        loader={supabaseImageLoader}
+                        src={url}
+                        alt="Job photo"
+                        width={600}
+                        height={300}
+                        className="h-40 w-full rounded-2xl border object-cover"
+                      />
                     ))}
                   </div>
                 )}

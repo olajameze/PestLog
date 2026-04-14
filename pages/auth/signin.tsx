@@ -74,7 +74,7 @@ export default function SignIn() {
         <div className="text-center text-sm text-zinc-600">
           Don&apos;t have an account?{' '}
           <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">
-            Start free trial
+            Create account
           </Link>
         </div>
       </form>

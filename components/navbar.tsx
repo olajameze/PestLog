@@ -46,7 +46,7 @@ export default function Navbar({ user, onSignOut, logo = '🐛 PestTrek' }: Navb
                   Sign In
                 </Link>
                 <Link href="/auth/signup">
-                  <Button variant="primary">Start Free Trial</Button>
+                  <Button variant="primary">Get Started</Button>
                 </Link>
               </>
             )}
@@ -83,7 +83,7 @@ export default function Navbar({ user, onSignOut, logo = '🐛 PestTrek' }: Navb
                   </Link>
                   <Link href="/auth/signup">
                     <Button variant="primary" className="mt-2">
-                      Start Free Trial
+                      Get Started
                     </Button>
                   </Link>
                 </>

@@ -1,6 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '../../../lib/supabase';
+import { supabaseAdmin } from '../../../lib/supabase-admin';
 import { prisma } from '../../../lib/prisma';
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
 
 const CERT_BUCKET = 'logbook-photos';
 
@@ -16,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -28,10 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  const { technicianId, expiryDate, file } = req.body;
+  const { technicianId, expiryDate, fileUrl } = req.body;
 
-  if (!technicianId || !file) {
-    return res.status(400).json({ error: 'Missing technicianId or file' });
+  if (!technicianId || !fileUrl) {
+    return res.status(400).json({ error: 'Missing technicianId or fileUrl' });
   }
 
   const technician = await prisma.technician.findFirst({
@@ -41,26 +49,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid technician' });
   }
 
-  // Parse base64 file
-  const base64Data = file.replace(/^data:([A-Za-z-+/]+);base64,/, '');
-  const buffer = Buffer.from(base64Data, 'base64');
-  const fileName = `cert-${technicianId}-${Date.now()}.${file.split(';')[0].split('/')[1]}`;
-  const filePath = `${technicianId}/${fileName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from(CERT_BUCKET)
-    .upload(filePath, buffer, {
-      upsert: false,
-    });
-
-  if (uploadError) {
-    return res.status(500).json({ error: 'File upload failed', details: uploadError.message });
+  if (!fileUrl.startsWith(`${technicianId}/`)) {
+    return res.status(400).json({ error: 'Invalid file path' });
   }
 
   const certification = await prisma.certification.create({
     data: {
       technicianId,
-      fileUrl: filePath,
+      fileUrl,
       expiryDate: expiryDate ? new Date(expiryDate) : null,
     },
   });

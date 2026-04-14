@@ -10,7 +10,9 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "migrate": "prisma migrate deploy"
+    "migrate": "prisma migrate deploy",
+    "smoke-test": "node scripts/run-smoke-test.js",
+    "e2e": "npx playwright test"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.6.0",
@@ -30,6 +32,7 @@
     "stripe": "^22.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^20",
     "@types/react": "^19",

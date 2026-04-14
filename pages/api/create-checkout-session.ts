@@ -89,7 +89,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ],
       mode: 'subscription',
       subscription_data: {
-        trial_period_days: 7,
         metadata: {
           plan: selectedPlan,
         },

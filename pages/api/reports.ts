@@ -227,6 +227,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     },
   });
 
+  const signedCertifications = await Promise.all(
+    certifications.map(async (cert) => ({
+      ...cert,
+      fileUrl: await createSignedPhotoUrl(cert.fileUrl),
+    }))
+  );
+
   const companyName = ownerMode 
     ? (company!.name || company!.email)
     : (technician!.company?.name || technician!.company?.email || 'Your Company');
@@ -234,6 +241,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.status(200).json({
     companyName,
     entries: await Promise.all(entries.map((entry) => signEntryPhotos(entry))),
-    certifications,
+    certifications: signedCertifications,
   });
 }

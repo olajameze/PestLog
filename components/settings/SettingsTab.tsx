@@ -20,7 +20,7 @@ type Company = {
   requireSignature: boolean;
   requirePhotos: boolean;
   defaultReportRangeDays?: number | null;
-  notificationPreferences?: NotificationPreferences | null;
+  notificationPreferences?: Partial<NotificationPreferences> | null;
 };
 
 type Subscription = {
