@@ -31,6 +31,7 @@ interface Company {
     trialExpiry?: boolean;
     renewal?: boolean;
     certificationExpiry?: boolean;
+    apiKey?: string;
   } | null;
   subscriptionStatus: string;
   trialEndsAt?: string | null;
@@ -386,7 +387,7 @@ export default function Dashboard() {
           const trialExpired = !trialExpiresAt || trialExpiresAt.getTime() < now;
 
           if (subData.status !== 'active' && trialExpired) {
-            router.push('/upgrade');
+            router.replace('/upgrade');
             return;
           }
 
@@ -491,6 +492,33 @@ export default function Dashboard() {
     }
   };
 
+  const handleGenerateApiKey = async (): Promise<string | null> => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Cannot generate API key in preview mode.', 'info');
+      return null;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return null;
+    }
+
+    const res = await fetch('/api/enterprise/api-key', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      showToast('API key failed', result.error || 'Unable to generate API key.', 'error');
+      return null;
+    }
+    showToast('API key generated', 'Your enterprise API key is ready.', 'success');
+    return result.apiKey || null;
+  };
+
   const handleUpdateCompanySettings = async (settings: {
     name: string;
     phone?: string;
@@ -504,6 +532,7 @@ export default function Dashboard() {
       trialExpiry: boolean;
       renewal: boolean;
       certificationExpiry: boolean;
+      apiKey?: string;
     };
   }) => {
     if (!company) return;
@@ -516,13 +545,22 @@ export default function Dashboard() {
       return;
     }
 
+    const existingApiKey = company.notificationPreferences?.apiKey;
+    const payload = {
+      ...settings,
+      notificationPreferences: {
+        ...settings.notificationPreferences,
+        apiKey: settings.notificationPreferences.apiKey ?? existingApiKey,
+      },
+    };
+
     const res = await fetch('/api/company', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify(settings),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json();
@@ -653,6 +691,7 @@ export default function Dashboard() {
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
                   onUpdateCompanySettings={handleUpdateCompanySettings}
+                  onGenerateApiKey={handleGenerateApiKey}
                   onDeleteAccount={handleRequestDeleteAccount}
                   deletingAccount={deletingAccount}
                   savingSettings={savingSettings}

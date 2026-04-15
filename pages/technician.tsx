@@ -127,7 +127,7 @@ export default function TechnicianPage() {
         const subData = await subRes.json();
         const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
         if (subData.status !== 'active' && trialExpired) {
-          router.push('/upgrade');
+          router.replace('/upgrade');
           return;
         }
       }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import Sidebar from '../components/sidebar';
+import Card from '../components/ui/Card';
 import { useToast } from '../components/ui/ToastProvider';
 
 type Company = {
@@ -104,6 +105,19 @@ export default function ReportsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [report, setReport] = useState<ReportResponse | null>(null);
+  const [analytics, setAnalytics] = useState<null | {
+    totalJobs: number;
+    completedJobs: number;
+    openJobs: number;
+    averageDurationMinutes: number | null;
+    averagePhotosPerJob: number;
+    topTreatments: Array<{ treatment: string; count: number }>;
+    technicianPerformance: Array<{ technicianName: string; jobs: number; averageDurationMinutes: number | null }>;
+    routePlan: Array<{ address: string; clientName: string; scheduledAt: string; treatment: string }>;
+    auditSummary: { missingPhotos: number; missingSignatures: number; missingStatus: number };
+  }>(null);
+  const [plan, setPlan] = useState<'trial' | 'pro' | 'business' | 'enterprise'>('trial');
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
@@ -145,9 +159,10 @@ export default function ReportsPage() {
           });
           if (subRes.ok) {
             const subData = await subRes.json();
+            setPlan(subData.plan || 'trial');
             const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
             if (subData.status !== 'active' && trialExpired) {
-              router.push('/upgrade');
+              router.replace('/upgrade');
               return;
             }
           }
@@ -178,6 +193,13 @@ export default function ReportsPage() {
         name: techData.technician.companyName,
         email: techData.technician.companyId // placeholder
       });
+      const subRes = await fetch('/api/subscription', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setPlan(subData.plan || 'trial');
+      }
       setTechnicians([{ id: techData.technician.id, name: techData.technician.name, email: techData.technician.email }]);
       setSelectedTechnician(techData.technician.id);
       setIsOwner(false);
@@ -187,7 +209,32 @@ export default function ReportsPage() {
     loadUserData();
   }, [isPreviewMode, router]);
 
-    const [search, setSearch] = useState('');
+  const fetchAnalytics = async (technicianId: string) => {
+    setAnalyticsLoading(true);
+    setAnalytics(null);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    const analyticsUrl = `/api/analytics?technicianId=${technicianId}&startDate=${startDate}&endDate=${endDate}`;
+    const res = await fetch(analyticsUrl, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+
+    if (!res.ok) {
+      setAnalyticsLoading(false);
+      return;
+    }
+
+    const result = await res.json();
+    setAnalytics(result);
+    setAnalyticsLoading(false);
+  };
+
+  const [search, setSearch] = useState('');
 
   const fetchReport = async () => {
     if (!selectedTechnician || !startDate || !endDate) {
@@ -256,6 +303,11 @@ export default function ReportsPage() {
 
     const result = await res.json();
     setReport(result);
+    if (plan === 'business' || plan === 'enterprise') {
+      await fetchAnalytics(selectedTechnician);
+    } else {
+      setAnalytics(null);
+    }
     setFetching(false);
   };
 
@@ -585,6 +637,117 @@ export default function ReportsPage() {
                 </div>
               </div>
             </div>
+
+            {plan === 'business' || plan === 'enterprise' ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold text-navy">Business insights</h3>
+                    <p className="text-sm text-slate-600">Advanced analytics, technician performance tracking, and route planning for your team.</p>
+                  </div>
+                  {analyticsLoading ? (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm">
+                      <span className="spinner" /> Loading analytics...
+                    </span>
+                  ) : null}
+                </div>
+
+                {analytics ? (
+                  <div className="mt-6 space-y-6">
+                    <div className="grid gap-4 sm:grid-cols-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Total jobs</p>
+                        <p className="mt-2 text-2xl font-semibold text-navy">{analytics.totalJobs}</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Completed</p>
+                        <p className="mt-2 text-2xl font-semibold text-navy">{analytics.completedJobs}</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Open jobs</p>
+                        <p className="mt-2 text-2xl font-semibold text-navy">{analytics.openJobs}</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Avg duration</p>
+                        <p className="mt-2 text-2xl font-semibold text-navy">{analytics.averageDurationMinutes !== null ? `${analytics.averageDurationMinutes} min` : 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <h4 className="text-lg font-semibold text-navy">Route optimization</h4>
+                        <p className="text-sm text-slate-600 mt-2">A recommended sequence for upcoming jobs based on schedule.</p>
+                        {analytics.routePlan.length === 0 ? (
+                          <p className="mt-4 text-sm text-slate-500">No route data available for this range.</p>
+                        ) : (
+                          <ol className="mt-4 space-y-3">
+                            {analytics.routePlan.map((stop, index) => (
+                              <li key={`${stop.address}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-sm font-semibold text-slate-900">Stop {index + 1}</span>
+                                  <span className="text-xs uppercase text-slate-500">{stop.scheduledAt}</span>
+                                </div>
+                                <p className="mt-2 text-base font-semibold text-navy">{stop.clientName}</p>
+                                <p className="text-sm text-slate-600">{stop.address}</p>
+                                <p className="mt-1 text-sm text-slate-500">{stop.treatment}</p>
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <h4 className="text-lg font-semibold text-navy">Technician performance</h4>
+                        <p className="text-sm text-slate-600 mt-2">Team productivity based on completed work and job duration.</p>
+                        <div className="mt-4 grid gap-3">
+                          {analytics.technicianPerformance.slice(0, 4).map((tech) => (
+                            <div key={tech.technicianName} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                              <p className="text-sm font-semibold text-slate-900">{tech.technicianName}</p>
+                              <p className="text-xs text-slate-500">Jobs: {tech.jobs}</p>
+                              <p className="text-xs text-slate-500">Avg duration: {tech.averageDurationMinutes !== null ? `${tech.averageDurationMinutes} min` : 'N/A'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-100 p-4 shadow-sm">
+                      <h4 className="text-lg font-semibold text-navy">Security & compliance pulse</h4>
+                      <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                        <div className="rounded-2xl bg-white p-4">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Missing photos</p>
+                          <p className="mt-2 text-xl font-semibold text-navy">{analytics.auditSummary.missingPhotos}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Missing signatures</p>
+                          <p className="mt-2 text-xl font-semibold text-navy">{analytics.auditSummary.missingSignatures}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Open jobs</p>
+                          <p className="mt-2 text-xl font-semibold text-navy">{analytics.auditSummary.missingStatus}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
+                    Business analytics will appear after you fetch the report.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Card className="rounded-2xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold text-navy">Upgrade to Business</h3>
+                    <p className="text-sm text-slate-600">Unlock advanced reporting, route optimization, and technician performance tracking.</p>
+                  </div>
+                  <button type="button" onClick={() => router.push('/upgrade')} className="btn btn-primary">
+                    Upgrade to Business
+                  </button>
+                </div>
+              </Card>
+            )}
 
             {/* Jobs Section */}
             <div className="space-y-4">

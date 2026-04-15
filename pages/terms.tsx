@@ -1,0 +1,69 @@
+import Link from 'next/link';
+import Navbar from '../components/navbar';
+import LandingFooter from '../components/landing/LandingFooter';
+
+export default function TermsPage() {
+  return (
+    <div className="min-h-screen bg-offwhite">
+      <Navbar />
+      <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+          <h1 className="text-4xl font-bold text-navy">Terms of Service</h1>
+          <p className="mt-4 text-slate-600">These terms apply to PestTrek, the pest control compliance and technician management platform.</p>
+
+          <section className="mt-10 space-y-5 text-slate-700">
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">1. About PestTrek</h2>
+              <p className="mt-3 leading-7">
+                PestTrek provides pest control companies with an online logbook, technician certifications, compliance reports, and plan-based analytics.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">2. Account security</h2>
+              <p className="mt-3 leading-7">
+                You must keep your sign-in details secure and not share your password. You are responsible for all activity under your account.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">3. Subscription plans</h2>
+              <p className="mt-3 leading-7">
+                PestTrek offers Trial, Pro, Business, and Enterprise plans. Trial users have limited access, while paid plans unlock advanced reporting, route optimization, and enterprise API access.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">4. Service usage</h2>
+              <p className="mt-3 leading-7">
+                You may only use PestTrek for lawful business purposes related to pest control operations. Unauthorized access, data scraping, or misuse of the service is prohibited.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">5. Data accuracy</h2>
+              <p className="mt-3 leading-7">
+                You are responsible for the accuracy of the client, job, and certification records entered into the system. PestTrek is not liable for incorrect data entered by users.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">6. Termination</h2>
+              <p className="mt-3 leading-7">
+                We may suspend or terminate accounts that violate these terms, abuse the service, or threaten security. You may also cancel your subscription at any time through the billing portal.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-semibold text-navy">7. Contact</h2>
+              <p className="mt-3 leading-7">
+                For questions or support, visit our <Link href="/contact" className="text-primary-600 hover:text-primary-700">contact page</Link> or email <a href="mailto:hello@jgdev.co.uk" className="text-primary-600 hover:text-primary-700">hello@jgdev.co.uk</a>.
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+      <LandingFooter />
+    </div>
+  );
+}

@@ -57,6 +57,11 @@ export default function SignIn() {
           placeholder="••••••••"
           required
         />
+        <div className="flex justify-between items-center text-sm text-zinc-600">
+          <Link href="/auth/forgot-password" className="font-semibold text-primary-600 hover:text-primary-700">
+            Forgot password?
+          </Link>
+        </div>
         {error ? <div className="form-feedback form-feedback-error">{error}</div> : null}
         {successMessage ? <div className="form-feedback form-feedback-success">{successMessage}</div> : null}
         <div className="flex justify-center">

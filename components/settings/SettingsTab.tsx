@@ -7,6 +7,7 @@ type NotificationPreferences = {
   trialExpiry: boolean;
   renewal: boolean;
   certificationExpiry: boolean;
+  apiKey?: string;
 };
 
 type Company = {
@@ -34,6 +35,7 @@ interface SettingsTabProps {
   subscription: Subscription | null;
   onSubscribe: () => void;
   onManageSubscription: () => void;
+  onGenerateApiKey: () => Promise<string | null>;
   onUpdateCompanySettings: (settings: {
     name: string;
     phone?: string;
@@ -58,6 +60,7 @@ export default function SettingsTab({
   onSubscribe,
   onManageSubscription,
   onUpdateCompanySettings,
+  onGenerateApiKey,
   onDeleteAccount,
   deletingAccount,
   savingSettings,
@@ -76,7 +79,9 @@ export default function SettingsTab({
     trialExpiry: company.notificationPreferences?.trialExpiry ?? true,
     renewal: company.notificationPreferences?.renewal ?? true,
     certificationExpiry: company.notificationPreferences?.certificationExpiry ?? true,
+    apiKey: company.notificationPreferences?.apiKey,
   });
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
 
   const handleSaveSettings = () => {
     onUpdateCompanySettings({
@@ -90,6 +95,18 @@ export default function SettingsTab({
       defaultReportRangeDays,
       notificationPreferences,
     });
+  };
+
+  const handleGenerateApiKey = async () => {
+    setApiKeyLoading(true);
+    const apiKey = await onGenerateApiKey();
+    if (apiKey) {
+      setNotificationPreferences((prev) => ({
+        ...prev,
+        apiKey,
+      }));
+    }
+    setApiKeyLoading(false);
   };
 
   const currentPlanLabel = subscription?.plan ? subscription.plan.toUpperCase() : 'TRIAL';
@@ -227,6 +244,44 @@ export default function SettingsTab({
             <p className="mt-2 font-semibold text-slate-900">{trialEndsAtLabel}</p>
           </div>
         </div>
+
+        {subscription?.plan === 'enterprise' && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+            <h3 className="text-xl font-semibold text-navy">Enterprise API Access</h3>
+            <p className="mt-2 text-sm text-slate-600">Generate a dedicated API key for secure custom integrations and enterprise automation.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <label htmlFor="enterprise-api-key" className="text-xs uppercase tracking-[0.24em] text-slate-500">API key</label>
+                <input
+                  id="enterprise-api-key"
+                  type="text"
+                  readOnly
+                  value={notificationPreferences.apiKey || ''}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-800"
+                />
+              </div>
+              <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Dedicated API access</p>
+                  <p className="mt-2 text-sm text-slate-600">Only enterprise customers can generate and manage this key.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerateApiKey}
+                  disabled={apiKeyLoading}
+                  className="btn btn-primary mt-4"
+                >
+                  {apiKeyLoading ? 'Generating...' : (notificationPreferences.apiKey ? 'Regenerate API key' : 'Generate API key')}
+                </button>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-sm text-slate-600">
+              <p className="font-semibold text-slate-900">Dedicated account manager</p>
+              <p className="mt-2">Enterprise customers have a dedicated account representative.</p>
+              <p className="mt-1">Contact: <a href="mailto:hello@jgdev.co.uk" className="text-blue-600 hover:text-blue-800">hello@jgdev.co.uk</a></p>
+            </div>
+          </div>
+        )}
 
         <div className="text-sm text-slate-600">
           Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
