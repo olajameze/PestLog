@@ -917,7 +917,7 @@ export default function ReportsPage() {
                                   alt={`Job photo for ${entry.clientName}`}
                                   width={800}
                                   height={400}
-                                  className="h-40 w-full object-cover"
+className="w-full h-auto max-h-[400px] object-contain rounded-2xl shadow-sm hover:shadow-md transition-shadow"
                                   sizes="(max-width: 640px) 100vw, 50vw"
                                 />
                               </div>

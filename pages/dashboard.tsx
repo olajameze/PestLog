@@ -1181,7 +1181,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                         alt="Job photo"
                         width={600}
                         height={300}
-                        className="h-40 w-full rounded-2xl border object-cover"
+className="w-full h-auto max-h-[400px] object-contain rounded-2xl border shadow-sm hover:shadow-md transition-shadow"
                       />
                     ))}
                   </div>

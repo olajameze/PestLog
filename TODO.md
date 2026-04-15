@@ -1,25 +1,22 @@
-# PestTrek Fixes TODO
+# PestTrek Task: Full Images in Reports + Confirm Features
 
-## Step 1: [TODO] Create TODO.md ✅ COMPLETED
+**Status**: ✅ Approved by user  
+**Approved Plan**: Minimal CSS updates only (delete/multi-upload already working)
 
-## Step 2: [TODO] Update pages/dashboard.tsx ✅ COMPLETED
-- [x] Add signedURL fetching for certifications in modal
-- [x] Replace direct public URLs with signed download links 
-- [x] Convert rooms input to dynamic form matching baitStations structure (add/remove rows with room name)
-- [x] Update payload/save logic for room objects/array
-- [x] Ensure image parsing/loader works with storage paths
+## Checklist
 
-## Step 3: [TODO] Update pages/technician.tsx ✅ COMPLETED
-- [x] Consistent image signedURL handling if needed
+### ✅ 1. Create this TODO.md file  
+### ✅ 2. Update image display in pages/reports.tsx
+### ✅ 3. Update image display in pages/dashboard.tsx  
 
-## Step 4: [TODO] Test changes
-- [ ] Verify cert downloads work (no 404)
-- [ ] Check images display correctly
-- [ ] Test dynamic rooms add/remove/save/display
-- [ ] Test PDF export with new rooms structure
+### ✅ 4. Update this TODO.md (mark steps 1-3 complete)
 
-## Step 5: [TODO] Update storage policy if needed (manual via Supabase dashboard)
-- [ ] Ensure logbook-photos bucket allows public reads OR use signed URLs everywhere
+### ✅ 5. Test verification  
+   - [✅] Reports page: Images show full height (not cropped 160px)  
+   - [✅] Dashboard logbook: Images full height  
+   - [✅] Delete buttons work (already functional pre-changes)  
+   - [✅] Multiple image upload works (already functional pre-changes; technician.tsx + dashboard)
 
-## Step 6: [TODO] attempt_completion
+### ✅ 6. Task completion
 
+**All changes complete! Delete/multi-upload were already working; images now display full uncropped with responsive height up to 400px, object-contain (no cropping), hover shadows.**
