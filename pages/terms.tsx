@@ -9,13 +9,13 @@ export default function TermsPage() {
       <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
           <h1 className="text-4xl font-bold text-navy">Terms of Service</h1>
-          <p className="mt-4 text-slate-600">These terms apply to PestTrek, the pest control compliance and technician management platform.</p>
+          <p className="mt-4 text-slate-600">These terms apply to Pest Trace, the pest control compliance and technician management platform.</p>
 
           <section className="mt-10 space-y-5 text-slate-700">
             <div>
-              <h2 className="text-2xl font-semibold text-navy">1. About PestTrek</h2>
+              <h2 className="text-2xl font-semibold text-navy">1. About Pest Trace</h2>
               <p className="mt-3 leading-7">
-                PestTrek provides pest control companies with an online logbook, technician certifications, compliance reports, and plan-based analytics.
+                Pest Trace provides pest control companies with an online logbook, technician certifications, compliance reports, and plan-based analytics.
               </p>
             </div>
 
@@ -29,21 +29,21 @@ export default function TermsPage() {
             <div>
               <h2 className="text-2xl font-semibold text-navy">3. Subscription plans</h2>
               <p className="mt-3 leading-7">
-                PestTrek offers Trial, Pro, Business, and Enterprise plans. Trial users have limited access, while paid plans unlock advanced reporting, route optimization, and enterprise API access.
+                Pest Trace offers Trial, Pro, Business, and Enterprise plans. Trial users have limited access, while paid plans unlock advanced reporting, route optimization, and enterprise API access.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-semibold text-navy">4. Service usage</h2>
               <p className="mt-3 leading-7">
-                You may only use PestTrek for lawful business purposes related to pest control operations. Unauthorized access, data scraping, or misuse of the service is prohibited.
+                You may only use Pest Trace for lawful business purposes related to pest control operations. Unauthorized access, data scraping, or misuse of the service is prohibited.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-semibold text-navy">5. Data accuracy</h2>
               <p className="mt-3 leading-7">
-                You are responsible for the accuracy of the client, job, and certification records entered into the system. PestTrek is not liable for incorrect data entered by users.
+                You are responsible for the accuracy of the client, job, and certification records entered into the system. Pest Trace is not liable for incorrect data entered by users.
               </p>
             </div>
 

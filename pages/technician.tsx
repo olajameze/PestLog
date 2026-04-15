@@ -96,7 +96,7 @@ export default function TechnicianPage() {
           name: 'John Smith',
           email: 'john@preview.local',
           companyId: 'preview-company',
-          companyName: 'PestTrek Preview Co.',
+          companyName: 'Pest Trace Preview Co.',
         });
         setLoading(false);
         return;

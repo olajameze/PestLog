@@ -69,7 +69,7 @@ export default function ContactPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
             <div>
-              <h1 className="text-4xl font-bold text-navy">Contact PestTrek</h1>
+              <h1 className="text-4xl font-bold text-navy">Contact Pest Trace</h1>
               <p className="mt-4 text-base text-slate-600">
                 Need help with your account, upgrades, or enterprise integration? Send us a message and we&apos;ll respond promptly.
               </p>

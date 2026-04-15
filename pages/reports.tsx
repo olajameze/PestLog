@@ -140,7 +140,7 @@ export default function ReportsPage() {
           { id: 'tech-2', name: 'Sarah Johnson', email: 'sarah@preview.local' },
           { id: 'tech-3', name: 'Mike Williams', email: 'mike@preview.local' },
         ];
-        setCompany({ id: 'preview-company', name: 'PestTrek Preview Co.', email: 'owner@preview.local' });
+        setCompany({ id: 'preview-company', name: 'Pest Trace Preview Co.', email: 'owner@preview.local' });
         setTechnicians(mockTechs);
         setSelectedTechnician(mockTechs[0].id);
         setIsOwner(true);
@@ -327,7 +327,7 @@ export default function ReportsPage() {
     if (isPreviewMode) {
       const selectedName = technicians.find((t) => t.id === selectedTechnician)?.name || 'Technician';
       const previewReport = {
-        companyName: company?.name || 'PestTrek Preview Co.',
+        companyName: company?.name || 'Pest Trace Preview Co.',
         entries: [
           {
             id: 'entry-1',
@@ -569,7 +569,7 @@ export default function ReportsPage() {
     }
 
     addFooter();
-    doc.save(`pesttrek-report-${selectedTechnician}-${Date.now()}.pdf`);
+    doc.save(`pesttrace-report-${selectedTechnician}-${Date.now()}.pdf`);
     showToast('Report downloaded', 'Your printable A4 report has been generated successfully.', 'success');
   };
 

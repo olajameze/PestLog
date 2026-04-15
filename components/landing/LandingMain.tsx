@@ -16,6 +16,15 @@ export default function LandingMain() {
     <>
       <section className="bg-offwhite px-4 py-14 sm:px-6 lg:py-24">
         <div className="mx-auto w-full max-w-7xl text-center">
+          <div className="mx-auto mb-8 inline-flex items-center justify-center rounded-3xl bg-white p-4 shadow-sm">
+            <Image
+              src="/pest-trace.png"
+              alt="Pest Trace logo"
+              width={140}
+              height={140}
+              className="h-20 w-auto object-contain"
+            />
+          </div>
           <h1 className="mx-auto max-w-5xl text-4xl font-bold leading-tight text-navy sm:text-5xl lg:text-6xl">
             Prove Compliance, Log Jobs, and Win More Contracts
           </h1>
@@ -62,7 +71,7 @@ export default function LandingMain() {
             ))}
           </div>
           <p className="max-w-3xl text-center text-sm text-zinc-600">
-            &quot;PestTrek helped us move from paper logs to audit-ready records in under a week.&quot;
+            &quot;Pest Trace helped us move from paper logs to audit-ready records in under a week.&quot;
           </p>
         </div>
       </section>
@@ -136,7 +145,7 @@ export default function LandingMain() {
       <section className="bg-white px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-200 bg-offwhite p-8 text-center sm:p-10">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Ready to simplify compliance and grow your business?</h2>
-          <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using PestTrek.</p>
+          <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using Pest Trace.</p>
           <Link href="/auth/signup" className="mt-6 inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">
             Start Your Free Trial
           </Link>

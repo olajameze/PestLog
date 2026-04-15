@@ -61,6 +61,6 @@ export const landingFaqs = [
   },
   {
     question: 'Do I need to download software?',
-    answer: 'No, PestTrek works in the browser and can be installed as a PWA on mobile.',
+    answer: 'No, Pest Trace works in the browser and can be installed as a PWA on mobile.',
   },
 ];

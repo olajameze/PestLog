@@ -14,7 +14,7 @@ export default function AuthLayout({
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="text-3xl font-semibold text-navy">
-            PestTrek
+            Pest Trace
           </Link>
           <Link
             href="/auth/signin"

@@ -44,7 +44,7 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
       >
         <div className="flex flex-col h-full">
           <div className="border-b border-zinc-200 px-5 py-5">
-            <h2 className="text-3xl font-semibold text-navy">PestTrek</h2>
+            <h2 className="text-3xl font-semibold text-navy">Pest Trace</h2>
             <p className="mt-1 text-sm text-zinc-500">Compliance Suite</p>
             <button
               onClick={() => setMobileOpen(false)}

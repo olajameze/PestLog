@@ -27,7 +27,7 @@ export default function LandingFAQ() {
                 <div className="border-t border-zinc-200 px-5 py-4 text-sm text-zinc-600">
                   {faq.question === 'Do I need to download software?' ? (
                     <>
-                      No, PestTrek works in the browser and can be installed as a PWA on mobile.{' '}
+                      No, Pest Trace works in the browser and can be installed as a PWA on mobile.{' '}
                       <Link href="/?showPwaPrompt=1" className="font-semibold text-primary-600 hover:underline">
                         Tap here to open install prompt
                       </Link>

@@ -31,7 +31,7 @@ export default function UpgradePage() {
     const loadData = async () => {
       if (isPreviewMode) {
         const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        setCompany({ id: 'preview-company', name: 'PestTrek Preview Co.', email: 'owner@preview.local' });
+        setCompany({ id: 'preview-company', name: 'Pest Trace Preview Co.', email: 'owner@preview.local' });
         setSubscription({ status: 'trial', trialEndsAt: endDate.toISOString() });
         setTrialEndsDate(endDate);
         setTrialDaysLeft(7);
@@ -145,7 +145,7 @@ export default function UpgradePage() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to PestTrek</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to Pest Trace</h1>
           <p className="text-sm sm:text-base text-gray-600">Choose a plan for your team. Unlock Reports, Dashboard, and Pro features.</p>
         </div>
 
@@ -170,14 +170,14 @@ export default function UpgradePage() {
                   ✓ Access ends in <strong>{trialDaysLeft}</strong> day{trialDaysLeft === 1 ? '' : 's'} <span className="text-gray-500">({trialEndsDate.toLocaleDateString()})</span>
                   {trialDaysLeft <= 2 && (
                     <p className="mt-1 text-sm font-semibold text-orange-600">
-                      ⏰ Access ending soon! Upgrade now to retain full PestTrek access.
+                      ⏰ Access ending soon! Upgrade now to retain full Pest Trace access.
                     </p>
                   )}
                 </p>
               )}
               {subscription?.status !== 'active' && trialEndsDate && trialDaysLeft <= 0 && (
                 <p className="text-sm font-semibold text-red-600">
-                  ⚠️ Access expired. Upgrade now to regain full PestTrek access.
+                  ⚠️ Access expired. Upgrade now to regain full Pest Trace access.
                 </p>
               )}
             </div>
@@ -214,7 +214,7 @@ export default function UpgradePage() {
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
             <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
             <a
-              href="mailto:hello@jgdev.co.uk?subject=PestTrek Enterprise Enquiry"
+              href="mailto:hello@jgdev.co.uk?subject=Pest Trace Enterprise Enquiry"
               className="btn btn-secondary mt-6 w-full inline-flex items-center justify-center"
             >
               Contact Sales

@@ -118,6 +118,6 @@ export const Wordmark = ({ className = '', height = 40 }: { className?: string; 
   <svg height={height} viewBox="0 0 120 40" className={className}>
     <path d="M10 10c0-2 2-4 4-4h6c4 0 7 3 7 7s-3 7-7 7h-6v6" fill="none" stroke="#2563EB" strokeWidth="3" />
     <path d="M15 13l3 3 5-5" fill="none" stroke="#10B981" strokeWidth="3" opacity="0.6" />
-    <text x="35" y="28" fontWeight="800" fontSize="22" fill="#1E293B">PestTrek</text>
+    <text x="35" y="28" fontWeight="800" fontSize="22" fill="#1E293B">Pest Trace</text>
   </svg>
 );

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.describe('PestTrek E2E smoke', () => {
+test.describe('Pest Trace E2E smoke', () => {
   test('loads public pages, signs up, and protects dashboard endpoints', async ({ page, request }) => {
     const baseEmail = `playwright+${Date.now()}@example.com`;
     const password = 'Password123!';
@@ -16,7 +16,7 @@ test.describe('PestTrek E2E smoke', () => {
     await page.click('button:has-text("Create Account")');
 
     await page.waitForURL('**/auth/signin', { timeout: 15000 });
-    await expect(page.getByRole('heading', { name: 'Welcome back to PestTrek' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Welcome back to Pest Trace' })).toBeVisible();
 
     await page.goto('/dashboard');
     expect(page.url()).toMatch(/\/(auth\/signin|dashboard)$/);

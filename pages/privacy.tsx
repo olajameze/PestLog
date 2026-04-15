@@ -9,7 +9,7 @@ export default function PrivacyPage() {
       <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
           <h1 className="text-4xl font-bold text-navy">Privacy Policy</h1>
-          <p className="mt-4 text-slate-600">This privacy policy explains how PestTrek collects, uses, and protects your information while delivering pest control compliance tools.</p>
+          <p className="mt-4 text-slate-600">This privacy policy explains how Pest Trace collects, uses, and protects your information while delivering pest control compliance tools.</p>
 
           <section className="mt-10 space-y-5 text-slate-700">
             <div>
@@ -22,14 +22,14 @@ export default function PrivacyPage() {
             <div>
               <h2 className="text-2xl font-semibold text-navy">2. How we use your data</h2>
               <p className="mt-3 leading-7">
-                We use your data to authenticate you, deliver the PestTrek service, process subscriptions, send support replies, and improve product features such as reporting and analytics.
+                We use your data to authenticate you, deliver the Pest Trace service, process subscriptions, send support replies, and improve product features such as reporting and analytics.
               </p>
             </div>
 
             <div>
               <h2 className="text-2xl font-semibold text-navy">3. Third-party services</h2>
               <p className="mt-3 leading-7">
-                PestTrek uses Supabase for authentication and data storage, Stripe for billing, and Resend for support email delivery. These providers process your data only to support the service.
+                Pest Trace uses Supabase for authentication and data storage, Stripe for billing, and Resend for support email delivery. These providers process your data only to support the service.
               </p>
             </div>
 

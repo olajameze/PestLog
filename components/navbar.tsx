@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Button from './ui/Button';
@@ -6,10 +7,19 @@ import Button from './ui/Button';
 interface NavbarProps {
   user?: { name: string; email: string };
   onSignOut?: () => void;
-  logo?: string;
+  logo?: ReactNode;
 }
 
-export default function Navbar({ user, onSignOut, logo = '🐛 PestTrek' }: NavbarProps) {
+export default function Navbar({
+  user,
+  onSignOut,
+  logo = (
+    <div className="flex items-center gap-3">
+      <Image src="/pest-trace.png" alt="Pest Trace logo" width={32} height={32} className="h-8 w-auto object-contain" />
+      <span className="text-xl font-bold text-navy">Pest Trace</span>
+    </div>
+  ),
+}: NavbarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
 

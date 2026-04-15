@@ -340,7 +340,7 @@ export default function Dashboard() {
         setUser({ id: 'preview-user', email: 'preview@pestlog.local' });
         setCompany({
           id: 'preview-company',
-          name: 'PestTrek Preview Co.',
+          name: 'Pest Trace Preview Co.',
           email: 'owner@preview.local',
           requireSignature: false,
           requirePhotos: false,
@@ -681,7 +681,7 @@ export default function Dashboard() {
               {trialBanner ? (
                 <Card className="mb-6 border-blue-200 bg-blue-50">
                   <div className="flex flex-col gap-4 p-4 text-blue-900 sm:flex-row sm:items-center sm:justify-between">
-                    <div>Your current access ends on {trialBanner}. Upgrade now to retain full PestTrek access.</div>
+                    <div>Your current access ends on {trialBanner}. Upgrade now to retain full Pest Trace access.</div>
                     <Button variant="primary" onClick={() => router.push('/upgrade')}>
                       Upgrade now
                     </Button>
@@ -746,7 +746,7 @@ export default function Dashboard() {
       <ConfirmDialog
         open={showDeleteAccountConfirm}
         title="Delete account"
-        description="This will cancel your subscription and permanently delete your account and all company data. If you want to use PestTrek again, you will need to sign up again. This cannot be undone."
+        description="This will cancel your subscription and permanently delete your account and all company data. If you want to use Pest Trace again, you will need to sign up again. This cannot be undone."
         confirmLabel={deletingAccount ? 'Deleting...' : 'Delete account'}
         cancelLabel="Cancel"
         onCancel={() => setShowDeleteAccountConfirm(false)}
@@ -907,7 +907,7 @@ function CompanySetupTab() {
   return (
     <div className="max-w-md mx-auto">
       <Card>
-        <h2 className="text-2xl font-bold text-navy mb-4 text-center">Welcome to PestTrek!</h2>
+        <h2 className="text-2xl font-bold text-navy mb-4 text-center">Welcome to Pest Trace!</h2>
         <p className="text-zinc-600 mb-6 text-center">Let&apos;s set up your pest control company to get started.</p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput
@@ -1062,7 +1062,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     
     doc.setFontSize(20);
-    doc.text('PestTrek Compliance Report', 105, 50, { align: 'center' });
+    doc.text('Pest Trace Compliance Report', 105, 50, { align: 'center' });
     doc.setFontSize(12);
     doc.text(new Date().toLocaleDateString(), 105, 70, { align: 'center' });
     doc.text(`Company ID: ${companyId}`, 105, 85, { align: 'center' });
@@ -1124,7 +1124,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
       }
     }
     
-    doc.save(`pesttrek-compliance-${Date.now()}.pdf`);
+    doc.save(`pesttrace-compliance-${Date.now()}.pdf`);
   };
 
   if (loading) return <div>Loading entries...</div>;

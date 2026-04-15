@@ -5,9 +5,6 @@ export default function Document() {
     <Html lang="en">
       <Head>
         {/* PWA & App Meta Tags */}
-        <meta name="theme-color" content="#2563EB" />
-        <meta name="theme-color" content="#2563EB" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#1e1e1e" media="(prefers-color-scheme: dark)" />
         <meta name="description" content="Digital compliance logbook for pest control businesses" />
 
         {/* Web App Manifest - MUST be in head for PWA */}
@@ -16,8 +13,8 @@ export default function Document() {
         {/* Apple iOS PWA Support */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="PestTrek" />
-        <link rel="apple-touch-icon" type="image/svg+xml" href="/file.svg" />
+        <meta name="apple-mobile-web-app-title" content="Pest Trace" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Standard Favicons */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -25,7 +22,7 @@ export default function Document() {
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 
         {/* PWA Icons */}
-        <link rel="icon" type="image/svg+xml" sizes="192x192 512x512" href="/file.svg" />
+        <link rel="icon" type="image/png" sizes="192x192 512x512" href="/pest-trace.png" />
 
         {/* Fonts - handled by next/font/google in _app.tsx */}
 

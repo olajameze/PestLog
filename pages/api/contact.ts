@@ -39,9 +39,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await resend.emails.send({
-      from: `PestTrek <${supportEmail}>`,
+      from: `Pest Trace <${supportEmail}>`,
       to: [supportEmail],
-      subject: `New PestTrek contact request from ${trimmedName}`,
+      subject: `New Pest Trace contact request from ${trimmedName}`,
       html: `
         <h1>New contact request</h1>
         <p><strong>Name:</strong> ${trimmedName}</p>
