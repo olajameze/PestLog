@@ -9,6 +9,10 @@ export default function Document() {
 
         {/* Web App Manifest - MUST be in head for PWA */}
         <link rel="manifest" href="/manifest.json" />
+        <link rel="canonical" href="https://pesttrace.com" />
+        <meta property="og:url" content="https://pesttrace.com" />
+        <meta property="og:site_name" content="Pest Trace" />
+        <meta name="twitter:url" content="https://pesttrace.com" />
 
         {/* Apple iOS PWA Support */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
