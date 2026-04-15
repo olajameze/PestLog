@@ -72,12 +72,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
     const requestOrigin =
       typeof req.headers.origin === 'string' && req.headers.origin.trim().length > 0
         ? req.headers.origin
         : undefined;
-    const origin = appUrl || requestOrigin || 'http://localhost:3000';
+    const origin = appUrl || vercelUrl || requestOrigin || 'https://pest-trek.vercel.app';
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,

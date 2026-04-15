@@ -161,11 +161,21 @@ export default function ReportsPage() {
           });
           if (subRes.ok) {
             const subData = await subRes.json();
-            setPlan(subData.plan || 'trial');
+            const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+            setPlan(
+              queryPlan && (queryPlan === 'pro' || queryPlan === 'business')
+                ? queryPlan
+                : subData.plan || 'trial'
+            );
             const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
             if (subData.status !== 'active' && trialExpired) {
               router.replace('/upgrade');
               return;
+            }
+          } else {
+            const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+            if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business')) {
+              setPlan(queryPlan);
             }
           }
 
@@ -200,7 +210,17 @@ export default function ReportsPage() {
       });
       if (subRes.ok) {
         const subData = await subRes.json();
-        setPlan(subData.plan || 'trial');
+        const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+        setPlan(
+          queryPlan && (queryPlan === 'pro' || queryPlan === 'business')
+            ? queryPlan
+            : subData.plan || 'trial'
+        );
+      } else {
+        const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+        if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business')) {
+          setPlan(queryPlan);
+        }
       }
       setTechnicians([{ id: techData.technician.id, name: techData.technician.name, email: techData.technician.email }]);
       setSelectedTechnician(techData.technician.id);
@@ -217,12 +237,32 @@ export default function ReportsPage() {
     if (!queryPlan) return;
 
     setUpgradeConfirmedPlan(queryPlan);
+    if (queryPlan === 'pro' || queryPlan === 'business') {
+      setPlan(queryPlan);
+    }
+
     const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
     showToast(
       'Subscription upgraded',
       `Your plan is now ${planLabel}. Enhanced reporting is available on this page.`,
       'success'
     );
+
+    const refreshSubscriptionPlan = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch('/api/subscription', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) return;
+      const subData = await res.json();
+      if (subData.plan) {
+        setPlan(subData.plan);
+      }
+    };
+
+    refreshSubscriptionPlan();
+    const refreshTimer = window.setTimeout(refreshSubscriptionPlan, 3000);
 
     const cleanedQuery = { ...router.query };
     delete cleanedQuery.upgradedPlan;
@@ -232,6 +272,8 @@ export default function ReportsPage() {
       undefined,
       { shallow: true }
     );
+
+    return () => window.clearTimeout(refreshTimer);
   }, [router, showToast]);
 
   const fetchAnalytics = async (technicianId: string) => {

@@ -41,7 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
+    const returnUrl = `${appUrl || vercelUrl || 'https://pest-trek.vercel.app'}/dashboard`;
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: company.stripeCustomerId,
       return_url: process.env.STRIPE_PORTAL_RETURN_URL || returnUrl,
