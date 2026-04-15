@@ -312,13 +312,24 @@ export default function Dashboard() {
     });
     if (res.ok) {
       const certs = await res.json();
-      // Add signed URLs
       const signedPromises = certs.map(async (cert: Certification) => {
         const path = cert.fileUrl; // already path
-        const { data } = await supabase.storage
+        const { data, error } = await supabase.storage
           .from('logbook-photos')
           .createSignedUrl(path, 3600);
-        return { ...cert, signedUrl: data?.signedUrl || '' };
+
+        if (error || !data?.signedUrl) {
+          console.error('Failed to create cert signed URL:', error);
+          const { data: publicData } = await supabase.storage
+            .from('logbook-photos')
+            .getPublicUrl(path);
+          return {
+            ...cert,
+            signedUrl: publicData?.publicUrl || cert.fileUrl,
+          };
+        }
+
+        return { ...cert, signedUrl: data.signedUrl };
       });
       const certsWithSigned = await Promise.all(signedPromises);
       setTechnicianCerts(certsWithSigned);

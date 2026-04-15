@@ -73,6 +73,19 @@ function supabaseImageLoader({ src }: { src: string }): string {
   return src;
 }
 
+function buildCertDownloadUrl(url: string): string {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') || '';
+  if (!base) {
+    return url;
+  }
+
+  return `${base}/storage/v1/object/public/logbook-photos/${encodeURIComponent(url)}`;
+}
+
 async function fetchImageAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
@@ -960,7 +973,7 @@ export default function ReportsPage() {
                       <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
                       <p className="mt-3 text-sm text-gray-600">Expiry</p>
                       <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
-                      <a href={cert.fileUrl} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                      <a href={buildCertDownloadUrl(cert.fileUrl)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
                         📥 Download
                       </a>
                     </div>
