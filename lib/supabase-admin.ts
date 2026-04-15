@@ -60,7 +60,8 @@ export async function createSignedPhotoUrl(pathOrUrl: string): Promise<string> {
     return data.signedUrl;
   }
 
-  return getPublicPhotoUrl(pathOrUrl);
+  console.error('Failed to create signed URL:', error, 'path:', path);
+  return pathOrUrl;
 }
 
 

@@ -78,7 +78,7 @@ function buildCertDownloadUrl(url: string): string {
     return url;
   }
 
-  return `/api/storage/signed-url?path=${encodeURIComponent(url)}`;
+  return `/api/storage/download?path=${encodeURIComponent(url)}`;
 }
 
 async function fetchImageAsBase64(url: string): Promise<string> {

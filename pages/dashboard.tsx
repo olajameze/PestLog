@@ -320,12 +320,9 @@ export default function Dashboard() {
 
         if (error || !data?.signedUrl) {
           console.error('Failed to create cert signed URL:', error);
-          const { data: publicData } = await supabase.storage
-            .from('logbook-photos')
-            .getPublicUrl(path);
           return {
             ...cert,
-            signedUrl: publicData?.publicUrl || cert.fileUrl,
+            signedUrl: cert.fileUrl,
           };
         }
 
@@ -853,7 +850,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <a
-                          href={cert.signedUrl || `/api/storage/signed-url?path=${encodeURIComponent(cert.fileUrl)}`}
+                          href={`/api/storage/download?path=${encodeURIComponent(cert.fileUrl)}`}
                           target="_blank"
                           rel="noreferrer"
                           className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
