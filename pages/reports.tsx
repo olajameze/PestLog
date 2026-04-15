@@ -105,6 +105,8 @@ export default function ReportsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [report, setReport] = useState<ReportResponse | null>(null);
+  const [upgradeConfirmedPlan, setUpgradeConfirmedPlan] = useState<string | null>(null);
+  const [reportGeneratedMessage, setReportGeneratedMessage] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<null | {
     totalJobs: number;
     completedJobs: number;
@@ -209,6 +211,29 @@ export default function ReportsPage() {
     loadUserData();
   }, [isPreviewMode, router]);
 
+  useEffect(() => {
+    if (!router.isReady) return;
+    const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+    if (!queryPlan) return;
+
+    setUpgradeConfirmedPlan(queryPlan);
+    const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
+    showToast(
+      'Subscription upgraded',
+      `Your plan is now ${planLabel}. Enhanced reporting is available on this page.`,
+      'success'
+    );
+
+    const cleanedQuery = { ...router.query };
+    delete cleanedQuery.upgradedPlan;
+    delete cleanedQuery.session_id;
+    router.replace(
+      { pathname: router.pathname, query: cleanedQuery },
+      undefined,
+      { shallow: true }
+    );
+  }, [router, showToast]);
+
   const fetchAnalytics = async (technicianId: string) => {
     setAnalyticsLoading(true);
     setAnalytics(null);
@@ -243,6 +268,7 @@ export default function ReportsPage() {
     }
 
     setFetching(true);
+    setReportGeneratedMessage(null);
     let apiUrl = `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`;
     if (search.trim()) {
       apiUrl += `&search=${encodeURIComponent(search.trim())}`;
@@ -250,7 +276,7 @@ export default function ReportsPage() {
 
     if (isPreviewMode) {
       const selectedName = technicians.find((t) => t.id === selectedTechnician)?.name || 'Technician';
-      setReport({
+      const previewReport = {
         companyName: company?.name || 'PestTrek Preview Co.',
         entries: [
           {
@@ -282,7 +308,9 @@ export default function ReportsPage() {
             expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
           },
         ],
-      });
+      };
+      setReport(previewReport);
+      setReportGeneratedMessage(`Preview report ready with ${previewReport.entries.length} jobs and ${previewReport.certifications.length} certifications.`);
       showToast('Preview mode', `Generated preview report for ${selectedName}.`, 'info');
       setFetching(false);
       return;
@@ -303,6 +331,9 @@ export default function ReportsPage() {
 
     const result = await res.json();
     setReport(result);
+    setReportGeneratedMessage(
+      `Report ready with ${result.entries.length} jobs, ${result.certifications.length} certifications, and ${result.entries.reduce((count: number, entry: ReportEntry) => count + parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length, 0)} photos.`
+    );
     if (plan === 'business' || plan === 'enterprise') {
       await fetchAnalytics(selectedTechnician);
     } else {
@@ -344,44 +375,45 @@ export default function ReportsPage() {
   const downloadPdf = async () => {
     if (!report || !company) return;
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-    const pageWidth = 612;
-    const contentWidth = 532;
-    const marginLeft = 40;
-    const marginRight = pageWidth - marginLeft;
-    const lineHeight = 16;
-    let y = 50;
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 16;
+    const contentWidth = pageWidth - margin * 2;
+    const lineHeight = 6;
+    let y = 22;
 
     const addHeader = () => {
-      doc.setFillColor(19, 78, 203);
-      doc.rect(0, 0, pageWidth, 50, 'F');
-      doc.setFontSize(16);
+      doc.setFillColor(14, 55, 121);
+      doc.rect(0, 0, pageWidth, 24, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.text(`${company.name || company.email}`, marginLeft, 32);
+      doc.setFontSize(18);
+      doc.text(`${company.name || company.email}`, margin, 14);
       doc.setFontSize(10);
-      doc.text('Compliance Report', marginLeft, 46);
-      doc.setTextColor(255, 255, 255);
-      doc.text(`Technician: ${technicians.find((t) => t.id === selectedTechnician)?.name || ''}`, marginLeft + 260, 32);
-      doc.text(`Period: ${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`, marginLeft + 260, 46);
-      doc.setDrawColor(226, 232, 240);
-      doc.line(marginLeft, 60, marginRight, 60);
-      y = 75;
+      doc.text('Compliance Report', margin, 21);
+      doc.setFontSize(9);
+      const technicianName = technicians.find((t) => t.id === selectedTechnician)?.name || 'All technicians';
+      doc.text(`Technician: ${technicianName}`, pageWidth - margin, 14, { align: 'right' });
+      doc.text(`Period: ${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`, pageWidth - margin, 21, { align: 'right' });
+      y = 32;
     };
 
     const addFooter = () => {
       const pageCount = doc.getNumberOfPages();
       for (let pageIndex = 1; pageIndex <= pageCount; pageIndex += 1) {
         doc.setPage(pageIndex);
-        doc.setFontSize(9);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16);
+        doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, marginLeft, 760);
-        doc.text(`Page ${pageIndex} of ${pageCount}`, pageWidth - marginLeft - 80, 760);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pageHeight - 8);
+        doc.text(`Page ${pageIndex} of ${pageCount}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
       }
     };
 
     const ensureSpace = (needed: number) => {
-      if (y + needed > 740) {
+      if (y + needed > pageHeight - 24) {
         doc.addPage();
         addHeader();
       }
@@ -391,102 +423,104 @@ export default function ReportsPage() {
 
     doc.setFontSize(12);
     doc.setTextColor(17, 24, 39);
-    doc.text('Job Summary', marginLeft, y);
-    y += 22;
+    doc.text('Report overview', margin, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.setTextColor(75, 85, 99);
+    const summaryItems = [
+      `Total jobs included: ${report.entries.length}`,
+      `Photos included: ${report.entries.reduce((count, entry) => count + parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length, 0)}`,
+      `Certifications included: ${report.certifications.length}`,
+    ];
+    summaryItems.forEach((item) => {
+      doc.text(item, margin, y);
+      y += 6;
+    });
+    y += 4;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
 
     for (const entry of report.entries) {
-      ensureSpace(140);
-      doc.setFillColor(241, 245, 249);
-      doc.roundedRect(marginLeft, y, contentWidth, 110, 8, 8, 'F');
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(marginLeft, y, contentWidth, 110, 8, 8, 'S');
-      y += 16;
-
-      doc.setFontSize(11);
-      doc.setTextColor(17, 24, 39);
-      doc.text(`${new Date(entry.date).toLocaleDateString()} · ${entry.clientName}`, marginLeft + 8, y);
-      y += lineHeight;
-      doc.setFontSize(10);
-      doc.setTextColor(75, 85, 99);
-      doc.text(`Address: ${entry.address}`, marginLeft + 8, y);
-      y += lineHeight;
-      doc.text(`Treatment: ${entry.treatment}`, marginLeft + 8, y);
-      y += lineHeight;
-
+      const entryPhotos = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).slice(0, 3);
       const details = [
         entry.rooms && `Rooms: ${entry.rooms.join(', ')}`,
         entry.baitBoxesPlaced && `Bait Boxes: ${entry.baitBoxesPlaced}`,
         entry.poisonUsed && `Poison Used: ${entry.poisonUsed}`,
       ].filter(Boolean) as string[];
-      details.forEach((detail) => {
-        doc.text(detail, marginLeft + 8, y);
-        y += lineHeight;
-      });
+      const notesLines = entry.notes ? doc.splitTextToSize(`Notes: ${entry.notes}`, contentWidth - 10) : [];
+      const imageHeight = entryPhotos.length > 0 ? 40 : 0;
+      const blockHeight = 32 + details.length * lineHeight + notesLines.length * 5 + imageHeight + 10;
+      ensureSpace(blockHeight + 8);
 
-      if (entry.notes) {
-        const notesLines = doc.splitTextToSize(`Notes: ${entry.notes}`, contentWidth - 16);
-        doc.text(notesLines, marginLeft + 8, y);
-        y += notesLines.length * lineHeight;
+      doc.setFillColor(245, 246, 250);
+      doc.roundedRect(margin, y, contentWidth, blockHeight, 5, 5, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(margin, y, contentWidth, blockHeight, 5, 5, 'S');
+
+      let entryY = y + 8;
+      doc.setFontSize(10);
+      doc.setTextColor(17, 24, 39);
+      doc.text(`${new Date(entry.date).toLocaleDateString()} · ${entry.clientName}`, margin + 5, entryY);
+      entryY += 6;
+      doc.setFontSize(9);
+      doc.setTextColor(75, 85, 99);
+      doc.text(`Address: ${entry.address}`, margin + 5, entryY);
+      entryY += 5;
+      doc.text(`Treatment: ${entry.treatment}`, margin + 5, entryY);
+      entryY += 6;
+      details.forEach((detail) => {
+        doc.text(detail, margin + 5, entryY);
+        entryY += 5;
+      });
+      if (notesLines.length > 0) {
+        entryY += 2;
+        doc.text(notesLines, margin + 5, entryY);
+        entryY += notesLines.length * 4;
       }
 
-      const entryPhotos = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
       if (entryPhotos.length > 0) {
-        ensureSpace(90);
-        const imageTop = y + 4;
-        let imageX = marginLeft + 8;
-        const imageWidth = 120;
-        const imageHeight = 80;
-
-        for (const photoUrl of entryPhotos.slice(0, 3)) {
-          if (imageX + imageWidth > marginLeft + contentWidth) {
-            imageX = marginLeft + 8;
-          }
+        const imageTop = entryY + 4;
+        const imageWidth = Math.min((contentWidth - 10 - (entryPhotos.length - 1) * 4) / entryPhotos.length, 60);
+        let imageX = margin + 5;
+        for (const photoUrl of entryPhotos) {
           try {
             const base64 = await fetchImageAsBase64(photoUrl);
             if (base64) {
               doc.addImage(base64, 'JPEG', imageX, imageTop, imageWidth, imageHeight);
             }
           } catch {
-            // Ignore image failures
+            // ignore image failures
           }
-          imageX += imageWidth + 10;
+          imageX += imageWidth + 4;
         }
-        y += imageHeight + 16;
-      } else {
-        y += 12;
+        entryY = imageTop + imageHeight + 4;
       }
 
-      if (entry.signature) {
-        doc.setFontSize(9);
-        doc.setTextColor(100, 116, 139);
-        doc.text('Signature captured', marginLeft + 8, y);
-        y += lineHeight;
-      }
-      y += 10;
+      y += blockHeight + 8;
     }
 
     if (report.certifications.length > 0) {
-      ensureSpace(80);
+      ensureSpace(30);
       doc.setFontSize(12);
       doc.setTextColor(17, 24, 39);
-      doc.text('Certifications', marginLeft, y);
-      y += 18;
-
+      doc.text('Certifications', margin, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.setTextColor(75, 85, 99);
       report.certifications.forEach((cert) => {
-        ensureSpace(60);
-        doc.setFontSize(10);
-        doc.setTextColor(75, 85, 99);
-        doc.text(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()}`, marginLeft, y);
-        y += lineHeight;
-        doc.text(`Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}`, marginLeft, y);
-        y += lineHeight;
-        doc.text(`File: ${cert.fileUrl}`, marginLeft, y);
-        y += 20;
+        ensureSpace(20);
+        const certName = cert.fileUrl.split('/').pop() || cert.fileUrl;
+        doc.text(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()} · Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}`, margin + 5, y);
+        y += 5;
+        doc.text(`File: ${certName}`, margin + 5, y);
+        y += 9;
       });
     }
 
     addFooter();
     doc.save(`pesttrek-report-${selectedTechnician}-${Date.now()}.pdf`);
+    showToast('Report downloaded', 'Your printable A4 report has been generated successfully.', 'success');
   };
 
   if (loading) {
@@ -514,6 +548,20 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
+
+        {upgradeConfirmedPlan ? (
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900 shadow-sm">
+            <p className="font-semibold">Your subscription has been upgraded to {upgradeConfirmedPlan}.</p>
+            <p className="mt-1">Enhanced reporting and compliance tools are now available on this page.</p>
+          </div>
+        ) : null}
+
+        {reportGeneratedMessage ? (
+          <div className="rounded-3xl border border-slate-200 bg-slate-100 p-5 text-sm text-slate-800 shadow-sm">
+            <p className="font-semibold">Report ready</p>
+            <p className="mt-1">{reportGeneratedMessage}</p>
+          </div>
+        ) : null}
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
           <div className="grid gap-4 sm:grid-cols-5">

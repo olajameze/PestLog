@@ -3,6 +3,14 @@ import Image from 'next/image';
 import { featureCards, howItWorksSteps, pricingPlans } from './content';
 import { ComplianceIcon, ContractsIcon, TimeSavingIcon } from '../icons';
 
+const trustedCompanies = [
+  {
+    href: 'https://weatherspestsolutions.co.uk/',
+    logo: '/weathers-logo.png',
+    name: "Weathers' Pest Solutions",
+  },
+];
+
 export default function LandingMain() {
   return (
     <>
@@ -29,30 +37,28 @@ export default function LandingMain() {
       <section className="bg-white px-4 py-10 sm:px-6">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-5">
           <span className="rounded-full border border-primary-200 bg-primary-50 px-4 py-1 text-sm font-semibold text-primary-700">
-            Trusted by 50+ pest control businesses
+            Trusted by pest control businesses
           </span>
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <a
-              href="https://weatherspestsolutions.co.uk/"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Visit Weathers' Pest Solutions website"
-              title="Weathers' Pest Solutions"
-              className="interactive-surface flex flex-col items-center justify-center rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 hover:border-primary-400 hover:bg-white"
-            >
-              <Image
-                src="/weathers-logo.png"
-                alt="Weathers' Pest Solutions logo"
-                width={160}
-                height={60}
-                className="h-10 w-auto object-contain"
-              />
-              <span className="mt-2 text-xs font-semibold text-primary-700">Weathers&apos; Pest Solutions</span>
-            </a>
-            {['Partner Logo 2', 'Partner Logo 3', 'Partner Logo 4'].map((logo) => (
-              <div key={logo} className="interactive-surface rounded-xl border border-zinc-200 bg-offwhite px-4 py-3 text-center text-sm font-medium text-zinc-500">
-                {logo}
-              </div>
+            {trustedCompanies.map((company) => (
+              <a
+                key={company.name}
+                href={company.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Visit ${company.name} website`}
+                title={company.name}
+                className="interactive-surface flex flex-col items-center justify-center rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 hover:border-primary-400 hover:bg-white"
+              >
+                <Image
+                  src={company.logo}
+                  alt={`${company.name} logo`}
+                  width={160}
+                  height={60}
+                  className="h-10 w-auto object-contain"
+                />
+                <span className="mt-2 text-xs font-semibold text-primary-700">{company.name}</span>
+              </a>
             ))}
           </div>
           <p className="max-w-3xl text-center text-sm text-zinc-600">

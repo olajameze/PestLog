@@ -243,30 +243,41 @@ export default function TechnicianPage() {
   const handlePhotoChange = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const selectedFiles = Array.from(files).slice(0, 4);
+    const previewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+    setPhotoPreviewUrls(previewUrls);
+
     if (isPreviewMode) {
-      const previewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
       setPhotoUrls(previewUrls);
-      setPhotoPreviewUrls(previewUrls);
       showToast('Preview mode', 'Using local preview image only.', 'info');
       return;
     }
+
     if (!profile) return;
     setPhotoUploading(true);
-    const uploadedUrls: string[] = [];
-    const previewUrls: string[] = [];
-    for (const file of selectedFiles) {
-      const filePath = `private/${profile.companyId}/${profile.id}/${Date.now()}-${file.name}`;
-    const { data: signedData } = await supabase.storage
-      .from('logbook-photos')
-      .createSignedUrl(filePath, 3600);
-    uploadedUrls.push(signedData?.signedUrl || filePath);
+    const uploadedPaths: string[] = [];
 
-      // Upload handled, signed URL created above
-      previewUrls.push(URL.createObjectURL(file));
-      previewUrls.push(URL.createObjectURL(file));
+    for (const file of selectedFiles) {
+      const sanitizedFileName = file.name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-._]/g, '');
+      const filePath = `${profile.companyId}/${profile.id}/${Date.now()}-${sanitizedFileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('logbook-photos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        showToast('Photo upload failed', uploadError.message, 'error');
+        console.error('Photo upload failed:', uploadError);
+        setPhotoUploading(false);
+        return;
+      }
+
+      uploadedPaths.push(filePath);
     }
-    setPhotoUrls(uploadedUrls);
-    setPhotoPreviewUrls(previewUrls);
+
+    setPhotoUrls(uploadedPaths);
     setPhotoUploading(false);
   };
 

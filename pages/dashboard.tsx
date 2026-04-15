@@ -404,9 +404,23 @@ export default function Dashboard() {
         }
       }
 
+      const cleanedQuery = { ...router.query };
+      const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+
+      if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business')) {
+        const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
+        showToast(
+          'Subscription active',
+          `You upgraded to ${planLabel}. Your ${queryPlan === 'business' ? 'business reporting and analytics' : 'Pro reports and certifications'} are now available.`,
+          'success'
+        );
+        await router.replace('/reports');
+        return;
+      }
+
       if (router.query.session_id) {
-        const cleanedQuery = { ...router.query };
         delete cleanedQuery.session_id;
+        delete cleanedQuery.upgradedPlan;
         router.replace(
           { pathname: router.pathname, query: cleanedQuery },
           undefined,
@@ -415,7 +429,7 @@ export default function Dashboard() {
       }
     };
     getUser();
-  }, [isPreviewMode, router, showToast, router.query.session_id]);
+  }, [isPreviewMode, router, showToast, router.query.session_id, router.query.upgradedPlan]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -773,6 +787,24 @@ export default function Dashboard() {
                   className="form-input"
                 />
               </div>
+              {certFile ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-800">Ready to upload</p>
+                  <p className="text-sm text-slate-600">{certFile.file.name}</p>
+                  {certFile.contentType.startsWith('image/') ? (
+                    <Image
+                      src={certFile.dataUrl}
+                      alt="Certification preview"
+                      width={400}
+                      height={220}
+                      className="mt-3 w-full max-w-xl rounded-2xl border border-slate-200 object-contain"
+                      unoptimized
+                    />
+                  ) : (
+                    <p className="mt-3 text-sm text-slate-500">PDF selected; it will be available for download after upload.</p>
+                  )}
+                </div>
+              ) : null}
               <FormInput
                 label="Expiry Date (optional)"
                 id="cert-expiry"
