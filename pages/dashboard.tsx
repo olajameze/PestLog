@@ -781,7 +781,7 @@ export default function Dashboard() {
                 <input
                   id="cert-file"
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={(e) => {
                     const files = (e.target as HTMLInputElement).files;
                     if (files && files[0]) {
@@ -814,7 +814,9 @@ export default function Dashboard() {
                       unoptimized
                     />
                   ) : (
-                    <p className="mt-3 text-sm text-slate-500">PDF selected; it will be available for download after upload.</p>
+                    <p className="mt-3 text-sm text-slate-500">
+                      Document selected; it will be available for download after upload.
+                    </p>
                   )}
                 </div>
               ) : null}
@@ -850,9 +852,9 @@ export default function Dashboard() {
                             {cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}
                           </p>
                         </div>
-                        <a 
-                          href={cert.signedUrl || cert.fileUrl} 
-                          target="_blank" 
+                        <a
+                          href={cert.signedUrl || `/api/storage/signed-url?path=${encodeURIComponent(cert.fileUrl)}`}
+                          target="_blank"
                           rel="noreferrer"
                           className="btn btn-sm bg-blue-600 text-white hover:bg-blue-700"
                         >

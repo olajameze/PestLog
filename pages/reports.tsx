@@ -78,12 +78,7 @@ function buildCertDownloadUrl(url: string): string {
     return url;
   }
 
-  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') || '';
-  if (!base) {
-    return url;
-  }
-
-  return `${base}/storage/v1/object/public/logbook-photos/${encodeURIComponent(url)}`;
+  return `/api/storage/signed-url?path=${encodeURIComponent(url)}`;
 }
 
 async function fetchImageAsBase64(url: string): Promise<string> {
