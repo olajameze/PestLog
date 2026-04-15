@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 
 export const config = {
@@ -10,7 +10,9 @@ export const config = {
   },
 };
 
-const CERT_BUCKET = 'logbook-photos';
+
+// const CERT_BUCKET = 'logbook-photos'; // unused
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -24,7 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
   if (error || !user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
