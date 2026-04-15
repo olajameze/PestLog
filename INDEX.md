@@ -1,6 +1,6 @@
-# PestLog Documentation Index 📚
+# Pest Trace Documentation Index 📚
 
-**Welcome to PestLog MVP!** This index helps you navigate all documentation files.
+**Welcome to Pest Trace MVP!** This index helps you navigate all documentation files.
 
 ---
 
@@ -12,7 +12,7 @@
 - Local development setup
 - Common tasks
 
-### For Deployment to jgdev.org
+### For Deployment to pesttrace.com
 👉 **[DEPLOYMENT.md](DEPLOYMENT.md)** (20 min read)
 - Step-by-step Vercel deployment
 - Environment variable setup
@@ -175,7 +175,7 @@ Before deploying, gather:
 | **Supabase** | Project URL + Anon Key | Supabase → Project Settings → API |
 | **Stripe** | Live Secret Key + Webhook Secret | Stripe Dashboard → Developers |
 | **Database** | PostgreSQL connection string | Supabase or your provider |
-| **Domain** | DNS access for jgdev.org | Your domain registrar |
+| **Domain** | DNS access for pesttrace.com | Your domain registrar |
 | **Vercel** | Account created | vercel.com |
 
 See [DEPLOYMENT.md Step 1](DEPLOYMENT.md#step-1-prepare-environment-variables) for details.
@@ -195,7 +195,7 @@ vercel --prod
 
 # 4. Verify
 vercel logs --prod
-# Visit https://jgdev.org and test
+# Visit https://pesttrace.com and test
 ```
 
 Full details: [DEPLOYMENT.md](DEPLOYMENT.md)
@@ -220,7 +220,7 @@ Full details: [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## 📱 Mobile / PWA Deployment
 
-PestLog is a Progressive Web App (PWA):
+Pest Trace is a Progressive Web App (PWA):
 - ✅ Installable on mobile (Chrome: "Install app" prompt)
 - ✅ Works offline with fallback page
 - ✅ Service worker caching
@@ -312,7 +312,7 @@ Production Live ✨
 
 ## 🏁 Good Luck! 
 
-You have everything you need to launch PestLog to production. 
+You have everything you need to launch Pest Trace to production. 
 
 **Questions?** Check the relevant documentation file from the table above.  
 **Ready to start?** Follow the quick start path for your role above.
@@ -321,4 +321,4 @@ You have everything you need to launch PestLog to production.
 
 **Generated**: January 2025  
 **Status**: ✅ Production Ready  
-**Target URL**: https://jgdev.org
+**Target URL**: https://pesttrace.com

@@ -1,8 +1,8 @@
-# PestLog Quick Reference Guide
+# Pest Trace Quick Reference Guide
 
 **Status**: ✅ Production Ready  
 **Environment**: Next.js 16 + TypeScript + Tailwind  
-**Deployment Target**: jgdev.org via Vercel
+**Deployment Target**: pesttrace.com via Vercel
 
 ---
 
@@ -12,7 +12,7 @@
 
 ```bash
 git clone <repository-url>
-cd pestlog
+cd pesttrek
 npm install
 ```
 
@@ -197,7 +197,7 @@ window.location.href = url; // Redirect to Stripe
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://localhost/pestlog
+DATABASE_URL=postgresql://localhost/pesttrace
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_test_...
 NEXTAUTH_URL=http://localhost:3000
@@ -209,10 +209,10 @@ NODE_ENV=development
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://prod-server/pestlog-prod
+DATABASE_URL=postgresql://prod-server/pesttrace-prod
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_live_...
-NEXTAUTH_URL=https://jgdev.org
+NEXTAUTH_URL=https://pesttrace.com
 NODE_ENV=production
 ```
 
@@ -328,7 +328,7 @@ Fetches compliance reports.
 
 ### Production Testing
 
-- [ ] Site loads at https://jgdev.org
+- [ ] Site loads at https://pesttrace.com
 - [ ] SSL certificate active (green lock)
 - [ ] All features from "Local Testing" work on live
 - [ ] Errors logged to console (check Vercel logs)

@@ -1,4 +1,4 @@
-# PestLog – Requirements Document
+# Pest Trace – Requirements Document
 
 ## Project Overview
 A compliance logbook SaaS for pest control businesses. Helps prove technician certification and log jobs digitally to comply with UK regulations (Rodenticide Stewardship Regime, effective June 2025).
@@ -29,7 +29,7 @@ A compliance logbook SaaS for pest control businesses. Helps prove technician ce
 - Mobile‑first responsive
 
 ## Deployment
-- Domain: jgdev.org
+- Domain: pesttrace.com
 - Hosting: Vercel
 - Environment variables: see `.env.example`
 

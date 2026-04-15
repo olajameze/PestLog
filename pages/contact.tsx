@@ -76,8 +76,8 @@ export default function ContactPage() {
               <div className="mt-8 space-y-4 text-sm text-slate-600">
                 <p>
                   <strong>Support email:</strong>{' '}
-                  <a href="mailto:hello@jgdev.co.uk" className="text-primary-600 hover:text-primary-700">
-                    hello@jgdev.co.uk
+                  <a href="mailto:hello@pesttrace.com" className="text-primary-600 hover:text-primary-700">
+                    hello@pesttrace.com
                   </a>
                 </p>
                 <p>

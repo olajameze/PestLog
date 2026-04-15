@@ -1,4 +1,4 @@
-# PestLog Vercel Deployment Guide
+# Pest Trace Vercel Deployment Guide
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Database (Prisma)
-DATABASE_URL=postgresql://user:pass@server:5432/pestlog
+DATABASE_URL=postgresql://user:pass@server:5432/pesttrace
 
 # Stripe (Payments)
 STRIPE_SECRET_KEY=sk_live_...
@@ -27,7 +27,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_... # (optional for client-side)
 
 # Deployment
-NEXTAUTH_URL=https://jgdev.org
+NEXTAUTH_URL=https://pesttrace.com
 NODE_ENV=production
 ```
 
@@ -40,7 +40,7 @@ NODE_ENV=production
 **Stripe:**
 - Dashboard → Developers → API Keys
 - Use Live Secret Key and Webhook Signing Secret
-- Create webhook endpoint pointing to `https://jgdev.org/api/webhooks/stripe`
+- Create webhook endpoint pointing to `https://pesttrace.com/api/webhooks/stripe`
 
 **Database:**
 - Use Supabase's PostgreSQL connection string or external database
@@ -122,17 +122,17 @@ Or, if deploying with GitHub integration:
 
 ## Step 5: Configure Domain
 
-### Option A: Custom Domain (jgdev.org)
+### Option A: Custom Domain (pesttrace.com)
 
 1. In Vercel dashboard, go to **Settings → Domains**
 2. Click "Add Domain"
-3. Enter `jgdev.org`
+3. Enter `pesttrace.com`
 4. Choose "Nameserver" or "CNAME" integration
 5. Update DNS records at your domain registrar if needed
 
 ### Option B: Vercel Subdomain (auto-generated)
 
-1. Default: `pestlog.vercel.app`
+1. Default: `pesttrace.vercel.app`
 2. No additional configuration needed
 
 ---
@@ -143,7 +143,7 @@ In Stripe Dashboard:
 
 1. Go to **Developers → Webhooks**
 2. Click "Add endpoint"
-3. Enter endpoint URL: `https://jgdev.org/api/webhooks/stripe`
+3. Enter endpoint URL: `https://pesttrace.com/api/webhooks/stripe`
 4. Select events to listen for:
    - `checkout.session.completed`
    - `customer.subscription.updated`
@@ -156,7 +156,7 @@ In Stripe Dashboard:
 
 ### Health Checks
 
-1. **Authentication**: Visit `https://jgdev.org/auth/signin` → sign up
+1. **Authentication**: Visit `https://pesttrace.com/auth/signin` → sign up
 2. **Dashboard**: After signup, verify redirect to `/dashboard`
 3. **Subscription**: Click "Settings" → "Upgrade to Pro" → Stripe checkout
 4. **Reports**: Owner user creates technician, check `/reports` page
@@ -247,7 +247,7 @@ vercel rollback [deployment-url]
 - [ ] Environment variables set in Vercel dashboard
 - [ ] Database migrations applied (`npx prisma migrate deploy`)
 - [ ] Stripe webhook endpoint configured
-- [ ] Custom domain (jgdev.org) DNS records updated
+- [ ] Custom domain (pesttrace.com) DNS records updated
 - [ ] Authentication tested (sign up/sign in works)
 - [ ] Stripe checkout tested with test card
 - [ ] Technician logbook tested (photo upload works)
@@ -291,4 +291,4 @@ vercel logs --prod
 
 **Deployment Date**: _______________  
 **Deployed By**: _______________  
-**Environment**: Production (jgdev.org)
+**Environment**: Production (pesttrace.com)

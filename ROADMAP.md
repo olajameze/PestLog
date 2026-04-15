@@ -1,6 +1,6 @@
-# PestLog Deployment Roadmap 🗺️
+# Pest Trace Deployment Roadmap 🗺️
 
-**Project**: PestLog MVP → jgdev.org  
+**Project**: Pest Trace MVP → pesttrace.com  
 **Current Status**: ✅ Code Complete & Tested  
 **Next Phase**: Production Deployment  
 **Target Launch**: Ready Now
@@ -25,14 +25,14 @@ STEP 1: Preparation (1-2 hours)
 ├─ [ ] Gather Supabase credentials
 ├─ [ ] Gather Stripe Live API keys
 ├─ [ ] Gather database connection string
-├─ [ ] Prepare DNS records for jgdev.org
+├─ [ ] Prepare DNS records for pesttrace.com
 └─ → See [DEPLOYMENT.md](DEPLOYMENT.md) Step 1
 
 STEP 2: Configuration (30 min)
 ├─ [ ] Configure environment variables in Vercel
-├─ [ ] Create Stripe product ("PestLog Monthly")
+├─ [ ] Create Stripe product ("Pest Trace Monthly")
 ├─ [ ] Create Stripe webhook endpoint
-├─ [ ] Add domain jgdev.org in Vercel
+├─ [ ] Add domain pesttrace.com in Vercel
 └─ → See [DEPLOYMENT.md](DEPLOYMENT.md) Steps 2-6
 
 STEP 3: Deployment (15 min)
@@ -42,7 +42,7 @@ STEP 3: Deployment (15 min)
 └─ → See [DEPLOYMENT.md](DEPLOYMENT.md) Step 7
 
 STEP 4: Validation (30 min)
-├─ [ ] Verify site loads at jgdev.org
+├─ [ ] Verify site loads at pesttrace.com
 ├─ [ ] Test sign-up/sign-in flow
 ├─ [ ] Test Stripe payment (live)
 ├─ [ ] Test technician logbook
@@ -88,7 +88,7 @@ STEP 5: Monitoring (Ongoing)
      └─ Verify: Connection works locally
 
 ✓ [ ] Domain Setup
-     ├─ Domain: jgdev.org already purchased
+     ├─ Domain: pesttrace.com already purchased
      ├─ Registrar: Verify access
      └─ DNS: Ready to update
 ```
@@ -120,11 +120,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="eyxxxx..."
 DATABASE_URL="postgresql://user:pass@host/db"
 STRIPE_SECRET_KEY="sk_live_..."
 STRIPE_WEBHOOK_SECRET="whsec_live_..."
-NEXTAUTH_URL="https://jgdev.org"
+NEXTAUTH_URL="https://pesttrace.com"
 NODE_ENV="production"
 
 # Step 3: Add Custom Domain
-# Settings → Domains → Add Domain → jgdev.org
+# Settings → Domains → Add Domain → pesttrace.com
 
 # Step 4: Configure DNS (at registrar)
 # Add Vercel nameservers or CNAME record
@@ -149,7 +149,7 @@ NODE_ENV="production"
 # "build": "prisma migrate deploy && next build"
 
 # Option B: Manual Migration
-export DATABASE_URL="postgresql://prod-user:pass@prod-host/pestlog-prod"
+export DATABASE_URL="postgresql://prod-user:pass@prod-host/pesttrace-prod"
 npx prisma migrate deploy
 
 # Verify migration succeeded:
@@ -180,7 +180,7 @@ vercel logs --prod
 # Look for: "✓ Built successfully"
 
 # Verify URL
-# Expected: Automatic > jgdev.org
+# Expected: Automatic > pesttrace.com
 ```
 
 **Estimated Time**: 5-10 min
@@ -195,7 +195,7 @@ vercel logs --prod
 
 **Manual Testing**:
 ```
-✓ [ ] Visit https://jgdev.org
+✓ [ ] Visit https://pesttrace.com
      └─ Expected: Landing page loads, no console errors
 
 ✓ [ ] Test Sign-Up Flow
@@ -289,14 +289,14 @@ vercel logs --prod --level error
 - [ ] Supabase credentials ready
 - [ ] Stripe Live keys ready
 - [ ] Database connection string ready
-- [ ] Domain jgdev.org access verified
+- [ ] Domain pesttrace.com access verified
 
 ### Configuration Phase
 
 - [ ] Environment variables set in Vercel
 - [ ] Domain added to Vercel
 - [ ] DNS records configured
-- [ ] Stripe product created ("PestLog Monthly")
+- [ ] Stripe product created ("Pest Trace Monthly")
 - [ ] Stripe webhook endpoint registered
 - [ ] Build script verified
 
@@ -309,7 +309,7 @@ vercel logs --prod --level error
 
 ### Validation Phase
 
-- [ ] Site loads at jgdev.org (SSL active)
+- [ ] Site loads at pesttrace.com (SSL active)
 - [ ] Sign-up/sign-in flow works
 - [ ] Stripe live payment succeeded
 - [ ] Technician logbook works
@@ -394,7 +394,7 @@ DATABASE_URL="[prod]" npx prisma migrate resolve --rolled-back <migration_name>
 
 ✅ **Deployment is successful when:**
 
-1. **Site loads** at https://jgdev.org with valid SSL
+1. **Site loads** at https://pesttrace.com with valid SSL
 2. **No 5xx errors** in logs for first hour
 3. **All core flows work**: Auth → Dashboard → Payments → Logbook
 4. **Stripe payments process** to live account
@@ -437,7 +437,7 @@ Everything is in place for a successful deployment.
 
 **Generated**: January 2025  
 **Status**: Ready for Production  
-**Target**: https://jgdev.org  
+**Target**: https://pesttrace.com  
 **Estimated Launch**: Within 3-4 hours from start
 
 Good luck! 🚀

@@ -57,7 +57,7 @@ export default function TermsPage() {
             <div>
               <h2 className="text-2xl font-semibold text-navy">7. Contact</h2>
               <p className="mt-3 leading-7">
-                For questions or support, visit our <Link href="/contact" className="text-primary-600 hover:text-primary-700">contact page</Link> or email <a href="mailto:hello@jgdev.co.uk" className="text-primary-600 hover:text-primary-700">hello@jgdev.co.uk</a>.
+                For questions or support, visit our <Link href="/contact" className="text-primary-600 hover:text-primary-700">contact page</Link> or email <a href="mailto:hello@pesttrace.com" className="text-primary-600 hover:text-primary-700">hello@pesttrace.com</a>.
               </p>
             </div>
           </section>

@@ -1,7 +1,7 @@
-# PestLog Go-Live Checklist
+# Pest Trace Go-Live Checklist
 
-**Project**: PestLog MVP  
-**Target Domain**: jgdev.org  
+**Project**: Pest Trace MVP  
+**Target Domain**: pesttrace.com  
 **Status**: Ready for Staging/Production  
 **Last Updated**: January 2025
 
@@ -12,14 +12,14 @@
 ### Product Setup
 
 - [ ] **Stripe Product Created**
-  - Name: "PestLog Monthly"
+  - Name: "Pest Trace Monthly"
   - Price: £35.00 GBP
   - Billing: Monthly (recurring)
   - Trial: 14 days
-  - Webhook endpoint registered: `https://jgdev.org/api/webhooks/stripe`
+  - Webhook endpoint registered: `https://pesttrace.com/api/webhooks/stripe`
 
 - [ ] **Domain Registered**
-  - Domain: jgdev.org
+  - Domain: pesttrace.com
   - Registrar: _____________
   - DNS provider: _____________
   - Auto-renewal enabled: Yes / No
@@ -54,7 +54,7 @@
 ### Testing Environment (Staging)
 
 - [ ] **Staging Deployment Created**
-  - URL: staging.jgdev.org or pestlog-staging.vercel.app
+  - URL: staging.pesttrace.com or pesttrace-staging.vercel.app
   - Environment: All variables copied from prod (except with Stripe test keys)
   - Database: Separate staging database created
 
@@ -107,11 +107,11 @@
   - [ ] `DATABASE_URL` ✓
   - [ ] `STRIPE_SECRET_KEY` ✓
   - [ ] `STRIPE_WEBHOOK_SECRET` ✓
-  - [ ] `NEXTAUTH_URL` = https://jgdev.org ✓
+  - [ ] `NEXTAUTH_URL` = https://pesttrace.com ✓
   - [ ] `NODE_ENV` = production ✓
 
 - [ ] **DNS Propagation Checked**
-  - Command: `nslookup jgdev.org`
+  - Command: `nslookup pesttrace.com`
   - Resolves to: 76.76.19.0 (Vercel IP)
   - Propagation time: _____ minutes
 
@@ -128,7 +128,7 @@ DATABASE_URL="[production-url]" npx prisma migrate deploy
 vercel --prod
 
 # Step 4: Verify deployment URL
-# Expected: https://jgdev.org or default Vercel URL
+# Expected: https://pesttrace.com or default Vercel URL
 ```
 
 Deployment completed at: _____________  
@@ -138,7 +138,7 @@ Commit hash deployed: _____________
 ### Post-Deployment Smoke Test (10 min)
 
 - [ ] **Site Loads**
-  - `https://jgdev.org` returns 200 OK
+  - `https://pesttrace.com` returns 200 OK
   - Landing page displays correctly
   - No console errors in DevTools
 
@@ -202,7 +202,7 @@ Commit hash deployed: _____________
 
 - [ ] **Uptime Monitoring Started**
   - Service: _____________ (e.g., UptimeRobot, Pingdom)
-  - Endpoint: https://jgdev.org
+  - Endpoint: https://pesttrace.com
   - Check interval: Every 5 minutes
   - Alert email: _____________
 

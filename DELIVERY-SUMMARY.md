@@ -1,6 +1,6 @@
-# PestLog MVP - Stage 6 Complete ✅
+# Pest Trace MVP - Stage 6 Complete ✅
 
-**Project**: PestLog (Pest Control Management SaaS)  
+**Project**: Pest Trace (Pest Control Management SaaS)  
 **Status**: Production Ready  
 **Stages Completed**: 1-6 ✅  
 **Build Status**: ✅ PASSING  
@@ -75,7 +75,7 @@ DATABASE_URL="[prod-db]" npx prisma migrate deploy
 vercel --prod
 ```
 
-**Result**: Site live at https://jgdev.org ✅
+**Result**: Site live at https://pesttrace.com ✅
 
 ---
 
@@ -215,7 +215,7 @@ Stripe checkout (£35/mo, 7-day trial)
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://localhost/pestlog
+DATABASE_URL=postgresql://localhost/pesttrace
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_test_...
 NEXTAUTH_URL=http://localhost:3000
@@ -226,10 +226,10 @@ NEXTAUTH_URL=http://localhost:3000
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://prod/pestlog-prod
+DATABASE_URL=postgresql://prod/pesttrace-prod
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_live_...
-NEXTAUTH_URL=https://jgdev.org
+NEXTAUTH_URL=https://pesttrace.com
 NODE_ENV=production
 ```
 
@@ -276,7 +276,7 @@ All documentation is in the project root:
 1. **[DEPLOYMENT.md](DEPLOYMENT.md)** (8 steps, ~20 min read)
    - Vercel CLI setup
    - Environment variable configuration
-   - Domain setup (jgdev.org)
+   - Domain setup (pesttrace.com)
    - Stripe webhook setup
    - Testing checklist
    - Troubleshooting
@@ -333,7 +333,7 @@ vercel --prod
 
 # 4. Verify
 vercel logs --prod         # Check for errors
-# Manual: Visit https://jgdev.org and test flow
+# Manual: Visit https://pesttrace.com and test flow
 ```
 
 ---
@@ -366,7 +366,7 @@ All 6 MVP stages have been successfully completed:
 5. ✅ **Stage 5**: Stripe Payments & Subscription
 6. ✅ **Stage 6**: Polish, Micro-interactions & Deployment
 
-**Ready for launch to jgdev.org!**
+**Ready for launch to pesttrace.com!**
 
 ---
 
@@ -376,7 +376,7 @@ All 6 MVP stages have been successfully completed:
 | **Deployment Ready** | ✅ YES |
 | **Documentation** | ✅ COMPLETE |
 | **Testing Validated** | ✅ YES |
-| **Live URL** | https://jgdev.org (Point DNS) |
+| **Live URL** | https://pesttrace.com (Point DNS) |
 | **Estimated Launch** | Ready Now |
 
 ---

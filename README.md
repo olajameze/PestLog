@@ -1,4 +1,4 @@
-# PestLog
+# Pest Trace
 
 A compliance logbook SaaS for pest control businesses.
 
@@ -10,7 +10,7 @@ A compliance logbook SaaS for pest control businesses.
 - PDF export for compliance
 - Subscription payments with Stripe
 - PWA support
-- Deployed on Vercel at jgdev.org
+- Deployed on Vercel at pesttrace.com
 
 ## Tech Stack
 
@@ -34,7 +34,7 @@ A compliance logbook SaaS for pest control businesses.
 
 ## Deployment
 
-Deployed on Vercel with custom domain jgdev.org.
+Deployed on Vercel with custom domain pesttrace.com.
 
 ## Environment Variables
 

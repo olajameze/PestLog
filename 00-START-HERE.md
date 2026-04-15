@@ -1,6 +1,6 @@
-# 🎉 PestLog Stage 6 Complete - Final Summary
+# 🎉 Pest Trace Stage 6 Complete - Final Summary
 
-**Project**: PestLog MVP (Pest Control Management SaaS)  
+**Project**: Pest Trace MVP (Pest Control Management SaaS)  
 **Status**: ✅ PRODUCTION READY  
 **Build Status**: ✅ PASSING (TypeScript + Compilation)  
 **Stages Completed**: 1 → 2 → 3 → 4 → 5 → 6 (All Complete)  
@@ -47,7 +47,7 @@ A production-ready Next.js application with:
 - Environment variable templates for dev/prod
 - Prisma migration strategy for database
 - Stripe webhook configuration
-- Domain setup for jgdev.org
+- Domain setup for pesttrace.com
 - DNS configuration instructions
 
 ---
@@ -74,7 +74,7 @@ A production-ready Next.js application with:
 - Track completed jobs by type
 
 ✅ **Billing & Subscription**
-- Subscribe to "PestLog Monthly" (£35/month)
+- Subscribe to "Pest Trace Monthly" (£35/month)
 7-day free trial
 - Manage subscription via Stripe portal
 - Access billing history
@@ -180,12 +180,12 @@ A production-ready Next.js application with:
 ### Phase 2: Configuration (30 min)
 - Set environment variables in Vercel
 - Configure Stripe webhook
-- Add domain jgdev.org
+- Add domain pesttrace.com
 
 ### Phase 3: Deploy (30 min)
 - Run Prisma migrations
 - Execute `vercel --prod`
-- Verify site loads at jgdev.org
+- Verify site loads at pesttrace.com
 
 ### Phase 4: Validation (30 min)
 - Test all features
@@ -233,7 +233,7 @@ A production-ready Next.js application with:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://localhost/pestlog
+DATABASE_URL=postgresql://localhost/pesttrace
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_test_...
 NEXTAUTH_URL=http://localhost:3000
@@ -243,10 +243,10 @@ NEXTAUTH_URL=http://localhost:3000
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://prod-server/pestlog-prod
+DATABASE_URL=postgresql://prod-server/pesttrace-prod
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_live_...
-NEXTAUTH_URL=https://jgdev.org
+NEXTAUTH_URL=https://pesttrace.com
 NODE_ENV=production
 ```
 
@@ -258,7 +258,7 @@ See [DEPLOYMENT.md Step 1](DEPLOYMENT.md#step-1-prepare-environment-variables) f
 
 ✅ **Deployment is successful when:**
 
-1. ✅ Site loads at https://jgdev.org with SSL certificate
+1. ✅ Site loads at https://pesttrace.com with SSL certificate
 2. ✅ Sign-up/sign-in flow works with real emails
 3. ✅ Stripe live payment processes successfully
 4. ✅ Technician logbook entry + photo upload works
@@ -311,7 +311,7 @@ vercel logs --prod
 ```
 LOCAL DEVELOPMENT                STAGING (Optional)          PRODUCTION
 ─────────────────               ──────────────────          ──────────────
-npm run dev            →         Vercel preview            jgdev.org
+npm run dev            →         Vercel preview            pesttrace.com
 (localhost:3000)                (vercel.app)               (LIVE)
 ├─ Test features                ├─ UAT
 ├─ Write code                   ├─ Security check
@@ -362,7 +362,7 @@ npm run dev            →         Vercel preview            jgdev.org
 
 ## 🎓 What You've Built
 
-**PestLog is a complete SaaS application:**
+**Pest Trace is a complete SaaS application:**
 
 1. ✅ **Multi-tenant database** - Each company separate
 2. ✅ **User authentication** - Email magic links
@@ -456,7 +456,7 @@ You now have a **complete, production-ready SaaS application**.
 5. ✅ Stripe Payments & Subscription
 6. ✅ Polish & Deployment
 
-**Status**: Ready to launch to jgdev.org  
+**Status**: Ready to launch to pesttrace.com  
 **Time to Production**: 3-4 hours  
 **Build Quality**: PASSING ✅  
 

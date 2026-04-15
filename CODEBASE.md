@@ -1,6 +1,6 @@
-# PestLog Complete Codebase Structure
+# Pest Trace Complete Codebase Structure
 
-**Project**: PestLog MVP  
+**Project**: Pest Trace MVP  
 **Status**: Production Ready (Stage 6 - Polish & Deployment)  
 **Build Standard**: ✅ Production Build Passes (TypeScript + Compilation)  
 **Generated**: January 2025
@@ -10,7 +10,7 @@
 ## File Tree
 
 ```
-pestlog/
+pesttrace/
 ├── .next/                          # Next.js build output (generated)
 ├── public/                         # Static assets
 │   ├── icons/
@@ -249,7 +249,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
 
 # Database
-DATABASE_URL=postgresql://user:pass@host:5432/pestlog
+DATABASE_URL=postgresql://user:pass@host:5432/pesttrace
 
 # Stripe (Test Keys in Dev)
 STRIPE_SECRET_KEY=sk_test_...
@@ -269,7 +269,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
 
 # Database (Production instance)
-DATABASE_URL=postgresql://user:pass@prod-host:5432/pestlog-prod
+DATABASE_URL=postgresql://user:pass@prod-host:5432/pesttrace-prod
 
 # Stripe (Live Keys)
 STRIPE_SECRET_KEY=sk_live_...
@@ -277,7 +277,7 @@ STRIPE_WEBHOOK_SECRET=whsec_live_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 # Deployment
-NEXTAUTH_URL=https://jgdev.org
+NEXTAUTH_URL=https://pesttrace.com
 NODE_ENV=production
 ```
 
@@ -348,7 +348,7 @@ vercel --prod
 
 ### After Deployment
 
-- [ ] Site loads at jgdev.org
+- [ ] Site loads at pesttrace.com
 - [ ] SSL certificate active (green lock)
 - [ ] Sign-up/sign-in works
 - [ ] Stripe live payment processes

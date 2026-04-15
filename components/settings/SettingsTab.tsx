@@ -278,7 +278,7 @@ export default function SettingsTab({
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-sm text-slate-600">
               <p className="font-semibold text-slate-900">Dedicated account manager</p>
               <p className="mt-2">Enterprise customers have a dedicated account representative.</p>
-              <p className="mt-1">Contact: <a href="mailto:hello@jgdev.co.uk" className="text-blue-600 hover:text-blue-800">hello@jgdev.co.uk</a></p>
+              <p className="mt-1">Contact: <a href="mailto:hello@pesttrace.com" className="text-blue-600 hover:text-blue-800">hello@pesttrace.com</a></p>
             </div>
           </div>
         )}

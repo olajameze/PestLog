@@ -337,7 +337,7 @@ export default function Dashboard() {
   useEffect(() => {
     const getUser = async () => {
       if (isPreviewMode) {
-        setUser({ id: 'preview-user', email: 'preview@pestlog.local' });
+        setUser({ id: 'preview-user', email: 'preview@pesttrace.local' });
         setCompany({
           id: 'preview-company',
           name: 'Pest Trace Preview Co.',
