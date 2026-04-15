@@ -241,8 +241,10 @@ export default function Dashboard() {
     }
 
     setCertLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      showToast('Upload failed', 'Unable to verify your session. Please refresh and try again.', 'error');
+      console.error('Cert upload failed: no session', sessionError);
       setCertLoading(false);
       return;
     }
@@ -257,12 +259,12 @@ export default function Dashboard() {
       .from('logbook-photos')
       .upload(filePath, certFile.file, {
         cacheControl: '3600',
-        contentType: certFile.contentType,
+        contentType: certFile.file.type || undefined,
         upsert: false,
       });
 
     if (uploadError) {
-      showToast('Upload failed', uploadError.message, 'error');
+      showToast('Upload failed', uploadError.message || 'Storage upload failed', 'error');
       console.error('Cert upload failed:', uploadError);
       setCertLoading(false);
       return;
@@ -294,8 +296,8 @@ export default function Dashboard() {
       }
     } else {
       const err = await res.json().catch(() => ({ error: 'Server error' }));
-      showToast('Upload failed', err.error || 'Try again', 'error');
-      console.error('Cert upload error:', err);
+      showToast('Upload failed', err.error || err.message || 'Try again', 'error');
+      console.error('Cert upload error:', err, 'status', res.status);
     }
     setCertLoading(false);
   };
