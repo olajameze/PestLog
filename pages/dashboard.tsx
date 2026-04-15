@@ -1174,14 +1174,15 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                 {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 && (
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
-                      <Image
+<Image
                         key={url}
                         loader={supabaseImageLoader}
                         src={url}
                         alt="Job photo"
                         width={600}
                         height={300}
-className="w-full h-auto max-h-[400px] object-contain rounded-2xl border shadow-sm hover:shadow-md transition-shadow"
+                        className="w-full h-auto max-h-[400px] object-contain rounded-2xl border shadow-sm hover:shadow-md transition-shadow"
+                        unoptimized
                       />
                     ))}
                   </div>

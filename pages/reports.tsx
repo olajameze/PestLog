@@ -911,14 +911,15 @@ export default function ReportsPage() {
                           <div className="grid gap-3 sm:grid-cols-2">
                             {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
                               <div key={url} className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-                                <Image
+<Image
                                   loader={supabaseImageLoader}
                                   src={url}
                                   alt={`Job photo for ${entry.clientName}`}
                                   width={800}
                                   height={400}
-className="w-full h-auto max-h-[400px] object-contain rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                                  className="w-full h-auto max-h-[400px] object-contain rounded-2xl shadow-sm hover:shadow-md transition-shadow"
                                   sizes="(max-width: 640px) 100vw, 50vw"
+                                  unoptimized
                                 />
                               </div>
                             ))}
