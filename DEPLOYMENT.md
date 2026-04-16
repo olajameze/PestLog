@@ -31,6 +31,8 @@ NEXTAUTH_URL=https://pesttrace.com
 NODE_ENV=production
 ```
 
+> Note: In production, set all of these values in your hosting provider / Vercel dashboard. Use Stripe live keys and the live `STRIPE_WEBHOOK_SECRET` for the webhook endpoint at `https://pesttrace.com/api/webhooks/stripe`.
+
 ### Getting Credentials
 
 **Supabase:**
@@ -41,6 +43,7 @@ NODE_ENV=production
 - Dashboard → Developers → API Keys
 - Use Live Secret Key and Webhook Signing Secret
 - Create webhook endpoint pointing to `https://pesttrace.com/api/webhooks/stripe`
+- Add live keys and `STRIPE_WEBHOOK_SECRET` to production environment variables in Vercel/hosting
 
 **Database:**
 - Use Supabase's PostgreSQL connection string or external database

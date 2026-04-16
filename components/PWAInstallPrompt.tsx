@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -108,7 +109,9 @@ export default function PWAInstallPrompt() {
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white shadow-2xl">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
-            <div className="text-3xl shrink-0">🐛</div>
+            <div className="shrink-0">
+              <Image src="/pest-trace.png" alt="Pest Trace logo" width={40} height={40} className="h-10 w-10 object-contain" />
+            </div>
             <div>
               <h3 className="font-bold text-lg leading-tight">Install Pest Trace</h3>
               <p className="text-blue-100 text-sm">

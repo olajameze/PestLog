@@ -431,22 +431,22 @@ export default function ReportsPage() {
     const pageHeight = 297;
     const margin = 16;
     const contentWidth = pageWidth - margin * 2;
-    const lineHeight = 6;
-    let y = 22;
+    const captionWidth = contentWidth - 8;
+    let y = 24;
 
     const addHeader = () => {
       doc.setFillColor(14, 55, 121);
-      doc.rect(0, 0, pageWidth, 24, 'F');
+      doc.rect(0, 0, pageWidth, 30, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.text(`${company.name || company.email}`, margin, 14);
+      doc.setFontSize(20);
+      doc.text(company.name || company.email, margin, 14);
       doc.setFontSize(10);
-      doc.text('Compliance Report', margin, 21);
-      doc.setFontSize(9);
+      doc.text('Compliance Report • Pest Trace', margin, 24);
+      doc.setFontSize(10);
+      doc.text(`Period: ${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`, pageWidth - margin, 14, { align: 'right' });
       const technicianName = technicians.find((t) => t.id === selectedTechnician)?.name || 'All technicians';
-      doc.text(`Technician: ${technicianName}`, pageWidth - margin, 14, { align: 'right' });
-      doc.text(`Period: ${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`, pageWidth - margin, 21, { align: 'right' });
-      y = 32;
+      doc.text(`Technician: ${technicianName}`, pageWidth - margin, 24, { align: 'right' });
+      y = 36;
     };
 
     const addFooter = () => {
@@ -454,11 +454,11 @@ export default function ReportsPage() {
       for (let pageIndex = 1; pageIndex <= pageCount; pageIndex += 1) {
         doc.setPage(pageIndex);
         doc.setDrawColor(226, 232, 240);
-        doc.line(margin, pageHeight - 16, pageWidth - margin, pageHeight - 16);
+        doc.line(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18);
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pageHeight - 8);
-        doc.text(`Page ${pageIndex} of ${pageCount}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
+        doc.text(`Page ${pageIndex} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
       }
     };
 
@@ -471,11 +471,12 @@ export default function ReportsPage() {
 
     addHeader();
 
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setTextColor(17, 24, 39);
     doc.text('Report overview', margin, y);
     y += 8;
-    doc.setFontSize(10);
+
+    doc.setFontSize(11);
     doc.setTextColor(75, 85, 99);
     const summaryItems = [
       `Total jobs included: ${report.entries.length}`,
@@ -484,12 +485,13 @@ export default function ReportsPage() {
     ];
     summaryItems.forEach((item) => {
       doc.text(item, margin, y);
-      y += 6;
+      y += 7;
     });
+
     y += 4;
     doc.setDrawColor(226, 232, 240);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
+    y += 10;
 
     for (const entry of report.entries) {
       const entryPhotos = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).slice(0, 3);
@@ -498,41 +500,46 @@ export default function ReportsPage() {
         entry.baitBoxesPlaced && `Bait Boxes: ${entry.baitBoxesPlaced}`,
         entry.poisonUsed && `Poison Used: ${entry.poisonUsed}`,
       ].filter(Boolean) as string[];
-      const notesLines = entry.notes ? doc.splitTextToSize(`Notes: ${entry.notes}`, contentWidth - 10) : [];
-      const imageHeight = entryPhotos.length > 0 ? 40 : 0;
-      const blockHeight = 32 + details.length * lineHeight + notesLines.length * 5 + imageHeight + 10;
+      const notesLines = entry.notes ? doc.splitTextToSize(`Notes: ${entry.notes}`, captionWidth) : [];
+      const imageHeight = entryPhotos.length > 0 ? 36 : 0;
+      const blockHeight = 18 + details.length * 7 + notesLines.length * 6 + imageHeight + 12;
       ensureSpace(blockHeight + 8);
 
-      doc.setFillColor(245, 246, 250);
-      doc.roundedRect(margin, y, contentWidth, blockHeight, 5, 5, 'F');
+      doc.setFillColor(249, 250, 253);
+      doc.roundedRect(margin, y, contentWidth, blockHeight, 6, 6, 'F');
       doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(margin, y, contentWidth, blockHeight, 5, 5, 'S');
+      doc.roundedRect(margin, y, contentWidth, blockHeight, 6, 6, 'S');
 
-      let entryY = y + 8;
-      doc.setFontSize(10);
+      let entryY = y + 10;
+      doc.setFontSize(12);
       doc.setTextColor(17, 24, 39);
-      doc.text(`${new Date(entry.date).toLocaleDateString()} · ${entry.clientName}`, margin + 5, entryY);
-      entryY += 6;
-      doc.setFontSize(9);
-      doc.setTextColor(75, 85, 99);
-      doc.text(`Address: ${entry.address}`, margin + 5, entryY);
-      entryY += 5;
-      doc.text(`Treatment: ${entry.treatment}`, margin + 5, entryY);
-      entryY += 6;
+      doc.text(`${new Date(entry.date).toLocaleDateString()} · ${entry.clientName}`, margin + 6, entryY);
+      entryY += 8;
+
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`Address: ${entry.address}`, margin + 6, entryY);
+      entryY += 7;
+      doc.text(`Treatment: ${entry.treatment || 'N/A'}`, margin + 6, entryY);
+      entryY += 8;
+
       details.forEach((detail) => {
-        doc.text(detail, margin + 5, entryY);
-        entryY += 5;
+        doc.text(detail, margin + 6, entryY);
+        entryY += 6;
       });
+
       if (notesLines.length > 0) {
         entryY += 2;
-        doc.text(notesLines, margin + 5, entryY);
-        entryY += notesLines.length * 4;
+        doc.setFontSize(10);
+        doc.setTextColor(75, 85, 99);
+        doc.text(notesLines, margin + 6, entryY);
+        entryY += notesLines.length * 6;
       }
 
       if (entryPhotos.length > 0) {
-        const imageTop = entryY + 4;
-        const imageWidth = Math.min((contentWidth - 10 - (entryPhotos.length - 1) * 4) / entryPhotos.length, 60);
-        let imageX = margin + 5;
+        const imageTop = entryY + 6;
+        const imageWidth = Math.min((contentWidth - 14 - (entryPhotos.length - 1) * 4) / entryPhotos.length, 60);
+        let imageX = margin + 6;
         for (const photoUrl of entryPhotos) {
           try {
             const base64 = await fetchImageAsBase64(photoUrl);
@@ -540,31 +547,36 @@ export default function ReportsPage() {
               doc.addImage(base64, 'JPEG', imageX, imageTop, imageWidth, imageHeight);
             }
           } catch {
-            // ignore image failures
+            doc.setFontSize(9);
+            doc.setTextColor(148, 163, 184);
+            doc.text('Photo unavailable', imageX, imageTop + 10);
           }
           imageX += imageWidth + 4;
         }
-        entryY = imageTop + imageHeight + 4;
+        entryY = imageTop + imageHeight + 6;
       }
 
       y += blockHeight + 8;
     }
 
     if (report.certifications.length > 0) {
-      ensureSpace(30);
-      doc.setFontSize(12);
+      ensureSpace(36);
+      doc.setFontSize(14);
       doc.setTextColor(17, 24, 39);
       doc.text('Certifications', margin, y);
-      y += 8;
-      doc.setFontSize(10);
+      y += 10;
+      doc.setFontSize(11);
       doc.setTextColor(75, 85, 99);
+
       report.certifications.forEach((cert) => {
-        ensureSpace(20);
+        ensureSpace(24);
         const certName = cert.fileUrl.split('/').pop() || cert.fileUrl;
-        doc.text(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()} · Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}`, margin + 5, y);
-        y += 5;
-        doc.text(`File: ${certName}`, margin + 5, y);
-        y += 9;
+        const certLines = doc.splitTextToSize(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()} · Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}`, captionWidth);
+        doc.text(certLines, margin + 6, y);
+        y += certLines.length * 6;
+        const fileLines = doc.splitTextToSize(`File: ${certName}`, captionWidth);
+        doc.text(fileLines, margin + 6, y);
+        y += fileLines.length * 6 + 8;
       });
     }
 

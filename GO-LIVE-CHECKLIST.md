@@ -109,6 +109,7 @@
   - [ ] `STRIPE_WEBHOOK_SECRET` ✓
   - [ ] `NEXTAUTH_URL` = https://pesttrace.com ✓
   - [ ] `NODE_ENV` = production ✓
+  - [ ] Production environment variables are configured in Vercel/hosting ✓
 
 - [ ] **DNS Propagation Checked**
   - Command: `nslookup pesttrace.com`
