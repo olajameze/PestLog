@@ -16,13 +16,13 @@ export default function LandingMain() {
     <>
       <section className="bg-offwhite px-4 py-14 sm:px-6 lg:py-24">
         <div className="mx-auto w-full max-w-7xl text-center">
-          <div className="mx-auto mb-8 inline-flex items-center justify-center rounded-3xl bg-white p-4 shadow-sm">
+          <div className="mx-auto mb-8 inline-flex items-center justify-center rounded-3xl bg-white p-6 shadow-sm">
             <Image
               src="/pest-trace.png"
               alt="Pest Trace logo"
-              width={140}
-              height={140}
-              className="h-20 w-auto object-contain"
+              width={200}
+              height={200}
+              className="h-32 w-auto object-contain"
             />
           </div>
           <h1 className="mx-auto max-w-5xl text-4xl font-bold leading-tight text-navy sm:text-5xl lg:text-6xl">
