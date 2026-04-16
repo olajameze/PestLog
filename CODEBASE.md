@@ -9,7 +9,7 @@
 
 ## File Tree
 
-```
+```text
 pesttrace/
 ├── .next/                          # Next.js build output (generated)
 ├── public/                         # Static assets
@@ -128,7 +128,7 @@ pesttrace/
 ### Configuration Files
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | [next.config.ts](next.config.ts) | Next.js config with next-pwa plugin for PWA support |
 | [tsconfig.json](tsconfig.json) | TypeScript strict mode config, path aliases |
 | [eslint.config.mjs](eslint.config.mjs) | ESLint rules for Next.js + TypeScript |
@@ -139,13 +139,13 @@ pesttrace/
 ### Global Styles
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | [app/globals.css](app/globals.css) | Theme variables, hover effects (`.hover-lift`), spinner CSS (`.spinner`), smooth scrolling |
 
 ### Core Pages (Pages Router)
 
 | Page | Route | Auth Required | Purpose |
-|------|-------|---------------|---------|
+| ------ | ------- | --------------- | --------- |
 | [pages/_app.tsx](pages/_app.tsx) | - | - | App shell with SessionProvider, RecoilRoot |
 | [pages/_document.tsx](pages/_document.tsx) | - | - | HTML document, PWA service worker script |
 | [pages/auth/signin.tsx](pages/auth/signin.tsx) | `/auth/signin` | No | Email sign in (magic link via Supabase) |
@@ -159,7 +159,7 @@ pesttrace/
 ### API Endpoints
 
 | Endpoint | Method | Auth | Purpose |
-|----------|--------|------|---------|
+| ---------- | -------- | ------ | --------- |
 | `api/company` | GET | Owner | Fetch current company info |
 | `api/technicians` | GET | Owner | List technicians for company |
 | `api/technician-info` | GET | Technician | Fetch technician details |
@@ -174,14 +174,14 @@ pesttrace/
 ### Database (Prisma)
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | [prisma/schema.prisma](prisma/schema.prisma) | Data models: Company, Technician, LogbookEntry, Subscription, User |
 | [prisma/migrations/](prisma/migrations/) | Auto-generated DB migration files |
 
 ### Library Utilities
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | [lib/auth.ts](lib/auth.ts) | Supabase auth helpers & session management |
 | [lib/prisma.ts](lib/prisma.ts) | Prisma client singleton |
 | [lib/stripe.ts](lib/stripe.ts) | Stripe SDK initialization |
@@ -192,7 +192,7 @@ pesttrace/
 ### Components (if separated)
 
 | Component | Purpose |
-|-----------|---------|
+| ----------- | --------- |
 | UI/Button.tsx | Reusable button with loading state |
 | UI/Card.tsx | Card wrapper with hover-lift support |
 | UI/Spinner.tsx | CSS-based loading spinner |
@@ -202,7 +202,7 @@ pesttrace/
 ### Static Assets
 
 | Asset | Purpose |
-|-------|---------|
+| ------- | --------- |
 | [public/manifest.json](public/manifest.json) | PWA manifest (app name, icons, theme color) |
 | [public/icons/icon-192x192.png](public/icons/icon-192x192.png) | PWA home screen icon |
 | [public/icons/icon-512x512.png](public/icons/icon-512x512.png) | PWA splash screen icon |
@@ -212,6 +212,7 @@ pesttrace/
 ## Core Technologies & Dependencies
 
 ### Frontend
+
 - **Next.js 16.2.2** - React framework with Pages Router
 - **React 19** - UI library
 - **TypeScript** - Type safety
@@ -219,19 +220,23 @@ pesttrace/
 - **next-pwa** - PWA support with Workbox
 
 ### Authentication & Database
+
 - **Supabase** - Auth provider (email magic links), PostgreSQL, storage (photos)
 - **Prisma** - ORM for database access
 - **NextAuth.js** - Session management (optional integration with Supabase)
 
 ### Payments
+
 - **Stripe SDK** - Checkout sessions, billing portal, webhooks
 - **Environment Variables** - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 
 ### State Management
+
 - **Recoil** - Client-side state (if used)
 - **React Query** - Data fetching/caching (if used)
 
 ### Development Tools
+
 - **ESLint** - Code linting
 - **PostCSS** - CSS preprocessing (Tailwind)
 - **TypeScript Compiler** - Type checking
@@ -306,6 +311,7 @@ vercel --prod
 ## Feature Summary
 
 ### Owner Features
+
 - ✅ Sign up / Sign in (email magic links)
 - ✅ Manage technicians (add, remove, view)
 - ✅ View technician logbook entries
@@ -315,6 +321,7 @@ vercel --prod
 - ✅ Settings tab (company info, subscription status)
 
 ### Technician Features
+
 - ✅ Sign in with Supabase email link
 - ✅ Create logbook entries (text + photo + signature)
 - ✅ Photo upload to Supabase storage
@@ -322,6 +329,7 @@ vercel --prod
 - ✅ Offline fallback page
 
 ### PWA Features
+
 - ✅ Installable on mobile (home screen)
 - ✅ Offline page + Workbox service worker
 - ✅ Web app manifest
@@ -398,12 +406,12 @@ npm run type-check       # TypeScript compiler check
 
 ## Support & Resources
 
-- **Next.js Docs**: https://nextjs.org/docs
-- **Vercel Docs**: https://vercel.com/docs
-- **Stripe API**: https://stripe.com/docs/api
-- **Supabase Docs**: https://supabase.com/docs
-- **Prisma Docs**: https://www.prisma.io/docs
-- **Tailwind CSS**: https://tailwindcss.com/docs
+- **Next.js Docs**: [https://nextjs.org/docs](https://nextjs.org/docs)
+- **Vercel Docs**: [https://vercel.com/docs](https://vercel.com/docs)
+- **Stripe API**: [https://stripe.com/docs/api](https://stripe.com/docs/api)
+- **Supabase Docs**: [https://supabase.com/docs](https://supabase.com/docs)
+- **Prisma Docs**: [https://www.prisma.io/docs](https://www.prisma.io/docs)
+- **Tailwind CSS**: [https://tailwindcss.com/docs](https://tailwindcss.com/docs)
 
 ---
 
