@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import Sidebar from '../components/sidebar';
 import Card from '../components/ui/Card';
+import FormInput from '../components/ui/FormInput';
 import { useToast } from '../components/ui/ToastProvider';
 
 type Company = {
@@ -28,7 +29,7 @@ type ReportEntry = {
   address: string;
   treatment: string;
   notes?: string;
-  rooms?: string[];
+  rooms?: Array<string | { name: string; note?: string }>;
   baitBoxesPlaced?: string;
   poisonUsed?: string;
   photoUrl?: string;
@@ -45,6 +46,29 @@ function isRenderableImageSrc(value: string): boolean {
     value.startsWith('data:') ||
     value.startsWith('/')
   );
+}
+
+type RoomForm = {
+  name: string;
+  note: string;
+};
+
+function parseRoomForms(rooms?: Array<string | { name: string; note?: string }>): RoomForm[] {
+  if (!rooms) return [];
+  return rooms.map((room) => {
+    if (typeof room === 'string') {
+      return { name: room, note: '' };
+    }
+    return { name: room.name || '', note: room.note || '' };
+  });
+}
+
+function formatRoomSummary(rooms?: Array<string | { name: string; note?: string }>) {
+  if (!rooms?.length) return '';
+  return rooms
+    .map((room) => (typeof room === 'string' ? room : room.name))
+    .filter(Boolean)
+    .join(', ');
 }
 
 function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url: string }[]): string[] {
@@ -131,6 +155,19 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editingEntryState, setEditingEntryState] = useState<{
+    date: string;
+    clientName: string;
+    address: string;
+    treatment: string;
+    notes: string;
+    rooms: RoomForm[];
+    baitBoxesPlaced: string;
+    poisonUsed: string;
+  } | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [updatedEntryMessage, setUpdatedEntryMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -422,6 +459,118 @@ export default function ReportsPage() {
     setDeletingEntryId(null);
   };
 
+  const startEditingEntry = (entry: ReportEntry) => {
+    setEditingEntryId(entry.id);
+    setEditingEntryState({
+      date: entry.date,
+      clientName: entry.clientName,
+      address: entry.address,
+      treatment: entry.treatment,
+      notes: entry.notes || '',
+      rooms: parseRoomForms(entry.rooms),
+      baitBoxesPlaced: entry.baitBoxesPlaced || '',
+      poisonUsed: entry.poisonUsed || '',
+    });
+  };
+
+  const updateEditingRoom = (index: number, field: keyof RoomForm, value: string) => {
+    if (!editingEntryState) return;
+    const nextRooms = [...editingEntryState.rooms];
+    nextRooms[index] = { ...nextRooms[index], [field]: value };
+    setEditingEntryState({ ...editingEntryState, rooms: nextRooms });
+  };
+
+  const addEditingRoom = () => {
+    if (!editingEntryState) return;
+    setEditingEntryState({
+      ...editingEntryState,
+      rooms: [...editingEntryState.rooms, { name: '', note: '' }],
+    });
+  };
+
+  const removeEditingRoom = (index: number) => {
+    if (!editingEntryState) return;
+    const nextRooms = editingEntryState.rooms.filter((_, i) => i !== index);
+    setEditingEntryState({ ...editingEntryState, rooms: nextRooms });
+  };
+
+  const saveEditedEntry = async () => {
+    if (!editingEntryId || !editingEntryState) return;
+    if (!selectedTechnician) {
+      showToast('Save failed', 'Select a technician before saving.', 'error');
+      return;
+    }
+
+    setSavingEdit(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    const roomsPayload = editingEntryState.rooms
+      .map((room) => ({ name: room.name.trim(), note: room.note.trim() }))
+      .filter((room) => room.name.length > 0);
+
+    const res = await fetch(`/api/logbook-entries/${editingEntryId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        date: editingEntryState.date,
+        clientName: editingEntryState.clientName,
+        address: editingEntryState.address,
+        treatment: editingEntryState.treatment,
+        notes: editingEntryState.notes || undefined,
+        technicianIds: [selectedTechnician],
+        rooms: roomsPayload.length > 0 ? roomsPayload : undefined,
+        baitBoxesPlaced: editingEntryState.baitBoxesPlaced || undefined,
+        poisonUsed: editingEntryState.poisonUsed || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Unable to save edit' }));
+      showToast('Save failed', error.error || 'Failed to save report entry', 'error');
+      setSavingEdit(false);
+      return;
+    }
+
+    setReport((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        entries: prev.entries.map((entry) =>
+          entry.id === editingEntryId
+            ? {
+                ...entry,
+                date: editingEntryState.date,
+                clientName: editingEntryState.clientName,
+                address: editingEntryState.address,
+                treatment: editingEntryState.treatment,
+                notes: editingEntryState.notes,
+                rooms: roomsPayload.length > 0 ? roomsPayload : undefined,
+                baitBoxesPlaced: editingEntryState.baitBoxesPlaced || undefined,
+                poisonUsed: editingEntryState.poisonUsed || undefined,
+              }
+            : entry
+        ),
+      };
+    });
+
+    showToast('Updated', 'Report entry updated successfully.', 'success');
+    setUpdatedEntryMessage('Report entry updated successfully.');
+    setEditingEntryId(null);
+    setEditingEntryState(null);
+    setSavingEdit(false);
+
+    window.setTimeout(() => {
+      setUpdatedEntryMessage(null);
+    }, 4500);
+  };
+
   const downloadPdf = async () => {
     if (!report || !company) return;
     const { jsPDF } = await import('jspdf');
@@ -622,6 +771,13 @@ export default function ReportsPage() {
           <div className="rounded-3xl border border-slate-200 bg-slate-100 p-5 text-sm text-slate-800 shadow-sm">
             <p className="font-semibold">Report ready</p>
             <p className="mt-1">{reportGeneratedMessage}</p>
+          </div>
+        ) : null}
+
+        {updatedEntryMessage ? (
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-950 shadow-sm">
+            <p className="font-semibold">Changes saved</p>
+            <p className="mt-1">{updatedEntryMessage}</p>
           </div>
         ) : null}
 
@@ -880,6 +1036,13 @@ export default function ReportsPage() {
                           <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
                           <button
                             type="button"
+                            onClick={() => startEditingEntry(entry)}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            {editingEntryId === entry.id ? 'Editing' : 'Edit'}
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => deleteReportEntry(entry.id)}
                             disabled={deletingEntryId === entry.id}
                             className="btn btn-danger btn-sm"
@@ -892,7 +1055,7 @@ export default function ReportsPage() {
                         {entry.rooms && (
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Rooms</p>
-                            <p className="mt-1 font-semibold text-slate-900">{entry.rooms.join(', ')}</p>
+                            <p className="mt-1 font-semibold text-slate-900">{formatRoomSummary(entry.rooms) || 'No rooms added'}</p>
                           </div>
                         )}
                         {entry.baitBoxesPlaced && (
@@ -924,6 +1087,46 @@ export default function ReportsPage() {
                       </div>
                       {entry.notes ? (
                         <p className="mt-4 text-gray-600 text-sm leading-6">{entry.notes}</p>
+                      ) : null}
+                      {editingEntryId === entry.id && editingEntryState ? (
+                        <div className="mt-6 rounded-2xl border border-primary-200 bg-primary-50 p-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <h5 className="text-base font-semibold text-primary-900">Edit report entry</h5>
+                            <button type="button" onClick={() => { setEditingEntryId(null); setEditingEntryState(null); }} className="text-sm text-primary-700 hover:text-primary-900">Cancel</button>
+                          </div>
+                          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                            <FormInput label="Client Name" id={`edit-client-${entry.id}`} value={editingEntryState.clientName} onChange={(e) => setEditingEntryState({ ...editingEntryState, clientName: e.target.value })} />
+                            <FormInput label="Address" id={`edit-address-${entry.id}`} value={editingEntryState.address} onChange={(e) => setEditingEntryState({ ...editingEntryState, address: e.target.value })} />
+                            <FormInput label="Treatment" id={`edit-treatment-${entry.id}`} value={editingEntryState.treatment} onChange={(e) => setEditingEntryState({ ...editingEntryState, treatment: e.target.value })} />
+                            <FormInput label="Date" id={`edit-date-${entry.id}`} type="date" value={editingEntryState.date} onChange={(e) => setEditingEntryState({ ...editingEntryState, date: e.target.value })} />
+                          </div>
+                          <div className="mt-4 grid gap-4">
+                            <FormInput label="Job Notes" id={`edit-notes-${entry.id}`} as="textarea" value={editingEntryState.notes} onChange={(e) => setEditingEntryState({ ...editingEntryState, notes: e.target.value })} />
+                          </div>
+                          <div className="mt-4">
+                            <div className="flex items-center justify-between gap-4 mb-3">
+                              <p className="font-semibold text-slate-900">Room details</p>
+                              <button type="button" onClick={addEditingRoom} className="text-sm text-primary-700 hover:text-primary-900">+ Add Room</button>
+                            </div>
+                            <div className="space-y-3">
+                              {editingEntryState.rooms.map((room, roomIndex) => (
+                                <div key={`edit-room-${roomIndex}`} className="rounded-2xl border border-slate-200 bg-white p-3">
+                                  <FormInput label="Room Name" id={`edit-room-name-${entry.id}-${roomIndex}`} value={room.name} onChange={(e) => updateEditingRoom(roomIndex, 'name', e.target.value)} placeholder="Kitchen" />
+                                  <FormInput label="Room Notes" id={`edit-room-note-${entry.id}-${roomIndex}`} as="textarea" value={room.note} onChange={(e) => updateEditingRoom(roomIndex, 'note', e.target.value)} placeholder="Treatment details for this room" />
+                                  <button type="button" onClick={() => removeEditingRoom(roomIndex)} className="mt-2 text-sm text-red-600 hover:text-red-800">Remove room</button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <button type="button" onClick={saveEditedEntry} disabled={savingEdit} className="btn btn-primary btn-sm">
+                              {savingEdit ? 'Saving...' : 'Save changes'}
+                            </button>
+                            <button type="button" onClick={() => { setEditingEntryId(null); setEditingEntryState(null); }} className="btn btn-secondary btn-sm">
+                              Close
+                            </button>
+                          </div>
+                        </div>
                       ) : null}
                       {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
                         <div className="mt-4 space-y-2">

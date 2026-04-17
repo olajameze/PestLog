@@ -29,7 +29,7 @@ export default function FormInput({
   className = '',
   readOnly = false,
 }: FormInputProps) {
-  const baseClasses = 'form-input w-full border border-zinc-300 rounded-xl px-4 py-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-offset-0 transition-all placeholder-zinc-400';
+  const baseClasses = 'form-input w-full border border-zinc-300 rounded-xl px-4 py-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-offset-0 transition-all placeholder-slate-400 text-slate-900 bg-white';
 
   const Element = as === 'textarea' ? 'textarea' : as === 'select' ? 'select' : 'input';
 

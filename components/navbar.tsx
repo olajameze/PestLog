@@ -29,8 +29,8 @@ export default function Navbar({
     <nav className="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-navy hover:text-primary-600 transition-colors">
+          <div className="flex min-w-0 items-center">
+            <Link href="/" className="flex min-w-0 items-center gap-3 text-2xl font-bold text-navy hover:text-primary-600 transition-colors">
               {logo}
             </Link>
           </div>
@@ -63,7 +63,7 @@ export default function Navbar({
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center shrink-0">
             <Button variant="secondary" size="sm" onClick={() => setMobileOpen(!mobileOpen)}>
               <span className="text-xl">☰</span>
             </Button>

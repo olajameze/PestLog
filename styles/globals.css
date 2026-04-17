@@ -205,6 +205,8 @@ button {
   transition: all 0.2s ease;
   font-family: inherit;
   min-height: 2.75rem; /* Touch target size for mobile */
+  color: rgb(17, 24, 39);
+  background-color: #ffffff;
 }
 
 .form-input:focus,

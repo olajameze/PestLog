@@ -69,7 +69,7 @@ interface LogbookEntry {
   photoUrls?: string[];
   photos?: { url: string }[];
   signature?: string;
-  rooms?: string[];
+  rooms?: Array<string | { name: string; note?: string }>;
   baitBoxesPlaced?: string;
   poisonUsed?: string;
   startTime?: string;
@@ -114,6 +114,32 @@ function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url:
 
 function supabaseImageLoader({ src }: { src: string }): string {
   return src;
+}
+
+function formatRoomSummary(rooms?: Array<string | { name: string; note?: string }>) {
+  if (!rooms?.length) return '';
+  return rooms
+    .map((room) => (typeof room === 'string' ? room : room.name))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function renderRoomDetails(rooms?: Array<string | { name: string; note?: string }>) {
+  if (!rooms?.length) return null;
+  return (
+    <div className="mt-4 grid gap-3">
+      {rooms.map((room, index) => {
+        const name = typeof room === 'string' ? room : room.name;
+        const note = typeof room === 'string' ? '' : room.note;
+        return (
+          <div key={`room-${index}`} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3">
+            <p className="text-sm font-semibold text-navy">{name}</p>
+            {note ? <p className="mt-1 text-sm text-zinc-600 whitespace-pre-line">{note}</p> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 type Tab = 'technicians' | 'logbook' | 'settings';
@@ -1182,6 +1208,7 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
                     {entry.treatment}
                   </span>
                 </div>
+                {renderRoomDetails(entry.rooms)}
                 {entry.notes && <p className="mt-3 text-zinc-700">{entry.notes}</p>}
                 {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 && (
                   <div className="mt-4 grid grid-cols-2 gap-3">
@@ -1225,6 +1252,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [recommendation, setRecommendation] = useState('');
   interface RoomForm {
     name: string;
+    note: string;
   }
   const [rooms, setRooms] = useState<RoomForm[]>([]);
   const [baitBoxesPlaced, setBaitBoxesPlaced] = useState('');
@@ -1355,7 +1383,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   };
 
   const addRoom = () => {
-    setRooms([...rooms, { name: '' }]);
+    setRooms([...rooms, { name: '', note: '' }]);
   };
 
   const updateRoom = (index: number, field: keyof RoomForm, value: string) => {
@@ -1405,6 +1433,10 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       }
     }
     
+    const roomsPayload = rooms
+      .map((room) => ({ name: room.name.trim(), note: room.note.trim() }))
+      .filter((room) => room.name.length > 0);
+
     const payload = {
       companyId,
       date,
@@ -1413,7 +1445,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       treatment,
       notes: notes || undefined,
       technicianIds: [technicianId],
-      rooms: rooms.map(r => r.name).filter((name): name is string => Boolean(name?.trim())).map(name => name.trim()),
+      rooms: roomsPayload.length > 0 ? roomsPayload : undefined,
       baitBoxesPlaced: baitBoxesPlaced || undefined,
       poisonUsed: poisonUsed || undefined,
       followUpDate: followUpDate || undefined,
@@ -1450,7 +1482,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       setInternalNotes('');
       setProductAmount('');
       setRecommendation('');
-              setRooms([]);
+      setRooms([]);
       setBaitBoxesPlaced('');
       setPoisonUsed('');
       setBaitStations([]);
@@ -1478,13 +1510,21 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
                 ) : (
                   <div className="space-y-3">
                     {rooms.map((room, index) => (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-white rounded-lg border shadow-sm">
+                      <div key={index} className="space-y-3 p-4 bg-white rounded-lg border shadow-sm">
                         <FormInput 
                           label="Room Name" 
                           id={`room-${index}`}
                           value={room.name} 
                           onChange={(e) => updateRoom(index, 'name', e.target.value)} 
                           placeholder="Kitchen" 
+                        />
+                        <FormInput
+                          label="Room Notes"
+                          id={`room-note-${index}`}
+                          as="textarea"
+                          value={room.note}
+                          onChange={(e) => updateRoom(index, 'note', e.target.value)}
+                          placeholder="Notes about treatment or observations in this room"
                         />
                         <Button type="button" variant="danger" size="sm" onClick={() => removeRoom(index)} className="self-start">Remove</Button>
                       </div>

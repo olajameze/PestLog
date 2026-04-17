@@ -49,8 +49,21 @@ function tryParseJson(value: unknown) {
 function normalizeRoomsValue(value: unknown): Prisma.InputJsonValue | undefined {
   if (Array.isArray(value)) {
     const normalized = value
-      .map((room) => (typeof room === 'string' ? room.trim() : String(room).trim()))
-      .filter((room) => room.length > 0);
+      .map((room) => {
+        if (typeof room === 'string') return room.trim();
+        if (room && typeof room === 'object' && 'name' in room) {
+          const record = room as Record<string, unknown>;
+          return {
+            name: typeof record.name === 'string' ? record.name.trim() : String(record.name ?? '').trim(),
+            note: typeof record.note === 'string' ? record.note.trim() : undefined,
+          };
+        }
+        return String(room).trim();
+      })
+      .filter((room) => {
+        if (typeof room === 'string') return room.length > 0;
+        return typeof room === 'object' && room !== null && 'name' in room && typeof room.name === 'string' && room.name.length > 0;
+      });
     return normalized.length > 0 ? normalized : undefined;
   }
 
