@@ -42,38 +42,40 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:static`}
       >
-        <div className="flex flex-col h-full">
-          <div className="border-b border-zinc-200 px-5 py-5">
-            <h2 className="text-3xl font-semibold text-navy">Pest Trace</h2>
-            <p className="mt-1 text-sm text-zinc-500">Compliance Suite</p>
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="mt-3 rounded-lg p-2 hover:bg-zinc-100 lg:hidden"
-            >
-              ✕
-            </button>
-          </div>
-
-          <nav className="flex-1 space-y-1 p-3">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.id}
-                href={tab.href}
-                onClick={() => {
-                  onTabChange?.(tab.id);
-                  setMobileOpen(false);
-                }}
-                className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition ${
-                  isActive(tab.id)
-                    ? 'bg-primary-500 text-white'
-                    : 'text-zinc-700 hover:bg-zinc-100 hover:text-navy'
-                }`}
+        <div className="flex h-full flex-col justify-between">
+          <div>
+            <div className="border-b border-zinc-200 px-5 py-5">
+              <h2 className="text-3xl font-semibold text-navy">Pest Trace</h2>
+              <p className="mt-1 text-sm text-zinc-500">Compliance Suite</p>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="mt-3 rounded-lg p-2 hover:bg-zinc-100 lg:hidden"
               >
-                <tab.icon size={18} className={isActive(tab.id) ? 'text-white' : 'text-slate-500'} />
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
+                ✕
+              </button>
+            </div>
+
+            <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
+              {tabs.map((tab) => (
+                <Link
+                  key={tab.id}
+                  href={tab.href}
+                  onClick={() => {
+                    onTabChange?.(tab.id);
+                    setMobileOpen(false);
+                  }}
+                  className={`flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition ${
+                    isActive(tab.id)
+                      ? 'bg-primary-500 text-white'
+                      : 'text-zinc-700 hover:bg-zinc-100 hover:text-navy'
+                  }`}
+                >
+                  <tab.icon size={18} className={isActive(tab.id) ? 'text-white' : 'text-slate-500'} />
+                  {tab.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
 
           <div className="border-t border-zinc-200 p-4">
             <Button variant="danger" size="sm" onClick={onSignOut}>
