@@ -116,14 +116,6 @@ function supabaseImageLoader({ src }: { src: string }): string {
   return src;
 }
 
-function formatRoomSummary(rooms?: Array<string | { name: string; note?: string }>) {
-  if (!rooms?.length) return '';
-  return rooms
-    .map((room) => (typeof room === 'string' ? room : room.name))
-    .filter(Boolean)
-    .join(', ');
-}
-
 function renderRoomDetails(rooms?: Array<string | { name: string; note?: string }>) {
   if (!rooms?.length) return null;
   return (
