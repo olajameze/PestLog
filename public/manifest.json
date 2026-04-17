@@ -2,7 +2,7 @@
   "name": "Pest Trace",
   "short_name": "Pest Trace",
   "description": "Pest Trace is a pest control compliance logbook and technician reporting app.",
-  "start_url": "/",
+  "start_url": "/auth/signin",
   "scope": "/",
   "display": "standalone",
   "theme_color": "#2563EB",
