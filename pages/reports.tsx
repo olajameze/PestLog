@@ -102,6 +102,16 @@ function buildCertDownloadUrl(url: string): string {
   return `/api/storage/download?path=${encodeURIComponent(url)}`;
 }
 
+function sanitizeFilename(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9-_\.]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 64);
+}
+
 async function fetchImageAsBase64(url: string): Promise<string> {
   const response = await fetch(url);
   const buffer = await response.arrayBuffer();
@@ -647,9 +657,10 @@ export default function ReportsPage() {
         entry.poisonUsed && `Poison Used: ${entry.poisonUsed}`,
       ].filter(Boolean) as string[];
       const notesLines = entry.notes ? doc.splitTextToSize(`Notes: ${entry.notes}`, captionWidth) : [];
+      const notesHeight = notesLines.length > 0 ? doc.getTextDimensions(notesLines).h : 0;
       const imageHeight = entryPhotos.length > 0 ? 36 : 0;
-      const blockHeight = 18 + details.length * 7 + notesLines.length * 6 + imageHeight + 12;
-      ensureSpace(blockHeight + 8);
+      const blockHeight = 18 + details.length * 7 + notesHeight + imageHeight + 16;
+      ensureSpace(blockHeight + 10);
 
       doc.setFillColor(249, 250, 253);
       doc.roundedRect(margin, y, contentWidth, blockHeight, 6, 6, 'F');
@@ -671,15 +682,15 @@ export default function ReportsPage() {
 
       details.forEach((detail) => {
         doc.text(detail, margin + 6, entryY);
-        entryY += 6;
+        entryY += 7;
       });
 
       if (notesLines.length > 0) {
-        entryY += 2;
+        entryY += 4;
         doc.setFontSize(10);
         doc.setTextColor(75, 85, 99);
         doc.text(notesLines, margin + 6, entryY);
-        entryY += notesLines.length * 6;
+        entryY += notesHeight + 4;
       }
 
       if (entryPhotos.length > 0) {
@@ -699,14 +710,14 @@ export default function ReportsPage() {
           }
           imageX += imageWidth + 4;
         }
-        entryY = imageTop + imageHeight + 6;
+        entryY = imageTop + imageHeight + 8;
       }
 
-      y += blockHeight + 8;
+      y += blockHeight + 10;
     }
 
     if (report.certifications.length > 0) {
-      ensureSpace(36);
+      ensureSpace(60);
       doc.setFontSize(14);
       doc.setTextColor(17, 24, 39);
       doc.text('Certifications', margin, y);
@@ -718,16 +729,19 @@ export default function ReportsPage() {
         ensureSpace(24);
         const certName = cert.fileUrl.split('/').pop() || cert.fileUrl;
         const certLines = doc.splitTextToSize(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()} · Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}`, captionWidth);
+        const certLineHeight = doc.getTextDimensions(certLines).h;
         doc.text(certLines, margin + 6, y);
-        y += certLines.length * 6;
+        y += certLineHeight;
         const fileLines = doc.splitTextToSize(`File: ${certName}`, captionWidth);
+        const fileLineHeight = doc.getTextDimensions(fileLines).h;
         doc.text(fileLines, margin + 6, y);
-        y += fileLines.length * 6 + 8;
+        y += fileLineHeight + 8;
       });
     }
 
     addFooter();
-    const filename = `pesttrace-report-${selectedTechnician}-${Date.now()}.pdf`;
+    const technicianName = technicians.find((t) => t.id === selectedTechnician)?.name || 'report';
+    const filename = `pesttrace-report-${sanitizeFilename(technicianName) || 'report'}.pdf`;
     const pdfBlob = doc.output('blob');
     const downloadUrl = URL.createObjectURL(pdfBlob);
     const anchor = document.createElement('a');
@@ -1195,7 +1209,7 @@ export default function ReportsPage() {
                       <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
                       <p className="mt-3 text-sm text-gray-600">Expiry</p>
                       <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
-                      <a href={buildCertDownloadUrl(cert.fileUrl)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                      <a href={buildCertDownloadUrl(cert.fileUrl)} download={certName} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
                         📥 Download
                       </a>
                     </div>
