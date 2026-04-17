@@ -1203,17 +1203,20 @@ export default function ReportsPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {report.certifications.map((cert) => (
-                    <div key={cert.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
-                      <p className="text-sm text-gray-600">Uploaded</p>
-                      <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
-                      <p className="mt-3 text-sm text-gray-600">Expiry</p>
-                      <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
-                      <a href={buildCertDownloadUrl(cert.fileUrl)} download={certName} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
-                        📥 Download
-                      </a>
-                    </div>
-                  ))}
+                  {report.certifications.map((cert) => {
+                    const certName = cert.fileUrl.split('/').pop() || 'certificate';
+                    return (
+                      <div key={cert.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
+                        <p className="text-sm text-gray-600">Uploaded</p>
+                        <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
+                        <p className="mt-3 text-sm text-gray-600">Expiry</p>
+                        <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
+                        <a href={buildCertDownloadUrl(cert.fileUrl)} download={sanitizeFilename(certName) || 'certificate'} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                          📥 Download
+                        </a>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
