@@ -214,7 +214,7 @@ export default function UpgradePage() {
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
             <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
             <a
-              href="mailto:hello@pesttrace.com?subject=Pest Trace Enterprise Enquiry"
+              href="mailto:pesttrace@gmail.com?subject=Pest Trace Enterprise Enquiry"
               className="btn btn-secondary mt-6 w-full inline-flex items-center justify-center"
             >
               Contact Sales

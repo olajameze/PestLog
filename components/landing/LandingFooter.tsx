@@ -30,7 +30,7 @@ export default function LandingFooter() {
           <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Contact</p>
           <div className="mt-3 space-y-2 text-sm text-slate-300">
             <p>
-              Support: <a href="mailto:hello@pesttrace.com" className="text-white underline">hello@pesttrace.com</a>
+              Support: <a href="mailto:pesttrace@gmail.com" className="text-white underline">pesttrace@gmail.com</a>
             </p>
             <p>
               Created by <a href="https://jgdev.co.uk" target="_blank" rel="noreferrer" className="text-white underline">jgdev.co.uk</a>

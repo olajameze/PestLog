@@ -7,6 +7,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
 import SettingsTab from '../components/settings/SettingsTab';
+import DashboardEnhancements from '../components/dashboard/DashboardEnhancements';
 import { useToast } from '../components/ui/ToastProvider';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { checkPlan } from '../lib/planGuard';
@@ -712,7 +713,8 @@ export default function Dashboard() {
                 </Card>
               )}
               {currentTab === 'technicians' && (
-              <TechniciansTab 
+              <>
+                <TechniciansTab 
                   technicians={technicians} 
                   onAddTechnician={handleAddTechnician} 
                   onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
@@ -721,6 +723,8 @@ export default function Dashboard() {
                   setShowCertModal={setShowCertModal}
                   onLoadTechCerts={loadTechCerts}
                 />
+                <DashboardEnhancements plan={company.plan} />
+              </>
               )}
               {currentTab === 'logbook' && (
                 <LogbookTab companyId={company.id} technicians={technicians} />
