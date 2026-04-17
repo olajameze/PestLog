@@ -207,6 +207,14 @@ button {
   min-height: 2.75rem; /* Touch target size for mobile */
   color: rgb(17, 24, 39);
   background-color: #ffffff;
+  max-width: 64rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .form-input:focus,

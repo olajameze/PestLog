@@ -1502,7 +1502,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
                 ) : (
                   <div className="space-y-3">
                     {rooms.map((room, index) => (
-                      <div key={index} className="space-y-3 p-4 bg-white rounded-lg border shadow-sm">
+                      <div key={index} className="space-y-3 p-4 bg-white rounded-lg border shadow-sm max-w-3xl">
                         <FormInput 
                           label="Room Name" 
                           id={`room-${index}`}

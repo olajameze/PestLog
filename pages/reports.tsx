@@ -1110,7 +1110,7 @@ export default function ReportsPage() {
                             </div>
                             <div className="space-y-3">
                               {editingEntryState.rooms.map((room, roomIndex) => (
-                                <div key={`edit-room-${roomIndex}`} className="rounded-2xl border border-slate-200 bg-white p-3">
+                                <div key={`edit-room-${roomIndex}`} className="rounded-2xl border border-slate-200 bg-white p-3 max-w-3xl">
                                   <FormInput label="Room Name" id={`edit-room-name-${entry.id}-${roomIndex}`} value={room.name} onChange={(e) => updateEditingRoom(roomIndex, 'name', e.target.value)} placeholder="Kitchen" />
                                   <FormInput label="Room Notes" id={`edit-room-note-${entry.id}-${roomIndex}`} as="textarea" value={room.note} onChange={(e) => updateEditingRoom(roomIndex, 'note', e.target.value)} placeholder="Treatment details for this room" />
                                   <button type="button" onClick={() => removeEditingRoom(roomIndex)} className="mt-2 text-sm text-red-600 hover:text-red-800">Remove room</button>
