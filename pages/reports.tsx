@@ -28,6 +28,7 @@ type ReportEntry = {
   clientName: string;
   address: string;
   treatment: string;
+  status?: string;
   notes?: string;
   rooms?: Array<string | { name: string; note?: string }>;
   baitBoxesPlaced?: string;
@@ -726,7 +727,17 @@ export default function ReportsPage() {
     }
 
     addFooter();
-    doc.save(`pesttrace-report-${selectedTechnician}-${Date.now()}.pdf`);
+    const filename = `pesttrace-report-${selectedTechnician}-${Date.now()}.pdf`;
+    const pdfBlob = doc.output('blob');
+    const downloadUrl = URL.createObjectURL(pdfBlob);
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(downloadUrl);
+
     showToast('Report downloaded', 'Your printable A4 report has been generated successfully.', 'success');
   };
 
@@ -1030,6 +1041,9 @@ export default function ReportsPage() {
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                           <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
+                          <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap ${entry.status?.trim().toLowerCase() === 'open' || !entry.status ? 'border-amber-200 bg-amber-100 text-amber-800' : 'border-emerald-200 bg-emerald-100 text-emerald-800'}`}>
+                            {entry.status?.trim() ? entry.status : 'Open'}
+                          </span>
                           <button
                             type="button"
                             onClick={() => startEditingEntry(entry)}
