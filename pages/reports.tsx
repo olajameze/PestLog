@@ -93,10 +93,6 @@ function parsePhotoUrls(photoUrl?: string, photoUrls?: string[], photos?: { url:
   return isRenderableImageSrc(photoUrl) ? [photoUrl] : [];
 }
 
-function supabaseImageLoader({ src }: { src: string }): string {
-  return src;
-}
-
 function buildCertDownloadUrl(url: string): string {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
@@ -1128,27 +1124,29 @@ export default function ReportsPage() {
                           </div>
                         </div>
                       ) : null}
-                      {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
-                        <div className="mt-4 space-y-2">
-                          <p className="text-sm font-semibold text-gray-800">Job photos</p>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
-                              <div key={url} className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-<Image
-                                  loader={supabaseImageLoader}
+                      {(() => {
+                        const photoUrls = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
+                        if (photoUrls.length === 0) return null;
+                        return (
+                          <div className="mt-4 space-y-2">
+                            <p className="text-sm font-semibold text-gray-800">Job photos</p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {photoUrls.map((url) => (
+                                <div key={url} className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-slate-50">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
                                   src={url}
                                   alt={`Job photo for ${entry.clientName}`}
-                                  width={800}
-                                  height={400}
-                                  className="w-full h-auto max-h-[400px] object-contain rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-                                  sizes="(max-width: 640px) 100vw, 50vw"
-                                  unoptimized
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-auto max-h-[400px] object-contain rounded-2xl transition-shadow"
                                 />
-                              </div>
-                            ))}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ) : null}
+                        );
+                      })()}
                       {entry.signature ? (
                         <div className="mt-4">
                           <p className="text-sm text-gray-500 mb-2">Signature</p>
