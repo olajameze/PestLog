@@ -162,6 +162,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+  const [deletingCertificationId, setDeletingCertificationId] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editingEntryState, setEditingEntryState] = useState<{
     date: string;
@@ -466,6 +467,42 @@ export default function ReportsPage() {
     setDeletingEntryId(null);
   };
 
+  const deleteCertification = async (certId: string) => {
+    if (!confirm('Delete this certificate? This cannot be undone.')) return;
+    setDeletingCertificationId(certId);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    const res = await fetch(`/api/certifications/${certId}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: 'Failed to delete certificate' }));
+      showToast('Delete failed', data.error || 'Failed to delete certificate', 'error');
+      setDeletingCertificationId(null);
+      return;
+    }
+
+    setReport((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        certifications: prev.certifications.filter((cert) => cert.id !== certId),
+      };
+    });
+
+    showToast('Deleted', 'Certificate removed successfully.', 'success');
+    setDeletingCertificationId(null);
+  };
+
   const startEditingEntry = (entry: ReportEntry) => {
     setEditingEntryId(entry.id);
     setEditingEntryState({
@@ -657,9 +694,14 @@ export default function ReportsPage() {
         entry.poisonUsed && `Poison Used: ${entry.poisonUsed}`,
       ].filter(Boolean) as string[];
       const notesLines = entry.notes ? doc.splitTextToSize(`Notes: ${entry.notes}`, captionWidth) : [];
-      const notesHeight = notesLines.length > 0 ? doc.getTextDimensions(notesLines).h : 0;
-      const imageHeight = entryPhotos.length > 0 ? 36 : 0;
-      const blockHeight = 18 + details.length * 7 + notesHeight + imageHeight + 16;
+      const headerHeight = 8 + 7 + 8;
+      const detailHeights = details.reduce((sum, detail) => {
+        const detailLines = doc.splitTextToSize(detail, captionWidth);
+        return sum + detailLines.length * 6 + 3;
+      }, 0);
+      const notesHeight = notesLines.length > 0 ? notesLines.length * 6 + 6 : 0;
+      const imageHeight = entryPhotos.length > 0 ? 36 + 8 : 0;
+      const blockHeight = headerHeight + detailHeights + notesHeight + imageHeight + 24;
       ensureSpace(blockHeight + 10);
 
       doc.setFillColor(249, 250, 253);
@@ -681,8 +723,9 @@ export default function ReportsPage() {
       entryY += 8;
 
       details.forEach((detail) => {
-        doc.text(detail, margin + 6, entryY);
-        entryY += 7;
+        const detailLines = doc.splitTextToSize(detail, captionWidth);
+        doc.text(detailLines, margin + 6, entryY);
+        entryY += detailLines.length * 6 + 3;
       });
 
       if (notesLines.length > 0) {
@@ -690,7 +733,7 @@ export default function ReportsPage() {
         doc.setFontSize(10);
         doc.setTextColor(75, 85, 99);
         doc.text(notesLines, margin + 6, entryY);
-        entryY += notesHeight + 4;
+        entryY += notesHeight;
       }
 
       if (entryPhotos.length > 0) {
@@ -1211,9 +1254,25 @@ export default function ReportsPage() {
                         <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
                         <p className="mt-3 text-sm text-gray-600">Expiry</p>
                         <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
-                        <a href={buildCertDownloadUrl(cert.fileUrl)} download={sanitizeFilename(certName) || 'certificate'} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm">
-                          📥 Download
-                        </a>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <a
+                            href={buildCertDownloadUrl(cert.fileUrl)}
+                            download={sanitizeFilename(certName) || 'certificate'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm"
+                          >
+                            📥 Download
+                          </a>
+                          <button
+                            type="button"
+                            disabled={deletingCertificationId === cert.id}
+                            onClick={() => deleteCertification(cert.id)}
+                            className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          >
+                            {deletingCertificationId === cert.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
