@@ -38,9 +38,9 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-zinc-200 bg-white transform transition-transform lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-zinc-200 bg-white transform transition-transform ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:static`}
+        } lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen`}
       >
         <div className="flex h-full flex-col justify-between">
           <div>
