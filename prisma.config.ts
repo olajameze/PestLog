@@ -5,7 +5,7 @@ import { defineConfig } from "prisma/config";
 import { normalizePostgresUrlForPrisma } from "./lib/normalizePostgresUrl";
 
 /** Database URL - used by both the app and CLI */
-const databaseUrl = process.env["DATABASE_URL"] || process.env["POSTGRES_PRISMA_URL"] || process.env["POSTGRES_URL_NON_POOLING"] || "";
+const databaseUrl = process.env["DATABASE_URL"] || "";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
