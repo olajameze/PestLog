@@ -381,17 +381,19 @@ export default function TechnicianPage() {
         <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-5xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-navy">Technician Logbook</h1>
-              <p className="text-sm text-gray-600">Signed in as {profile.name} ({profile.email})</p>
-              <p className="text-sm text-gray-500">Company: {profile.companyName}</p>
-            </div>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-navy mb-3">Technician Logbook</h1>
+            <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full mb-4"></div>
+            <p className="text-sm text-gray-600">Signed in as {profile.name} ({profile.email})</p>
+            <p className="text-sm text-gray-500">Company: {profile.companyName}</p>
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-6">Add New Entry</h2>
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-3">Add New Entry</h2>
+            <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full"></div>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Date and Client Name Row */}
             <div className="grid gap-4 sm:grid-cols-2">

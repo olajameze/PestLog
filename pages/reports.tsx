@@ -816,11 +816,10 @@ export default function ReportsPage() {
         <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-6xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-navy">Compliance Reports</h1>
-              <p className="text-sm text-gray-600">Generate owner-only reports for technician work and certifications.</p>
-            </div>
+          <div className="text-center mb-6">
+            <h1 className="text-3xl font-bold text-navy mb-3">Compliance Reports</h1>
+            <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full mb-4"></div>
+            <p className="text-sm text-gray-600">Generate owner-only reports for technician work and certifications.</p>
           </div>
         </div>
 
@@ -923,10 +922,10 @@ export default function ReportsPage() {
         {report && (
           <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
-<div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-navy">{isOwner ? 'Company Report Results' : 'My Report Results'}</h2>
-              <p className="mt-1 text-sm text-slate-600">Review your logged jobs by client name or address. Export as PDF for compliance.</p>
-            </div>
+              <div className="flex-1 text-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-2">{isOwner ? 'Company Report Results' : 'My Report Results'}</h2>
+                <p className="text-sm text-slate-600">Review your logged jobs by client name or address. Export as PDF for compliance.</p>
+              </div>
               <button
                 type="button"
                 onClick={downloadPdf}

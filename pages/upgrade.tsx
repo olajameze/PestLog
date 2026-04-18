@@ -156,8 +156,9 @@ export default function UpgradePage() {
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header Card */}
-        <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-2">Upgrade to Pest Trace</h1>
+        <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8 text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-3">Upgrade to Pest Trace</h1>
+          <div className="mx-auto h-1 w-20 bg-primary-500 rounded-full mb-4"></div>
           <p className="text-sm sm:text-base text-gray-600">Choose a plan for your team. Unlock Reports, Dashboard, and Pro features.</p>
         </div>
 

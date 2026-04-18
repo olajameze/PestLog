@@ -329,3 +329,113 @@ button {
     min-height: 2.75rem;
   }
 }
+
+/* ========== Professional Spacing & Layout ========== */
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+p {
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* ========== Section Spacing ========== */
+section {
+  margin-bottom: 2rem;
+}
+
+section:last-child {
+  margin-bottom: 0;
+}
+
+/* ========== Card Improvements ========== */
+.card-heading {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+/* ========== Modal Improvements ========== */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgb(229, 231, 235);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgb(15, 23, 42);
+  margin: 0;
+}
+
+/* ========== Grid Layout ========== */
+.grid-center {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+/* ========== Text Alignment ========== */
+.text-center-md {
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .text-center-mobile {
+    text-align: center;
+  }
+}
+
+/* ========== Divider ========== */
+.divider {
+  height: 4px;
+  width: 64px;
+  background: rgb(var(--color-primary-500));
+  border-radius: 9999px;
+  margin: 0.75rem auto;
+}
+
+/* ========== Prevent Overlaps ========== */
+.fixed-button {
+  z-index: 35;
+}
+
+.modal-overlay {
+  z-index: 39;
+}
+
+.modal-content {
+  z-index: 40;
+}
+
+.toast {
+  z-index: 41;
+}
+
+.navbar {
+  z-index: 45;
+}

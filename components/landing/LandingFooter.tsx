@@ -44,7 +44,7 @@ export default function LandingFooter() {
         </div>
       </div>
 
-      <div className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-3 border-t border-slate-800 px-4 pt-5 text-xs text-slate-500 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-3 border-t border-slate-800 px-4 pt-8 text-xs text-slate-500 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
         <p>© 2026 Pest Trace. All rights reserved.</p>
         <p>Compliance reporting designed for pest control teams.</p>
       </div>

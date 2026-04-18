@@ -70,11 +70,12 @@ export default function ContactPage() {
       <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <h1 className="text-4xl font-bold text-navy">Contact Pest Trace</h1>
-              <p className="mt-4 text-base text-slate-600">
-                Need help with your account, upgrades, or enterprise integration? Send us a message and we&apos;ll respond promptly.
-              </p>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-navy mb-4">Contact Pest Trace</h1>
+            <div className="mx-auto h-1 w-20 bg-primary-500 rounded-full mb-6"></div>
+            <p className="text-base text-slate-600 max-w-2xl mx-auto">
+              Need help with your account, upgrades, or enterprise integration? Send us a message and we&apos;ll respond promptly.
+            </p>
               <div className="mt-8 space-y-4 text-sm text-slate-600">
                 <p>
                   <strong>Support email:</strong>{' '}

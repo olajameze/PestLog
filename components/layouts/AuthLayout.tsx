@@ -25,9 +25,12 @@ export default function AuthLayout({
         </div>
       </header>
       <main className="mx-auto flex w-full max-w-6xl flex-col items-center px-4 py-14 sm:px-6">
-        <h1 className="text-center text-5xl font-bold text-navy">{title}</h1>
-        <p className="mt-4 text-center text-xl text-zinc-600">{subtitle}</p>
-        <div className="mt-10 w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">{children}</div>
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-navy mb-4">{title}</h1>
+          <div className="mx-auto h-1 w-20 bg-primary-500 rounded-full mb-6"></div>
+          <p className="text-xl text-zinc-600">{subtitle}</p>
+        </div>
+        <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">{children}</div>
         <Link href="/" className="mt-8 text-sm text-zinc-600 transition hover:text-navy">
           ← Back to home
         </Link>

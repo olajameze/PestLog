@@ -25,10 +25,10 @@ export default function LandingMain() {
               className="h-32 w-auto object-contain"
             />
           </div>
-          <h1 className="mx-auto max-w-5xl text-4xl font-bold leading-tight text-navy sm:text-5xl lg:text-6xl">
+          <h1 className="mx-auto max-w-5xl text-center text-4xl font-bold leading-tight text-navy sm:text-5xl lg:text-6xl">
             Prove Compliance, Log Jobs, and Win More Contracts
           </h1>
-          <p className="mx-auto mt-6 max-w-4xl text-base leading-relaxed text-zinc-600 sm:text-lg lg:text-xl">
+          <p className="mx-auto mt-6 max-w-4xl text-center text-base leading-relaxed text-zinc-600 sm:text-lg lg:text-xl">
             The digital compliance logbook for pest control professionals. Meet UK regulations (Rodenticide Stewardship Regime), log jobs on-site, and generate audit-ready reports.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -78,8 +78,9 @@ export default function LandingMain() {
 
       <section id="features" className="bg-offwhite px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="mb-10 text-center">
+          <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-navy sm:text-4xl">Key Features</h2>
+            <div className="mx-auto mt-2 h-1 w-16 bg-primary-500 rounded-full"></div>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {featureCards.map((item, index) => (
@@ -97,8 +98,11 @@ export default function LandingMain() {
 
       <section className="bg-white px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-7xl">
-          <h2 className="text-center text-3xl font-bold text-navy sm:text-4xl">How It Works</h2>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-navy sm:text-4xl">How It Works</h2>
+            <div className="mx-auto mt-2 h-1 w-16 bg-primary-500 rounded-full"></div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {howItWorksSteps.map((step, index) => (
               <article key={step} className="interactive-surface rounded-2xl border border-zinc-200 bg-offwhite p-5 hover:border-primary-300">
                 <p className="text-sm font-semibold text-primary-600">Step {index + 1}</p>
@@ -111,8 +115,9 @@ export default function LandingMain() {
 
       <section id="pricing" className="bg-offwhite px-4 py-16 sm:px-6">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="mb-10 text-center">
+          <div className="mb-12 text-center">
             <h2 className="text-3xl font-bold text-navy sm:text-4xl">Pricing</h2>
+            <div className="mx-auto mt-2 h-1 w-16 bg-primary-500 rounded-full"></div>
           </div>
           <div className="grid gap-6 lg:grid-cols-3">
             {pricingPlans.map((plan) => (
@@ -143,7 +148,7 @@ export default function LandingMain() {
       </section>
 
       <section className="bg-white px-4 py-16 sm:px-6">
-        <div className="mx-auto w-full max-w-4xl rounded-2xl border border-zinc-200 bg-offwhite p-8 text-center sm:p-10">
+        <div className="mx-auto w-full max-w-4xl rounded-2xl border border-primary-200 bg-primary-50 p-8 text-center sm:p-10">
           <h2 className="text-3xl font-bold text-navy sm:text-4xl">Ready to simplify compliance and grow your business?</h2>
           <p className="mt-3 text-base text-zinc-600 sm:text-lg">Join 50+ pest control companies using Pest Trace.</p>
           <Link href="/auth/signup" className="mt-6 inline-flex rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary-600 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500">

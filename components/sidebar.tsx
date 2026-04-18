@@ -25,14 +25,15 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
     <>
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-50 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg lg:hidden"
+        className="fixed left-4 top-20 z-40 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg lg:hidden"
+        aria-label="Open navigation menu"
       >
         ☰
       </button>
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-39 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}

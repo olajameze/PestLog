@@ -8,8 +8,11 @@ export default function LandingFAQ() {
   return (
     <section id="faq" className="bg-offwhite py-20">
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6">
-        <h2 className="text-center text-4xl font-bold text-navy sm:text-5xl">Frequently Asked Questions</h2>
-        <div className="mt-10 space-y-4">
+        <div className="mb-12 text-center">
+          <h2 className="text-4xl font-bold text-navy sm:text-5xl">Frequently Asked Questions</h2>
+          <div className="mx-auto mt-3 h-1 w-16 bg-primary-500 rounded-full"></div>
+        </div>
+        <div className="space-y-4">
           {landingFaqs.map((faq, idx) => {
             const isOpen = openIndex === idx;
 

@@ -142,8 +142,8 @@ type Tab = 'technicians' | 'logbook' | 'settings';
 const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe: (plan: 'pro' | 'business') => void }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-navy">Choose Your Plan</h2>
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="flex-1 text-center text-2xl font-bold text-navy">Choose Your Plan</h2>
         <Button size="sm" variant="secondary" onClick={onClose}>✕</Button>
       </div>
       <div className="grid gap-6 mb-8 md:grid-cols-3">
@@ -817,7 +817,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-navy">Upload Certification</h2>
+              <h2 className="flex-1 text-center text-2xl font-bold text-navy">Upload Certification</h2>
               <Button size="sm" variant="secondary" onClick={() => setShowCertModal(false)}>✕</Button>
             </div>
             <div className="space-y-4">
@@ -959,8 +959,11 @@ function CompanySetupTab() {
   return (
     <div className="max-w-md mx-auto">
       <Card>
-        <h2 className="text-2xl font-bold text-navy mb-4 text-center">Welcome to Pest Trace!</h2>
-        <p className="text-zinc-600 mb-6 text-center">Let&apos;s set up your pest control company to get started.</p>
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-navy mb-3">Welcome to Pest Trace!</h2>
+          <div className="mx-auto h-1 w-12 bg-primary-500 rounded-full mb-4"></div>
+          <p className="text-zinc-600">Let&apos;s set up your pest control company to get started.</p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <FormInput
             label="Company Name"
@@ -1012,7 +1015,10 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
   return (
     <div className="space-y-6">
       <Card className="space-y-4">
-        <h2 className="text-3xl font-bold text-navy">Add New Technician</h2>
+        <div className="text-center mb-6">
+          <h2 className="text-3xl font-bold text-navy mb-2">Add New Technician</h2>
+          <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full"></div>
+        </div>
         <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-12">
           <div className="sm:col-span-5">
             <FormInput label="Full Name" id="tech-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" required />
@@ -1183,11 +1189,15 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-navy">Logbook Entries</h2>
+      <div className="bg-white rounded-2xl shadow-md p-6">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-navy mb-2">Logbook Entries</h2>
+          <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full mb-4"></div>
           <p className="text-zinc-600">{filteredEntries.length} entries</p>
         </div>
+      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
           <input
             type="text"
