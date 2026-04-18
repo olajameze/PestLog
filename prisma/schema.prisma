@@ -26,8 +26,6 @@ model Company {
   updatedAt               DateTime       @updatedAt
   technicians             Technician[]
   logbookEntries          LogbookEntry[]
-  chemicalInventory       ChemicalInventory[]
-  marketingSpend          MarketingSpend[]
 }
 
 model Technician {
@@ -73,8 +71,6 @@ model LogbookEntry {
   endTime                 DateTime?
   status                  String                   @default("open")
   price                   Decimal?                 // Job price for CLV calculations
-  latitude                Float?                   // GPS coordinates for accurate mapping
-  longitude               Float?                   // GPS coordinates for accurate mapping
   logbookEntryTechnicians LogbookEntryTechnician[]
   createdAt               DateTime                 @default(now())
   company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -108,32 +104,4 @@ model LogbookPhoto {
   logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
 }
 
-model ChemicalInventory {
-  id           String   @id @default(cuid())
-  companyId    String
-  chemicalName String
-  currentStock Float    // Current stock level in ml/liters
-  unit         String   @default("ml") // ml, liters, kg, etc.
-  reorderPoint Float?  // Minimum stock level before reorder alert
-  supplier     String?
-  batchNumber  String?
-  expiryDate   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
-  @@unique([companyId, chemicalName])
-}
-
-model MarketingSpend {
-  id          String   @id @default(cuid())
-  companyId   String
-  amount      Decimal  // Marketing spend amount
-  currency    String   @default("GBP")
-  category    String   // "Google Ads", "Facebook", "SEO", "Events", etc.
-  description String?
-  date        DateTime // When the spend occurred
-  period      String?  // "monthly", "quarterly", etc.
-  createdAt   DateTime @default(now())
-  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-}
