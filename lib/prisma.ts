@@ -19,11 +19,23 @@ const globalForPrisma = globalThis as unknown as {
 
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false }, // Allow self-signed certs for Supabase
+  // Supabase pooled connections require specific SSL settings
+  ssl: {
+    rejectUnauthorized: false, // Required for Supabase pooled connections
+  },
+  // Connection pool settings for Vercel serverless
+  max: 1, // Limit connections for serverless
+  min: 0,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 const adapter = new PrismaPg(pool);
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  adapter,
+  // Disable query logging in production for performance
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

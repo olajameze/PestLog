@@ -4,8 +4,15 @@ import "dotenv/config";
 import { defineConfig } from "prisma/config";
 import { normalizePostgresUrlForPrisma } from "./lib/normalizePostgresUrl";
 
-/** Database URL - used by both the app and CLI */
+/** Database URL - Supabase pooled connection for app, direct for CLI */
 const databaseUrl = process.env["DATABASE_URL"] || "";
+const isPooledConnection = databaseUrl.includes('pooler.supabase.com');
+
+// For CLI operations (migrations, db push), use direct connection
+// For app runtime, use pooled connection
+const cliUrl = isPooledConnection
+  ? databaseUrl.replace('aws-0-eu-west-1.pooler.supabase.com:6543', 'db.ozmqpbouelfinhpzcfvs.supabase.co:5432').replace('?pgbouncer=true&connection_limit=1', '')
+  : databaseUrl;
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -13,6 +20,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: normalizePostgresUrlForPrisma(databaseUrl),
+    url: normalizePostgresUrlForPrisma(cliUrl),
   },
 });
