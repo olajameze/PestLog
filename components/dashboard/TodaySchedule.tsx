@@ -82,7 +82,7 @@ export default function TodaySchedule({ schedule, loading, onMapClick }: TodaySc
           ))}
         </div>
         <div className="mt-3 text-sm text-slate-600">
-          Tap to view fleet locations. This mock map reflects technician assignments and status.
+          Tap to view fleet locations. Pins reflect today&apos;s jobs and completion status (approximate layout).
         </div>
       </button>
     </Card>

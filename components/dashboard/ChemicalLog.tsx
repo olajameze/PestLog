@@ -41,18 +41,26 @@ export default function ChemicalLog({ chemicalLog, loading, onRowClick }: Chemic
               </tr>
             </thead>
             <tbody>
-              {chemicalLog.map((item) => (
-                <tr key={item.id} className="border-t border-slate-200 hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-900">{item.chemical}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.volumeMl} ml</td>
-                  <td className="px-4 py-3 text-slate-600">{item.stockRemaining}%</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'compliant' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                      {item.status}
-                    </span>
+              {chemicalLog.length === 0 ? (
+                <tr className="border-t border-slate-200">
+                  <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-500">
+                    No chemical or product lines recorded in this period. Log treatments and products on jobs to populate this table.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                chemicalLog.map((item) => (
+                  <tr key={item.id} className="border-t border-slate-200 hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-900">{item.chemical}</td>
+                    <td className="px-4 py-3 text-slate-600">{item.volumeMl} ml</td>
+                    <td className="px-4 py-3 text-slate-600">{item.stockRemaining}%</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${item.status === 'compliant' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

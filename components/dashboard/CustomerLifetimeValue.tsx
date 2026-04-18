@@ -59,6 +59,9 @@ export default function CustomerLifetimeValue({ customerValue, loading }: Custom
           </div>
           <div className="space-y-2">
             <p className="text-sm font-semibold text-slate-700">Trend</p>
+            <p className="text-xs text-slate-500">
+              CLV and CAC are directional estimates from your logged jobs (assumed £{135} average visit value until invoicing is connected). Trend follows estimated revenue by week in the selected range.
+            </p>
             <div
               className="flex h-32 max-h-32 min-h-32 items-end gap-2"
               role="img"

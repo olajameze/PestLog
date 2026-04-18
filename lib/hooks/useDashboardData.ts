@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchDashboardData, DashboardData, DashboardDateRangeOption } from '../api/mockDashboardData';
+import type { DashboardData, DashboardDateRangeOption } from '../api/mockDashboardData';
+import { fetchDashboardInsights } from '../api/dashboardInsightsClient';
 
 export function useDashboardData(range: DashboardDateRangeOption) {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -16,7 +17,7 @@ export function useDashboardData(range: DashboardDateRangeOption) {
       if (mounted) setLoading(true);
     });
 
-    fetchDashboardData(range)
+    fetchDashboardInsights(range)
       .then((result) => {
         if (!mounted) return;
         setData(result);

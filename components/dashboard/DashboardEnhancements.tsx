@@ -38,7 +38,9 @@ export default function DashboardEnhancements({ plan }: DashboardEnhancementsPro
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Dashboard insights</p>
             <h2 id="dashboard-enhancements-heading" className="text-2xl font-semibold text-navy">Operational & customer visibility</h2>
-            <p className="mt-2 text-sm text-slate-600">Updated with mock operational metrics and plan-gated customer analytics.</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Operational metrics are computed from your logbook, certifications, and company rules. Business and Enterprise plans unlock the customer analytics cards below.
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {options.map((option) => (

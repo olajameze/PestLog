@@ -34,6 +34,9 @@ export default function CSATScore({ csat, loading }: CSATScoreProps) {
       <div>
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Customer satisfaction</p>
         <h3 className="text-xl font-semibold text-navy">CSAT & NPS trend</h3>
+        <p className="mt-2 text-xs text-slate-500">
+          Scores are modelled from documentation quality on jobs (photos, signatures, notes) until survey responses are stored in Pest Trace.
+        </p>
       </div>
       {loading ? (
         <p className="text-sm text-slate-500">Loading satisfaction analytics…</p>

@@ -83,6 +83,7 @@ export interface DashboardData {
   csat: CSATData;
 }
 
+/** @deprecated Dashboard UI uses `/api/dashboard-insights` via `fetchDashboardInsights`. Kept for local fixtures / tests. */
 export async function fetchDashboardData(range: DashboardDateRangeOption): Promise<DashboardData> {
   await new Promise((resolve) => setTimeout(resolve, 220));
 
