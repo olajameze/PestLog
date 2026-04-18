@@ -1197,17 +1197,14 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
         </div>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search entries..."
-            className="form-input w-full sm:w-72 border-zinc-300 rounded-xl px-4 py-3"
-          />
-          <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
-        </div>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search entries..."
+          className="form-input w-full sm:w-72 border-zinc-300 rounded-xl px-4 py-3"
+        />
+        <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
       </div>
       <Card>
         <AddLogbookEntryForm
