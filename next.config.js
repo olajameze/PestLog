@@ -1,18 +1,17 @@
-import nextPWA from 'next-pwa';
+const DEFAULT_PUBLIC_SUPPORT = 'pesttrace@gmail.com';
 
 const nextConfig = {
-  pwa: {
-    dest: 'public',
-    register: true,
-    skipWaiting: true,
-    disable: process.env.NODE_ENV === 'development',
-    cacheOnFrontEndNav: true,
-    reloadOnOnline: true,
-    sw: '/sw.js',
+  env: {
+    /** Exposed to the browser for mailto links; falls back to SUPPORT_EMAIL then default. */
+    NEXT_PUBLIC_SUPPORT_EMAIL: (
+      process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
+      process.env.SUPPORT_EMAIL ||
+      DEFAULT_PUBLIC_SUPPORT
+    ).trim(),
   },
   turbopack: {},
   reactStrictMode: true,
-  images: { 
+  images: {
     remotePatterns: [
       {
         protocol: 'https',
@@ -57,5 +56,4 @@ const nextConfig = {
   },
 };
 
-export default nextPWA(nextConfig);
-
+export default nextConfig;
