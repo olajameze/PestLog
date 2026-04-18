@@ -10,6 +10,7 @@
 ## 1. ✅ Contact Form Email Configuration
 
 ### Current Setup
+
 - **Email Service**: Resend
 - **Default Recipient**: `pesttrace@gmail.com`
 - **Configuration File**: [lib/supportEmail.ts](lib/supportEmail.ts)
@@ -18,7 +19,7 @@
 
 When a user submits the contact form on `/contact`:
 
-```
+```text
 User fills form → POST /api/contact → Resend Email Service → pesttrace@gmail.com
 ```
 
@@ -55,28 +56,32 @@ NEXT_PUBLIC_SUPPORT_EMAIL=pesttrace@gmail.com  # For client-side display
 ### Setup Steps for Vercel Production
 
 1. **Create Resend Account**
+
    - Go to [resend.com](https://resend.com)
    - Sign up with your email
    - Get your API key from the dashboard
 
 2. **Configure Vercel Environment Variables**
+
    - Go to Vercel Dashboard → Your Project → Settings → Environment Variables
    - Add:
-     ```
+
+     ```bash
      RESEND_API_KEY = re_...
      SUPPORT_EMAIL = pesttrace@gmail.com
      NEXT_PUBLIC_SUPPORT_EMAIL = pesttrace@gmail.com
      ```
 
 3. **Verify Email Works**
+
    - Test in staging: Submit contact form, check inbox
-   - Expected: Email arrives at pesttrace@gmail.com within 1-2 minutes
+   - Expected: Email arrives at `pesttrace@gmail.com` within 1-2 minutes
 
 ### Email Template
 
 The contact form email uses a professional branded template:
 
-```
+```text
 From: Pest Trace <pesttrace@gmail.com>
 To: pesttrace@gmail.com
 Subject: New Pest Trace contact request from [User Name]
@@ -105,7 +110,7 @@ Message: [User Message]
 ### Owner (Company Admin) Features
 
 | Feature | Status | Notes |
-|---------|--------|-------|
+| --- | --- | --- |
 | Sign up / Sign in | ✅ | Email magic links via Supabase |
 | Dashboard hub | ✅ | Tabs: Technicians, Logbook, Settings |
 | Add/manage technicians | ✅ | Invite & certification tracking |
@@ -118,14 +123,14 @@ Message: [User Message]
 | Delete account | ✅ | Full account & data removal |
 | Export analytics | ✅ | Dashboard insights export |
 
-**Owner Features: 11/11 COMPLETE ✅**
+## Owner Features: 11/11 COMPLETE ✅
 
 ---
 
 ### Technician Features
 
 | Feature | Status | Notes |
-|---------|--------|-------|
+| --- | --- | --- |
 | Sign in (email magic link) | ✅ | Supabase email auth |
 | Create logbook entry | ✅ | Date, client, address, treatment |
 | Capture photos | ✅ | Upload to Supabase Storage |
@@ -135,14 +140,14 @@ Message: [User Message]
 | Offline support | ✅ | PWA works without internet |
 | Sync on reconnect | ✅ | Auto-sync when back online |
 
-**Technician Features: 8/8 COMPLETE ✅**
+## Technician Features: 8/8 COMPLETE ✅
 
 ---
 
 ### PWA & Mobile Features
 
 | Feature | Status | Notes |
-|---------|--------|-------|
+| --- | --- | --- |
 | Installable app | ✅ | iOS & Android install prompt |
 | Offline fallback | ✅ | Works without internet |
 | Service worker | ✅ | Caches key assets |
@@ -151,14 +156,14 @@ Message: [User Message]
 | Touch-friendly UI | ✅ | 3rem+ touch targets |
 | ARIA accessibility | ✅ | Screen reader compatible |
 
-**PWA Features: 7/7 COMPLETE ✅**
+## PWA Features: 7/7 COMPLETE ✅
 
 ---
 
 ### Platform & Infrastructure
 
 | Feature | Status | Notes |
-|---------|--------|-------|
+| --- | --- | --- |
 | Supabase Authentication | ✅ | Email magic links |
 | PostgreSQL Database | ✅ | Prisma ORM |
 | Stripe Payments | ✅ | Checkout & webhooks |
@@ -168,14 +173,14 @@ Message: [User Message]
 | Analytics | ✅ | Dashboard insights |
 | Error Logging | ✅ | Sentry integration ready |
 
-**Platform Features: 8/8 COMPLETE ✅**
+## Platform Features: 8/8 COMPLETE ✅
 
 ---
 
 ### NEW: Professional Layout Features (Just Deployed)
 
 | Feature | Status | Notes |
-|---------|--------|-------|
+| --- | --- | --- |
 | Centered headings | ✅ | All pages & sections |
 | Decorative dividers | ✅ | Under main headings |
 | Professional spacing | ✅ | Consistent margins/padding |
@@ -185,13 +190,13 @@ Message: [User Message]
 | Hover effects | ✅ | Desktop-only media query |
 | Loading states | ✅ | Spinner feedback |
 
-**Design Features: 8/8 COMPLETE ✅**
+## Design Features: 8/8 COMPLETE ✅
 
 ---
 
 ### FEATURE COMPLETION SUMMARY
 
-```
+```text
 Owner Features:      11/11 ✅
 Technician Features:  8/8  ✅
 PWA Features:         7/7  ✅
@@ -209,7 +214,7 @@ TOTAL:               42/42 ✅
 
 ### Build Status (Latest)
 
-```
+```text
 ✅ TypeScript Check:    PASS (14.2s)
 ✅ Production Build:    PASS (14.7s)
 ✅ Page Generation:     PASS (16/16 pages)
@@ -223,6 +228,7 @@ Exit Code: 0
 ### Routes Deployed (38 total)
 
 **Pages** (9 static):
+
 - ✅ Landing page `/`
 - ✅ Dashboard `/dashboard`
 - ✅ Technician logbook `/technician`
@@ -234,6 +240,7 @@ Exit Code: 0
 - ✅ Offline fallback `/_offline`
 
 **API Endpoints** (15 dynamic):
+
 - ✅ Authentication routes
 - ✅ Company info endpoint
 - ✅ Technician management
@@ -247,6 +254,7 @@ Exit Code: 0
 - ✅ (Plus 5 more utility endpoints)
 
 **Auth Routes** (5 dynamic):
+
 - ✅ `/auth/signin`
 - ✅ `/auth/signup`
 - ✅ `/auth/forgot-password`
@@ -256,7 +264,7 @@ Exit Code: 0
 ### Vercel Integration Checklist
 
 | Item | Status | Action |
-|------|--------|--------|
+| --- | --- | --- |
 | GitHub repository connected | ✅ | Already configured |
 | Auto-deploy on push enabled | ✅ | Already configured |
 | Production environment variables set | ⏳ | **See section below** |
@@ -271,6 +279,9 @@ Exit Code: 0
 Set these in Vercel Dashboard → Settings → Environment Variables:
 
 ```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -344,7 +355,7 @@ curl https://pesttrace.com/api/subscription
 
 ### Before Going Live
 
-- [ ] **Environment Variables Configured in Vercel**
+- **Environment Variables Configured in Vercel**
   - [ ] All keys in the section above added
   - [ ] No hardcoded secrets in code
   - [ ] Test keys removed (using LIVE keys)
@@ -406,7 +417,7 @@ git push origin main
 ## 5. Technical Stack Summary
 
 | Layer | Technology | Version | Status |
-|-------|-----------|---------|--------|
+| --- | --- | --- | --- |
 | **Frontend Framework** | Next.js (Pages Router) | 16.2.4 | ✅ |
 | **React** | React | 19 | ✅ |
 | **Language** | TypeScript | 5.x | ✅ |
@@ -429,7 +440,7 @@ git push origin main
 ### Documentation Files
 
 | File | Purpose | Read Time |
-|------|---------|-----------|
+| --- | --- | --- |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Step-by-step Vercel setup | 20 min |
 | [GO-LIVE-CHECKLIST.md](GO-LIVE-CHECKLIST.md) | Pre/post-launch validation | 30 min |
 | [QUICK-REFERENCE.md](QUICK-REFERENCE.md) | Developer cheat sheet | 5 min |
@@ -438,7 +449,7 @@ git push origin main
 
 ### Support Email
 
-- **Support Address**: pesttrace@gmail.com
+- **Support Address**: `pesttrace@gmail.com`
 - **Response Time**: Next business day
 - **Contact Form**: Available at `https://pesttrace.com/contact`
 
@@ -447,18 +458,21 @@ git push origin main
 ## 7. Launch Timeline
 
 ### Week 1: Final Testing
+
 - Run full UAT on staging deployment
 - Test all features end-to-end
 - Performance testing (Lighthouse)
 - Security audit
 
 ### Week 2: Production Setup
+
 - Configure Vercel environment variables
 - Apply database migrations
 - Set up Stripe webhooks
 - Configure custom domain DNS
 
 ### Day 1: Launch
+
 - Deploy to production
 - Run smoke tests
 - Monitor Vercel analytics
@@ -466,6 +480,7 @@ git push origin main
 - Verify email notifications work
 
 ### Day 2-7: Post-Launch Monitoring
+
 - Monitor error rates
 - Check payment success rate
 - Track user sign-ups
@@ -478,7 +493,7 @@ git push origin main
 
 Once deployed, monitor these KPIs:
 
-```
+```text
 ✅ Build Status: All deploys pass (target: 100%)
 ✅ Uptime: >99.9% (Vercel SLA: 99.95%)
 ✅ Load Time: <2s homepage (target)
@@ -494,10 +509,10 @@ Once deployed, monitor these KPIs:
 ## SUMMARY: LAUNCH READY ✅
 
 | Component | Status | Notes |
-|-----------|--------|-------|
+| --- | --- | --- |
 | **Code** | ✅ READY | Build passes, 38 routes compiled |
 | **Features** | ✅ COMPLETE | 42/42 features implemented |
-| **Email** | ✅ CONFIGURED | Resend + pesttrace@gmail.com |
+| **Email** | ✅ CONFIGURED | Resend + `pesttrace@gmail.com` |
 | **Deployment** | ✅ CONFIGURED | Vercel auto-deploy ready |
 | **Environment** | ⏳ ACTION | Add vars to Vercel dashboard |
 | **Database** | ✅ READY | Migrations prepared |
