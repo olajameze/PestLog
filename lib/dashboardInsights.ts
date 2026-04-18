@@ -276,7 +276,10 @@ export async function buildDashboardInsights(
     .map(([reason, count]) => ({ reason: `Open jobs: ${reason}`, count }));
 
   const avgJobsPerClient = uniqueClients === 0 ? 0 : totalJobs / uniqueClients;
-  const clv = Math.round(avgJobsPerClient * ESTIMATED_GBP_PER_VISIT * Math.max(1, uniqueClients));
+  // Calculate average price per job from actual data, fallback to estimated value
+  const totalRevenue = entriesInRange.reduce((sum, entry) => sum + (entry.price ? Number(entry.price) : ESTIMATED_GBP_PER_VISIT), 0);
+  const avgPricePerJob = entriesInRange.length > 0 ? totalRevenue / entriesInRange.length : ESTIMATED_GBP_PER_VISIT;
+  const clv = Math.round(avgJobsPerClient * avgPricePerJob * Math.max(1, uniqueClients));
   const cac = Math.max(420, Math.min(1400, Math.round(5400 / Math.max(1, Math.ceil(uniqueClients / 2) || 1))));
 
   const weekBuckets = Math.min(8, Math.max(3, Math.ceil(days / 14)));
@@ -287,7 +290,8 @@ export async function buildDashboardInsights(
       rangeStart.getTime() + ((w + 1) * (rangeEnd.getTime() - rangeStart.getTime())) / weekBuckets,
     );
     const slice = entriesInRange.filter((e) => e.date >= from && e.date < to);
-    trend.push(Math.round(slice.length * ESTIMATED_GBP_PER_VISIT));
+    const sliceRevenue = slice.reduce((sum, entry) => sum + (entry.price ? Number(entry.price) : ESTIMATED_GBP_PER_VISIT), 0);
+    trend.push(Math.round(sliceRevenue));
   }
   if (trend.length === 0) trend.push(0);
 
