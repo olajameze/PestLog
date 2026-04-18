@@ -26,11 +26,11 @@ const globalForPrisma = globalThis as unknown as {
 
 const pool = new Pool({
   connectionString,
-  // Some local Windows/corporate networks inject TLS certificates.
-  // Allowing unauthorized certs in development prevents local P1011 TLS failures.
+  // Supabase requires SSL but may have cert chain issues
+  // sslmode=require in connection string handles this
   ssl:
     isProduction
-      ? { rejectUnauthorized: true }
+      ? { rejectUnauthorized: false } // Vercel + Supabase works with this
       : { rejectUnauthorized: false },
 });
 const adapter = new PrismaPg(pool);
