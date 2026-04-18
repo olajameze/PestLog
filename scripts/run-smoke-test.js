@@ -37,7 +37,7 @@ try {
     stdio: 'inherit',
     env: process.env,
   });
-} catch (error) {
+} catch {
   console.error('❌ Production build failed.');
   process.exit(1);
 }

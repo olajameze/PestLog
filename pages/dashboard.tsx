@@ -383,11 +383,12 @@ export default function Dashboard() {
         router.push('/auth/signin');
         return;
       }
-      const userVerified = Boolean(
-        (session.user as any).email_confirmed_at ??
-        (session.user as any).confirmed_at ??
-        (session.user as any).email_confirmed
-      );
+      const authUser = session.user as {
+        email_confirmed_at?: string | null;
+        confirmed_at?: string | null;
+        email_confirmed?: boolean;
+      };
+      const userVerified = Boolean(authUser.email_confirmed_at ?? authUser.confirmed_at ?? authUser.email_confirmed);
       if (!userVerified) {
         router.replace(`/auth/verify?email=${encodeURIComponent(session.user.email ?? '')}`);
         return;

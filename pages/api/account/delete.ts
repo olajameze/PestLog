@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { sendAccountDeletionEmail } from '../../../lib/email';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -74,6 +75,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Delete Supabase user
+    try {
+      await sendAccountDeletionEmail(user.email, company.name ?? undefined);
+    } catch (emailError) {
+      console.error('Account deletion email failed (continuing with delete):', emailError);
+    }
+
     const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteAuthError) {
       console.error('Supabase auth delete error:', deleteAuthError);

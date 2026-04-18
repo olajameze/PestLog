@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Resend } from 'resend';
+import { getServerSupportEmail } from '../../lib/supportEmail';
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const supportEmail = process.env.SUPPORT_EMAIL || 'pesttrace@gmail.com';
+const supportEmail = getServerSupportEmail();
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 

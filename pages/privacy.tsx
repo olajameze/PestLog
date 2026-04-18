@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import Navbar from '../components/navbar';
 import LandingFooter from '../components/landing/LandingFooter';
+import { getClientSupportEmail } from '../lib/supportEmail';
 
 export default function PrivacyPage() {
+  const supportAddr = getClientSupportEmail();
   return (
     <div className="min-h-screen bg-offwhite">
       <Navbar />
@@ -50,7 +52,11 @@ export default function PrivacyPage() {
             <div>
               <h2 className="text-2xl font-semibold text-navy">6. Contact</h2>
               <p className="mt-3 leading-7">
-                If you have privacy questions, email <a href="mailto:pesttrace@gmail.com" className="text-primary-600 hover:text-primary-700">pesttrace@gmail.com</a> or submit a message through our <Link href="/contact" className="text-primary-600 hover:text-primary-700">contact page</Link>.
+                If you have privacy questions, email{' '}
+                <a href={`mailto:${supportAddr}`} className="text-primary-600 hover:text-primary-700">
+                  {supportAddr}
+                </a>{' '}
+                or submit a message through our <Link href="/contact" className="text-primary-600 hover:text-primary-700">contact page</Link>.
               </p>
             </div>
           </section>

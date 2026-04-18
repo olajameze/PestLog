@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { prisma } from '../../lib/prisma';
+import { sendSubscriptionUpgradeEmail } from './subscription';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-07-30.basil',
@@ -83,6 +84,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: { id: true, plan: true },
       });
       console.log(`Company updated: ${updatedCompany.id}, plan: ${updatedCompany.plan}`);
+      if (plan === 'pro' || plan === 'business') {
+        await sendSubscriptionUpgradeEmail(companyId, plan);
+      }
     } 
     else if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object as Stripe.Subscription;

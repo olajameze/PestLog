@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import type { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { checkPlan } from '../../lib/planGuard';
@@ -23,11 +24,11 @@ async function resolveCompanyForUser(token: string) {
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user?.email) return null;
 
-  let company = await prisma.company.findUnique({
+  const directCompany = await prisma.company.findUnique({
     where: { email: user.email },
     select: { id: true, plan: true, subscriptionStatus: true, notificationPreferences: true },
   });
-  if (company) return company;
+  if (directCompany) return directCompany;
 
   const technician = await prisma.technician.findFirst({
     where: { email: user.email },
@@ -64,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const technicianId = typeof req.query.technicianId === 'string' ? req.query.technicianId : undefined;
 
-  const whereClause: any = {
+  const whereClause: Prisma.LogbookEntryWhereInput = {
     companyId: company.id,
     date: { gte: startDate, lte: endDate },
   };

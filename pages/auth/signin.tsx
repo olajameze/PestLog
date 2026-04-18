@@ -28,11 +28,24 @@ export default function SignIn() {
     if (error) {
       setError(error.message);
       showToast('Sign in failed', error.message, 'error');
-    } else if (data?.session?.user && !((data.session.user as any).email_confirmed_at ?? (data.session.user as any).confirmed_at ?? (data.session.user as any).email_confirmed)) {
+    } else if (!data.session) {
       setSuccessMessage('Please verify your email before accessing the dashboard.');
-      showToast('Email verification required', 'Check your inbox for the verification email.', 'info');
+      showToast('Email verification required', 'Check your inbox or resend verification from the next screen.', 'info');
       router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
     } else {
+      const u = data.session.user as {
+        email_confirmed_at?: string | null;
+        confirmed_at?: string | null;
+        email_confirmed?: boolean;
+      };
+      const verified = Boolean(u.email_confirmed_at ?? u.confirmed_at ?? u.email_confirmed);
+      if (!verified) {
+        setSuccessMessage('Please verify your email before accessing the dashboard.');
+        showToast('Email verification required', 'Check your inbox for the verification email.', 'info');
+        router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
+        setLoading(false);
+        return;
+      }
       setSuccessMessage('Signed in successfully. Redirecting to dashboard...');
       showToast('Signed in', 'Redirecting to dashboard', 'success');
       router.push('/dashboard');

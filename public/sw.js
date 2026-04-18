@@ -1,7 +1,7 @@
 // Service Worker for PestTrek PWA
 // Enables offline support and caching
 
-const CACHE_NAME = 'pestlog-v1';
+const CACHE_NAME = 'pestlog-v2';
 const urlsToCache = [
   '/',
   '/offline.html',
@@ -26,18 +26,26 @@ self.addEventListener('install', (event) => {
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
+    caches
+      .keys()
+      .then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('[Service Worker] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      })
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then((clients) => {
+        for (const client of clients) {
+          client.postMessage({ type: 'PESTTRACE_SW_UPDATE' });
+        }
+      })
   );
-  self.clients.claim();
 });
 
 // Fetch event - network first, fall back to cache

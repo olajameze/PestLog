@@ -5,12 +5,14 @@ import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
 import Navbar from '../components/navbar';
 import LandingFooter from '../components/landing/LandingFooter';
+import { getClientSupportEmail } from '../lib/supportEmail';
 
 function validEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 export default function ContactPage() {
+  const supportAddr = getClientSupportEmail();
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -76,8 +78,8 @@ export default function ContactPage() {
               <div className="mt-8 space-y-4 text-sm text-slate-600">
                 <p>
                   <strong>Support email:</strong>{' '}
-                  <a href="mailto:pesttrace@gmail.com" className="text-primary-600 hover:text-primary-700">
-                    pesttrace@gmail.com
+                  <a href={`mailto:${supportAddr}`} className="text-primary-600 hover:text-primary-700">
+                    {supportAddr}
                   </a>
                 </p>
                 <p>

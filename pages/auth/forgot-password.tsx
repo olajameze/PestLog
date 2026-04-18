@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import Button from '../../components/ui/Button';
@@ -12,7 +11,6 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const router = useRouter();
   const { showToast } = useToast();
 
   const handleSubmit = async (event: React.FormEvent) => {

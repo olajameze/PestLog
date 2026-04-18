@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/ToastProvider';
+import { getClientSupportEmail } from '../lib/supportEmail';
 
 type Company = {
   id: string;
@@ -17,6 +18,7 @@ type Subscription = {
 
 export default function UpgradePage() {
   const router = useRouter();
+  const supportAddr = getClientSupportEmail();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const [company, setCompany] = useState<Company | null>(null);
@@ -44,11 +46,12 @@ export default function UpgradePage() {
         router.push('/auth/signin');
         return;
       }
-      const userVerified = Boolean(
-        (session.user as any).email_confirmed_at ??
-        (session.user as any).confirmed_at ??
-        (session.user as any).email_confirmed
-      );
+      const authUser = session.user as {
+        email_confirmed_at?: string | null;
+        confirmed_at?: string | null;
+        email_confirmed?: boolean;
+      };
+      const userVerified = Boolean(authUser.email_confirmed_at ?? authUser.confirmed_at ?? authUser.email_confirmed);
       if (!userVerified) {
         router.push(`/auth/verify?email=${encodeURIComponent(session.user.email ?? '')}`);
         return;
@@ -223,7 +226,7 @@ export default function UpgradePage() {
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
             <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
             <a
-              href="mailto:pesttrace@gmail.com?subject=Pest Trace Enterprise Enquiry"
+              href={`mailto:${supportAddr}?subject=${encodeURIComponent('Pest Trace Enterprise Enquiry')}`}
               className="btn btn-secondary mt-6 w-full inline-flex items-center justify-center"
             >
               Contact Sales

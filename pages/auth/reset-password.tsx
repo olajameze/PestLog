@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import Button from '../../components/ui/Button';
@@ -12,34 +11,31 @@ function getQueryStringValue(query: URLSearchParams, key: string) {
 }
 
 export default function ResetPassword() {
-  const router = useRouter();
   const { showToast } = useToast();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [validRecoveryLink, setValidRecoveryLink] = useState(false);
-  const [invalidLinkMessage, setInvalidLinkMessage] = useState('');
 
   const recoveryParams = useMemo(() => {
     if (typeof window === 'undefined') return null;
     return new URLSearchParams(window.location.search);
   }, []);
 
-  useEffect(() => {
-    if (!recoveryParams) return;
-
+  const { validRecoveryLink, invalidLinkMessage } = useMemo(() => {
+    if (!recoveryParams) {
+      return { validRecoveryLink: false, invalidLinkMessage: '' };
+    }
     const type = getQueryStringValue(recoveryParams, 'type');
     const accessToken = getQueryStringValue(recoveryParams, 'access_token');
-
     if (type !== 'recovery' || !accessToken) {
-      setInvalidLinkMessage('This reset link is invalid or incomplete. Please request a new one.');
-      setValidRecoveryLink(false);
-      return;
+      return {
+        validRecoveryLink: false,
+        invalidLinkMessage: 'This reset link is invalid or incomplete. Please request a new one.',
+      };
     }
-
-    setValidRecoveryLink(true);
+    return { validRecoveryLink: true, invalidLinkMessage: '' };
   }, [recoveryParams]);
 
   const handleReset = async (event: React.FormEvent) => {

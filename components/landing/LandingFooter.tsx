@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import { getClientSupportEmail } from '../../lib/supportEmail';
 
 export default function LandingFooter() {
+  const supportAddr = getClientSupportEmail();
   return (
     <footer className="bg-navy border-t border-slate-800 py-8 text-slate-300">
       <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 text-sm sm:grid-cols-12 sm:px-6">
@@ -30,7 +32,10 @@ export default function LandingFooter() {
           <p className="text-xs uppercase tracking-[0.28em] text-slate-500">Contact</p>
           <div className="mt-3 space-y-2 text-sm text-slate-300">
             <p>
-              Support: <a href="mailto:pesttrace@gmail.com" className="text-white underline">pesttrace@gmail.com</a>
+              Support:{' '}
+              <a href={`mailto:${supportAddr}`} className="text-white underline">
+                {supportAddr}
+              </a>
             </p>
             <p>
               Created by <a href="https://jgdev.co.uk" target="_blank" rel="noreferrer" className="text-white underline">jgdev.co.uk</a>

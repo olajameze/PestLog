@@ -12,7 +12,9 @@ export function useDashboardData(range: DashboardDateRangeOption) {
 
   useEffect(() => {
     let mounted = true;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (mounted) setLoading(true);
+    });
 
     fetchDashboardData(range)
       .then((result) => {

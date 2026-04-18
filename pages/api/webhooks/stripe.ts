@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { prisma } from '../../../lib/prisma';
+import { sendSubscriptionUpgradeEmail } from '../subscription';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -70,6 +71,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       plan: shouldUpdatePlan ? (plan as 'pro' | 'business') : existing.plan,
     },
   });
+
+  const paidPlan = plan && ['pro', 'business'].includes(plan) ? plan : null;
+  if (paidPlan && (shouldUpdatePlan || shouldUpdateStatus)) {
+    await sendSubscriptionUpgradeEmail(companyId, paidPlan);
+  }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {

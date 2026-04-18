@@ -1,16 +1,15 @@
 import nextPWA from 'next-pwa';
 
-const withPWA = nextPWA({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-  cacheOnFrontEndNav: true,
-  reloadOnOnline: true,
-  sw: '/sw.js',
-});
-
 const nextConfig = {
+  pwa: {
+    dest: 'public',
+    register: true,
+    skipWaiting: true,
+    disable: process.env.NODE_ENV === 'development',
+    cacheOnFrontEndNav: true,
+    reloadOnOnline: true,
+    sw: '/sw.js',
+  },
   turbopack: {},
   reactStrictMode: true,
   images: { 
@@ -58,5 +57,5 @@ const nextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+export default nextPWA(nextConfig);
 

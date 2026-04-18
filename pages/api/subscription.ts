@@ -1,6 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { sendUpgradeNotificationEmail } from '../../lib/email';
+
+/** Called from the Stripe webhook when checkout activates a paid plan for a company. */
+export async function sendSubscriptionUpgradeEmail(companyId: string, plan: string): Promise<void> {
+  const row = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { email: true },
+  });
+  if (!row?.email) return;
+  try {
+    await sendUpgradeNotificationEmail(row.email, plan);
+  } catch (error) {
+    console.error('Subscription upgrade email failed:', error);
+  }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization;

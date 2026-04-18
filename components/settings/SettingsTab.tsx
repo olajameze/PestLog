@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getClientSupportEmail } from '../../lib/supportEmail';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import FormInput from '../ui/FormInput';
@@ -67,6 +68,7 @@ export default function SettingsTab({
   checkoutLoading,
   portalLoading,
 }: SettingsTabProps) {
+  const supportAddr = getClientSupportEmail();
   const [companyName, setCompanyName] = useState(company.name || '');
   const [phone, setPhone] = useState(company.phone || '');
   const [address, setAddress] = useState(company.address || '');
@@ -278,7 +280,12 @@ export default function SettingsTab({
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-sm text-slate-600">
               <p className="font-semibold text-slate-900">Dedicated account manager</p>
               <p className="mt-2">Enterprise customers have a dedicated account representative.</p>
-              <p className="mt-1">Contact: <a href="mailto:pesttrace@gmail.com" className="text-blue-600 hover:text-blue-800">pesttrace@gmail.com</a></p>
+              <p className="mt-1">
+                Contact:{' '}
+                <a href={`mailto:${supportAddr}`} className="text-blue-600 hover:text-blue-800">
+                  {supportAddr}
+                </a>
+              </p>
             </div>
           </div>
         )}

@@ -21,6 +21,41 @@ export default function PWAInstallPrompt() {
   const [isVisible, setIsVisible] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const markUpdate = () => setUpdateAvailable(true);
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'PESTTRACE_SW_UPDATE') {
+        markUpdate();
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+
+    const onControllerChange = () => markUpdate();
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+    void navigator.serviceWorker.getRegistration().then((registration) => {
+      if (!registration) return;
+      registration.addEventListener('updatefound', () => {
+        const installing = registration.installing;
+        if (!installing) return;
+        installing.addEventListener('statechange', () => {
+          if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+            markUpdate();
+          }
+        });
+      });
+    });
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', onMessage);
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -102,11 +137,38 @@ export default function PWAInstallPrompt() {
     localStorage.setItem('pwa-prompt-dismissed', new Date().getTime().toString());
   };
 
-  if (isInstalled || !isVisible) return null;
+  if (isInstalled || !isVisible) {
+    if (!updateAvailable) return null;
+    return (
+      <div className="fixed bottom-0 left-0 right-0 z-[60] px-3 pb-safe">
+        <div className="mx-auto mb-2 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-medium">A new version of Pest Trace is ready.</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-amber-500"
+            >
+              Reload to update
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white shadow-2xl">
+        {updateAvailable ? (
+          <div className="border-b border-white/20 bg-blue-800/40 px-4 py-2 text-center text-sm text-blue-50">
+            <span className="font-semibold">Update available.</span>{' '}
+            <button type="button" className="underline font-semibold" onClick={() => window.location.reload()}>
+              Reload
+            </button>{' '}
+            to use the latest version.
+          </div>
+        ) : null}
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
             <div className="shrink-0">
