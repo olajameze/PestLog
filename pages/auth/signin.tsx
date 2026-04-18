@@ -21,13 +21,17 @@ export default function SignIn() {
     setLoading(true);
     setError('');
     setSuccessMessage('');
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) {
       setError(error.message);
       showToast('Sign in failed', error.message, 'error');
+    } else if (data?.session?.user && !((data.session.user as any).email_confirmed_at ?? (data.session.user as any).confirmed_at ?? (data.session.user as any).email_confirmed)) {
+      setSuccessMessage('Please verify your email before accessing the dashboard.');
+      showToast('Email verification required', 'Check your inbox for the verification email.', 'info');
+      router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
     } else {
       setSuccessMessage('Signed in successfully. Redirecting to dashboard...');
       showToast('Signed in', 'Redirecting to dashboard', 'success');

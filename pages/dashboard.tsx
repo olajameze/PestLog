@@ -383,6 +383,15 @@ export default function Dashboard() {
         router.push('/auth/signin');
         return;
       }
+      const userVerified = Boolean(
+        (session.user as any).email_confirmed_at ??
+        (session.user as any).confirmed_at ??
+        (session.user as any).email_confirmed
+      );
+      if (!userVerified) {
+        router.replace(`/auth/verify?email=${encodeURIComponent(session.user.email ?? '')}`);
+        return;
+      }
       setUser(session.user);
       const res = await fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { Resend } from 'resend';
 
 const resendApiKey = process.env.RESEND_API_KEY;
-const supportEmail = process.env.SUPPORT_EMAIL || 'hello@jgdev.co.uk';
+const supportEmail = process.env.SUPPORT_EMAIL || 'pesttrace@gmail.com';
 
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 

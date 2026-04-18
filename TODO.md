@@ -1,28 +1,27 @@
-# PestTrek Task: Full Images in Reports + Confirm Features
+# Dashboard Enhancements & Email Implementation TODO
 
-**Status**: ✅ Approved by user  
-**Approved Plan**: Minimal CSS updates only (delete/multi-upload already working)
+## ✅ Completed
+- [x] Create .env.local with RESEND_API_KEY and SUPPORT_EMAIL
+- [x] Enhance lib/email.ts with templates
+- [x] Create api/auth/welcome.ts endpoint
 
-## Checklist
 
-### ✅ 1. Create this TODO.md file  
-### ✅ 2. Update image display in pages/reports.tsx
-### ✅ 3. Update image display in pages/dashboard.tsx  
+- [ ] Enhance lib/email.ts with templates
+- [x] Update auth/signup.tsx with welcome + verification emails
 
-### ✅ 4. Update this TODO.md (mark steps 1-3 complete)
+- [ ] Update auth/signin.tsx with verification check
+- [ ] Enhance auth/verify.tsx with resend button
+- [x] Create api/auth/welcome.ts endpoint
 
-### ✅ 5. Test verification  
-   - [✅] Reports page: Images show full height (not cropped 160px)  
-   - [✅] Dashboard logbook: Images full height  
-   - [✅] Delete buttons work  
-   - [✅] Multiple image upload works (technician + dashboard)
+- [ ] Enhance api/auth/send-verification.ts
+- [ ] Update api/account/delete.ts with email
+- [ ] Update api/subscription.ts with upgrade email
+- [ ] Update hooks/useRequireSession.ts with email_verified check
+- [ ] Enhance components/PWAInstallPrompt.tsx with update detection
+- [ ] Update public/sw.js for update notification
+- [ ] Update remaining email references (SettingsTab, upgrade, footer)
+- [x] Install resend package if missing
 
-### ✅ 6. Task completion (extra cert upload 401 fixed)
+- [ ] Full test: signup → verify → login → contact → PWA update
+- [ ] npm run build && npm run lint
 
-**✅ COMPLETE!** All requested features working:
-- Delete reports ✓
-- Logbook multi-images ✓
-- Full images (uncropped) ✓
-- Cert upload (401 fixed) ✓
-
-Run `npm run dev` to test locally.

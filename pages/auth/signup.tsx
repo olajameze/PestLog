@@ -43,9 +43,20 @@ export default function SignUp() {
       setError(error.message);
       showToast('Sign up failed', error.message, 'error');
     } else {
-      setSuccessMessage('Account created. Redirecting to your dashboard...');
-      showToast('Account created', 'Redirecting to your dashboard.', 'success');
-      router.push('/dashboard');
+      setSuccessMessage('Account created. Check your email for verification instructions.');
+      showToast('Account created', 'Verification email sent.', 'success');
+      try {
+        await fetch('/api/auth/welcome', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, fullName, businessName }),
+        });
+      } catch (sendError) {
+        console.error('Welcome email failed', sendError);
+      }
+      router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
     }
     setLoading(false);
   };

@@ -44,6 +44,15 @@ export default function UpgradePage() {
         router.push('/auth/signin');
         return;
       }
+      const userVerified = Boolean(
+        (session.user as any).email_confirmed_at ??
+        (session.user as any).confirmed_at ??
+        (session.user as any).email_confirmed
+      );
+      if (!userVerified) {
+        router.push(`/auth/verify?email=${encodeURIComponent(session.user.email ?? '')}`);
+        return;
+      }
 
       const companyRes = await fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },
