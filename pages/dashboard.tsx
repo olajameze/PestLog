@@ -1302,9 +1302,14 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
+
+    // Calculate scale factor between display size and internal canvas size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
     };
   };
 

@@ -198,8 +198,17 @@ export default function TechnicianPage() {
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    // Calculate scale factor between display size and internal canvas size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    // Scale coordinates to match internal canvas size
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
     ctx.beginPath();
-    ctx.moveTo(event.clientX - rect.left, event.clientY - rect.top);
+    ctx.moveTo(x, y);
     event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
   };
@@ -211,7 +220,16 @@ export default function TechnicianPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(event.clientX - rect.left, event.clientY - rect.top);
+
+    // Calculate scale factor between display size and internal canvas size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    // Scale coordinates to match internal canvas size
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    ctx.lineTo(x, y);
     ctx.stroke();
     event.preventDefault();
   };
