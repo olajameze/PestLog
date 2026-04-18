@@ -201,6 +201,12 @@ export default function UpgradePage() {
           <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-navy">Pro</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£25<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <ul className="mt-4 space-y-2 text-sm text-zinc-600">
+              <li>• Unlimited logbook entries</li>
+              <li>• PDF compliance reports</li>
+              <li>• Technician certifications</li>
+              <li>• PWA offline mode</li>
+            </ul>
             <button
               onClick={() => handleSubscribe('pro')}
               disabled={actionLoading}
@@ -213,6 +219,12 @@ export default function UpgradePage() {
           <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-navy">Business</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <ul className="mt-4 space-y-2 text-sm text-zinc-600">
+              <li>• Everything in Pro</li>
+              <li>• Multi-company support, advanced reporting &amp; API access</li>
+              <li>• Priority support</li>
+              <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
+            </ul>
             <button
               onClick={() => handleSubscribe('business')}
               disabled={actionLoading}
@@ -225,6 +237,11 @@ export default function UpgradePage() {
           <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
             <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
+            <ul className="mt-4 space-y-2 text-sm text-zinc-600">
+              <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
+              <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
+              <li>• Customer Satisfaction (CSAT) &amp; Net Promoter Score (NPS) with trend analysis</li>
+            </ul>
             <a
               href={`mailto:${supportAddr}?subject=${encodeURIComponent('Pest Trace Enterprise Enquiry')}`}
               className="btn btn-secondary mt-6 w-full inline-flex items-center justify-center"

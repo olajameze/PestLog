@@ -11,8 +11,23 @@ interface CustomerLifetimeValueProps {
   loading: boolean;
 }
 
+const TREND_BAR_MIN_PX = 28;
+const TREND_BAR_MAX_PX = 112;
+
+function trendBarHeightsPx(values: number[]): number[] {
+  if (values.length === 0) return [];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  return values.map((v) => {
+    const t = (v - min) / span;
+    return Math.round(TREND_BAR_MIN_PX + t * (TREND_BAR_MAX_PX - TREND_BAR_MIN_PX));
+  });
+}
+
 export default function CustomerLifetimeValue({ customerValue, loading }: CustomerLifetimeValueProps) {
-  const trend = customerValue?.trend ?? [];
+  const trendSeries = customerValue?.trend ?? [];
+  const trendHeightsPx = trendBarHeightsPx(trendSeries);
   const ratio = customerValue ? (customerValue.clv / customerValue.cac).toFixed(1) : '0.0';
 
   return (
@@ -44,9 +59,19 @@ export default function CustomerLifetimeValue({ customerValue, loading }: Custom
           </div>
           <div className="space-y-2">
             <p className="text-sm font-semibold text-slate-700">Trend</p>
-            <div className="flex items-end gap-2">
-              {trend.map((value, index) => (
-                <div key={index} className="h-10 rounded-full bg-primary-500/20" style={{ flex: 1, height: `${Math.max(30, value)}px` }} aria-label={`Trend point ${value}`} />
+            <div
+              className="flex h-32 max-h-32 min-h-32 items-end gap-2"
+              role="img"
+              aria-label={`CLV trend across ${trendSeries.length} periods (relative scale)`}
+            >
+              {trendSeries.map((value, index) => (
+                <div
+                  key={index}
+                  className="min-w-0 flex-1 rounded-t-md bg-primary-500/50 transition-[height] duration-300"
+                  style={{ height: `${trendHeightsPx[index] ?? TREND_BAR_MIN_PX}px` }}
+                  title={`£${value.toLocaleString()}`}
+                  aria-label={`Period ${index + 1}: £${value.toLocaleString()}`}
+                />
               ))}
             </div>
           </div>

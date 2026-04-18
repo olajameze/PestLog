@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
 import Sidebar from '../components/sidebar';
@@ -140,12 +141,12 @@ type Tab = 'technicians' | 'logbook' | 'settings';
 // ========== PlanModal Component ==========
 const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe: (plan: 'pro' | 'business') => void }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+    <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-navy">Choose Your Plan</h2>
         <Button size="sm" variant="secondary" onClick={onClose}>✕</Button>
       </div>
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="grid gap-6 mb-8 md:grid-cols-3">
         {/* Pro */}
         <div className="border-2 border-blue-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all">
           <div className="inline-flex items-center gap-2 mb-4">
@@ -172,8 +173,27 @@ const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe:
             <li>• Advanced reporting</li>
             <li>• API access</li>
             <li>• Priority support</li>
+            <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
           </ul>
           <Button variant="secondary" onClick={() => { onClose(); onSubscribe('business'); }} className="w-full">Choose Business (£40/mo)</Button>
+        </div>
+        {/* Enterprise */}
+        <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-gray-300 hover:shadow-lg transition-all">
+          <h3 className="text-xl font-bold text-navy mb-2">Enterprise</h3>
+          <div className="text-3xl font-bold text-primary-600 mb-4">Custom</div>
+          <ul className="space-y-2 mb-6 text-sm text-zinc-600">
+            <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
+            <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
+            <li>• Customer Satisfaction (CSAT) &amp; Net Promoter Score (NPS) with trend analysis</li>
+            <li>• All Business capabilities plus bespoke integrations</li>
+          </ul>
+          <Link
+            href="/contact"
+            onClick={onClose}
+            className="btn btn-secondary inline-flex w-full items-center justify-center rounded-lg border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+          >
+            Contact Sales
+          </Link>
         </div>
       </div>
       <div className="text-center text-sm text-zinc-500 mb-4">Your subscription starts immediately.</div>
