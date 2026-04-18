@@ -22,7 +22,8 @@ export default function LandingMain() {
               alt="Pest Trace logo"
               width={200}
               height={200}
-              className="h-32 w-auto object-contain"
+              style={{ height: '128px', width: 'auto' }}
+              className="object-contain"
             />
           </div>
           <h1 className="mx-auto max-w-5xl text-center text-4xl font-bold leading-tight text-navy sm:text-5xl lg:text-6xl">
@@ -104,9 +105,10 @@ export default function LandingMain() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {howItWorksSteps.map((step, index) => (
-              <article key={step} className="interactive-surface rounded-2xl border border-zinc-200 bg-offwhite p-5 hover:border-primary-300">
+              <article key={step.title} className="interactive-surface rounded-2xl border border-zinc-200 bg-offwhite p-5 hover:border-primary-300">
                 <p className="text-sm font-semibold text-primary-600">Step {index + 1}</p>
-                <p className="mt-2 text-base font-medium text-navy">{step}</p>
+                <p className="mt-2 text-base font-medium text-navy">{step.title}</p>
+                <p className="mt-1 text-sm text-zinc-600">{step.text}</p>
               </article>
             ))}
           </div>

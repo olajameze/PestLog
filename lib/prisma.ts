@@ -3,11 +3,12 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { normalizePostgresUrlForPrisma } from './normalizePostgresUrl';
 
-const connectionString = "postgres://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
+// Ensure the connection string is normalized for Supabase's connection pooler
+const connectionString = normalizePostgresUrlForPrisma(process.env.DATABASE_URL || '');
 
 if (!connectionString) {
   throw new Error(
-    'Missing DATABASE_URL environment variable. Set it in your .env file or Vercel dashboard.',
+    'Missing DATABASE_URL environment variable. Set it in your .env.local or Vercel dashboard.',
   );
 }
 
