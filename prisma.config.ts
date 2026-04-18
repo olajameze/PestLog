@@ -6,8 +6,8 @@ import { defineConfig } from "prisma/config";
 config({ path: '.env.local' });
 
 // Force the correct URLs to avoid conflicts with local dev tools
+// Use pooled URL for Prisma CLI operations (works despite prepared statement warnings)
 const databaseUrl = "postgres://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
-const directUrl = "postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -16,6 +16,5 @@ export default defineConfig({
   },
   datasource: {
     url: databaseUrl,
-    directUrl: directUrl,
   },
 });

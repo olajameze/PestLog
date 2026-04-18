@@ -3,9 +3,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import { normalizePostgresUrlForPrisma } from './normalizePostgresUrl';
 
-const connectionString = normalizePostgresUrlForPrisma(
-  process.env.DATABASE_URL || ''
-);
+const connectionString = "postgres://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
 
 if (!connectionString) {
   throw new Error(
