@@ -286,17 +286,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_AkO1Y2WmezhvACqn1Z2YYQ_6RvpaMPx"
 # Database (PostgreSQL)
 # IMPORTANT: DATABASE_URL must match POSTGRES_PRISMA_URL in Vercel
 # Using Supabase Transaction Pooler (Port 6543) for Serverless
-DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-POSTGRES_PRISMA_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-POSTGRES_URL_NON_POOLING="postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require"
+DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+POSTGRES_PRISMA_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+POSTGRES_URL_NON_POOLING="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require"
 
 # Stripe (LIVE KEYS FOR PRODUCTION)
-STRIPE_SECRET_KEY="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"
-STRIPE_WEBHOOK_SECRET="whsec_xXgRpuPQ84TFPxniuhI7Bb07zEpWohJa"
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_51TNlqaIq7ylmuWzzA992BsUInIgJxJvtQRcsZWByUnexInKm4tqg02tlbtp010g98K5mZt81bnqvCBJdLQoqcoJD00pM5RByiR"
+STRIPE_SECRET_KEY="sk_live_your_key_here"
+STRIPE_WEBHOOK_SECRET="whsec_your_secret_here"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_your_key_here"
 
 # Email Service
-RESEND_API_KEY="re_AkO1Y2WmezhvACqn1Z2YYQ"
+RESEND_API_KEY="re_your_key_here"
 SUPPORT_EMAIL="pesttrace@gmail.com"
 NEXT_PUBLIC_SUPPORT_EMAIL="pesttrace@gmail.com"
 
