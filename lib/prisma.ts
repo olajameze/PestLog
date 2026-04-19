@@ -22,11 +22,12 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false, // Required for Supabase pooled connections
   },
-  // Connection pool settings for Vercel serverless
-  max: 1, // Limit connections for serverless
+  // Connection pool settings optimized for Vercel serverless
+  max: 2, // Small pool for serverless (Supabase pooler handles the rest)
   min: 0,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased for network latency and database response time
+  statement_timeout: 30000, // 30s timeout for queries
 });
 
 const adapter = new PrismaPg(pool);
