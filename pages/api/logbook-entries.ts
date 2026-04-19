@@ -190,42 +190,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         };
       }
 
-      let newEntry;
-      try {
-        newEntry = await prisma.logbookEntry.create({
+      const fullEntry = await prisma.$transaction(async (tx) => {
+        const newEntry = await tx.logbookEntry.create({
           data: entryData,
+        });
+
+        await tx.logbookEntryTechnician.createMany({
+          data: technicianIds.map((techId: string) => ({
+            logbookEntryId: newEntry.id,
+            technicianId: techId,
+          })),
+        });
+
+        return tx.logbookEntry.findUnique({
+          where: { id: newEntry.id },
           include: {
             photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
             logbookEntryTechnicians: { include: { technician: true } },
           },
         });
-      } catch (err) {
-        logger.error(`Create error: ${String(err)}`);
-        return res.status(500).json({ error: 'Failed to create logbook entry', details: String(err) });
-      }
-
-      // Connect technicians via join table
-      await prisma.logbookEntryTechnician.createMany({
-        data: technicianIds.map((techId: string) => ({
-          logbookEntryId: newEntry.id,
-          technicianId: techId,
-        })),
-      });
-
-      // Re-fetch to include join records
-      const fullEntry = await prisma.logbookEntry.findUnique({
-        where: { id: newEntry.id },
-        include: {
-          photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
-          logbookEntryTechnicians: { include: { technician: true } },
-        },
       });
 
       await writeAuditLog({
         userId: user.id,
         action: 'CREATE',
         tableName: 'logbook_entries',
-        recordId: newEntry.id,
+        recordId: fullEntry!.id,
         newValues: {
           companyId,
           date,

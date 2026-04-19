@@ -7,7 +7,6 @@ type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
   id: string;
   companyId: string;
-  technicianId: string;
   date: Date;
   clientName: string;
   address: string;
@@ -16,6 +15,7 @@ type LogbookEntryWithPhotos = {
   photoUrl: string | null;
   signature: string | null;
   createdAt: Date;
+  technicianIds: string[];
   photos: LogbookPhotoRecord[];
 };
 
@@ -54,22 +54,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    const entries = await prisma.logbookEntry.findMany({
+    const rawEntries = await prisma.logbookEntry.findMany({
       where: {
         logbookEntryTechnicians: {
-          some: {
-            technicianId: technician.id
-          }
-        }
+          some: { technicianId: technician.id }
+        },
       },
       orderBy: { date: 'desc' },
       include: {
-        photos: {
-          select: { url: true },
-          orderBy: { createdAt: 'asc' },
-        },
+        photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
+        logbookEntryTechnicians: { select: { technicianId: true } },
       },
-    }) as unknown as LogbookEntryWithPhotos[];
+    });
+
+    // Explicitly map the data to the expected type
+    const entries: LogbookEntryWithPhotos[] = rawEntries.map((entry) => {
+      const { logbookEntryTechnicians, ...rest } = entry;
+      return {
+        ...rest,
+        technicianIds: logbookEntryTechnicians.map((lt) => lt.technicianId),
+      };
+    });
 
     return res.status(200).json(await Promise.all(entries.map((entry) => signEntryPhotos(entry))));
   }
@@ -120,7 +125,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    return res.status(201).json(await signEntryPhotos(newEntry as unknown as LogbookEntryWithPhotos));
+    const { logbookEntryTechnicians, ...rest } = newEntry;
+    const entryWithIds: LogbookEntryWithPhotos = {
+      ...rest,
+      technicianIds: logbookEntryTechnicians.map((lt) => lt.technicianId),
+      photos: rest.photos as LogbookPhotoRecord[],
+    };
+
+    return res.status(201).json(await signEntryPhotos(entryWithIds));
   }
 
   res.setHeader('Allow', ['GET', 'POST']);

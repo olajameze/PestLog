@@ -1,127 +1,25 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { prisma } from '../../../lib/prisma';
+import { logger } from '../../../lib/logger';
 import { sendSubscriptionUpgradeEmail } from '../subscription';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-function toAppSubscriptionStatus(status: Stripe.Subscription.Status): string {
-  if (status === 'active' || status === 'trialing') {
-    return 'active';
+/**
+ * Helper to read the raw body from the request.
+ * Required for Stripe signature verification when bodyParser is disabled.
+ */
+async function getRawBody(req: NextApiRequest): Promise<Buffer> {
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
   }
-  if (status === 'past_due' || status === 'unpaid') {
-    return 'past_due';
-  }
-  if (status === 'canceled' || status === 'incomplete_expired') {
-    return 'canceled';
-  }
-  return 'trial';
-}
-
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const clientReference = session.client_reference_id;
-  if (!clientReference) {
-    return;
-  }
-
-  const [companyId, plan] = clientReference.split(':');
-  if (!companyId) {
-    return;
-  }
-
-  const stripeCustomerId =
-    typeof session.customer === 'string' ? session.customer : session.customer?.id;
-  const nextStatus = 'active';
-
-  const existing = await prisma.company.findUnique({
-    where: { id: companyId },
-    select: {
-      id: true,
-      subscriptionStatus: true,
-      stripeCustomerId: true,
-      trialEndsAt: true,
-      plan: true,
-    },
-  });
-
-  if (!existing) {
-    return;
-  }
-
-  const shouldUpdateStatus = existing.subscriptionStatus !== nextStatus;
-  const shouldSetCustomer = Boolean(stripeCustomerId && existing.stripeCustomerId !== stripeCustomerId);
-  const shouldClearTrial = existing.trialEndsAt !== null;
-  const shouldUpdatePlan = plan && ['pro', 'business'].includes(plan) && existing.plan !== plan;
-
-  if (!shouldUpdateStatus && !shouldSetCustomer && !shouldClearTrial && !shouldUpdatePlan) {
-    return;
-  }
-
-  await prisma.company.update({
-    where: { id: companyId },
-    data: {
-      subscriptionStatus: nextStatus,
-      stripeCustomerId: shouldSetCustomer ? stripeCustomerId : existing.stripeCustomerId,
-      trialEndsAt: null,
-      plan: shouldUpdatePlan ? (plan as 'pro' | 'business') : existing.plan,
-    },
-  });
-
-  const paidPlan = plan && ['pro', 'business'].includes(plan) ? plan : null;
-  if (paidPlan && (shouldUpdatePlan || shouldUpdateStatus)) {
-    await sendSubscriptionUpgradeEmail(companyId, paidPlan);
-  }
-}
-
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const stripeCustomerId =
-    typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
-
-  if (!stripeCustomerId) {
-    return;
-  }
-
-  const existing = await prisma.company.findUnique({
-    where: { stripeCustomerId },
-    select: { id: true, subscriptionStatus: true },
-  });
-
-  if (!existing || existing.subscriptionStatus === 'canceled') {
-    return;
-  }
-
-  await prisma.company.update({
-    where: { id: existing.id },
-    data: { subscriptionStatus: 'canceled' },
-  });
-}
-
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const stripeCustomerId =
-    typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id;
-  if (!stripeCustomerId) {
-    return;
-  }
-
-  const nextStatus = toAppSubscriptionStatus(subscription.status);
-  const existing = await prisma.company.findUnique({
-    where: { stripeCustomerId },
-    select: { id: true, subscriptionStatus: true },
-  });
-
-  if (!existing || existing.subscriptionStatus === nextStatus) {
-    return;
-  }
-
-  await prisma.company.update({
-    where: { id: existing.id },
-    data: { subscriptionStatus: nextStatus },
-  });
+  return Buffer.concat(chunks);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -130,40 +28,82 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end('Method Not Allowed');
   }
 
-  if (!webhookSecret) {
-    return res.status(400).json({ error: 'Missing STRIPE_WEBHOOK_SECRET' });
-  }
-
-  const signature = req.headers['stripe-signature'];
-  if (typeof signature !== 'string') {
-    return res.status(400).json({ error: 'Missing Stripe signature' });
+  const sig = req.headers['stripe-signature'] as string;
+  if (!sig || !webhookSecret) {
+    return res.status(400).send('Webhook Error: Missing signature or secret configuration.');
   }
 
   let event: Stripe.Event;
+
   try {
-    const rawBody = await buffer(req);
-    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch (error) {
-    return res.status(400).json({ error: `Webhook Error: ${(error as Error).message}` });
+    const rawBody = await getRawBody(req);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error(`Webhook signature verification failed: ${errorMessage}`);
+    return res.status(400).send(`Webhook Error: ${errorMessage}`);
   }
 
   try {
-    if (event.type === 'checkout.session.completed') {
-      await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-    } else if (event.type === 'customer.subscription.deleted') {
-      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-    } else if (event.type === 'customer.subscription.updated') {
-      await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const stripeCustomerId = session.customer as string;
+        const clientReferenceId = session.client_reference_id;
+
+        // client_reference_id was set in create-checkout-session.ts as "companyId:plan"
+        if (clientReferenceId) {
+          const [companyId, plan] = clientReferenceId.split(':');
+          await prisma.company.update({
+            where: { id: companyId },
+            data: {
+              stripeCustomerId,
+              plan: plan || 'pro',
+              subscriptionStatus: 'active',
+              trialEndsAt: null, // User has converted to a paid plan
+            },
+          });
+          
+          // Trigger the upgrade notification email defined in pages/api/subscription.ts
+          await sendSubscriptionUpgradeEmail(companyId, plan || 'pro');
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const stripeCustomerId = subscription.customer as string;
+        const status = subscription.status;
+        const plan = subscription.metadata.plan;
+
+        await prisma.company.update({
+          where: { stripeCustomerId },
+          data: {
+            subscriptionStatus: status,
+            ...(plan && { plan }),
+          },
+        });
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const stripeCustomerId = subscription.customer as string;
+
+        await prisma.company.update({
+          where: { stripeCustomerId },
+          data: {
+            subscriptionStatus: 'canceled',
+          },
+        });
+        break;
+      }
     }
 
     return res.status(200).json({ received: true });
-  } catch (error) {
-    return res.status(400).json({ error: (error as Error).message || 'Webhook processing failed.' });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error(`Webhook processing failed: ${errorMessage}`);
+    return res.status(500).json({ error: 'Internal server error processing webhook' });
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

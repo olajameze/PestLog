@@ -12,12 +12,13 @@ function getStripe() {
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 
-type Plan = 'pro' | 'business';
+type Plan = 'pro' | 'business' | 'enterprise';
 
 const PRICE_IDS: Record<Plan, string> = {
   // Replace these with your Stripe Dashboard Price IDs.
   pro: process.env.STRIPE_PRICE_ID_PRO || 'price_1TJsS6C3CXyzwZzXmqVCJy86',
   business: process.env.STRIPE_PRICE_ID_BUSINESS || 'price_1TJsSfC3CXyzwZzX4liw2ahT',
+  enterprise: process.env.STRIPE_PRICE_ID_ENTERPRICE || 'prod_UMVBnmyTeyD8mg',
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -50,12 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { plan } = req.body as { plan?: Plan };
   if (!plan || !(plan in PRICE_IDS)) {
-    return res.status(400).json({ error: 'Invalid plan. Use "pro" or "business".' });
+    return res.status(400).json({ error: 'Invalid plan. Use "pro", "business" or "enterprise".' });
   }
 
   const selectedPlan = plan as Plan;
   const priceId = PRICE_IDS[selectedPlan];
-  if (!priceId || !priceId.startsWith('price_')) {
+  if (!priceId || (!priceId.startsWith('price_') && !priceId.startsWith('prod_'))) {
     return res.status(500).json({
       error: `Stripe price id not configured for ${selectedPlan}. Set STRIPE_PRICE_ID_${selectedPlan.toUpperCase()}.`,
     });
