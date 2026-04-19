@@ -4,9 +4,12 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas = ["public"]
 }
 
 model Company {
+  @@map("Company")
+  @@schema("public")
   id                      String         @id @default(cuid())
   name                    String?
   email                   String         @unique
@@ -29,6 +32,8 @@ model Company {
 }
 
 model Technician {
+  @@map("Technician")
+  @@schema("public")
   id                      String                   @id @default(cuid())
   name                    String
   email                   String
@@ -40,6 +45,8 @@ model Technician {
 }
 
 model Certification {
+  @@map("Certification")
+  @@schema("public")
   id           String     @id @default(cuid())
   technicianId String
   fileUrl      String
@@ -49,6 +56,8 @@ model Certification {
 }
 
 model LogbookEntry {
+  @@map("LogbookEntry")
+  @@schema("public")
   id                      String                   @id @default(cuid())
   companyId               String
   date                    DateTime
@@ -77,6 +86,8 @@ model LogbookEntry {
 }
 
 model BaitStation {
+  @@map("BaitStation")
+  @@schema("public")
   id             String       @id @default(cuid())
   logbookEntryId String
   stationId      String
@@ -88,6 +99,8 @@ model BaitStation {
 }
 
 model LogbookEntryTechnician {
+  @@map("LogbookEntryTechnician")
+  @@schema("public")
   logbookEntryId String
   technicianId   String
   logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
@@ -97,6 +110,8 @@ model LogbookEntryTechnician {
 }
 
 model LogbookPhoto {
+  @@map("LogbookPhoto")
+  @@schema("public")
   id             String       @id @default(cuid())
   logbookEntryId String
   url            String
