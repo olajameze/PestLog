@@ -282,9 +282,6 @@ Set these in Vercel Dashboard → Settings → Environment Variables:
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 # Database (PostgreSQL)
 DATABASE_URL=postgresql://user:password@host:5432/pesttrace
@@ -302,12 +299,12 @@ SUPPORT_EMAIL=pesttrace@gmail.com
 NEXT_PUBLIC_SUPPORT_EMAIL=pesttrace@gmail.com
 
 # NextAuth (Generate with: openssl rand -base64 32)
-NEXTAUTH_SECRET=your_generated_secret_here
-NEXTAUTH_URL=https://pesttrace.com
+NEXTAUTH_SECRET=8QN9GC9GKM43jtEhh068Yaj8BPGfqBsESCLgDkp8Gmg=
+NEXTAUTH_URL=https://www.pesttrace.com
 
 # App Config
 NODE_ENV=production
-NEXT_PUBLIC_SITE_URL=https://pesttrace.com
+NEXT_PUBLIC_SITE_URL=https://www.pesttrace.com
 ```
 
 ### Deployment Commands
