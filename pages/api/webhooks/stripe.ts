@@ -4,11 +4,29 @@ import { prisma } from '../../../lib/prisma';
 import { logger } from '../../../lib/logger';
 import { sendSubscriptionUpgradeEmail } from '../subscription';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
+  
+  if (
+    !key || 
+    key.trim().length === 0 || 
+    !isValidPrefix ||
+    key === 'sk_test_...' || 
+    key.includes('your-secret-key')
+  ) {
+    throw new Error('Stripe Secret Key is missing or using a placeholder value. Please update STRIPE_SECRET_KEY in .env.local with your actual key starting with sk_test_');
+  }
+  return new Stripe(key, { apiVersion: '2024-06-20' });
+}
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+const getWebhookSecret = () => {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!secret || secret.includes('whsec_...')) {
+    throw new Error('STRIPE_WEBHOOK_SECRET is missing or using a placeholder.');
+  }
+  return secret;
+};
 
 /**
  * Helper to read the raw body from the request.
@@ -28,12 +46,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end('Method Not Allowed');
   }
 
-  const sig = req.headers['stripe-signature'] as string;
-  if (!sig || !webhookSecret) {
-    return res.status(400).send('Webhook Error: Missing signature or secret configuration.');
+  let webhookSecret: string;
+  try {
+    webhookSecret = getWebhookSecret();
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err instanceof Error ? err.message : String(err)}`);
   }
 
+  const sig = req.headers['stripe-signature'] as string;
+  if (!sig) return res.status(400).send('Webhook Error: Missing stripe-signature header.');
+
   let event: Stripe.Event;
+
+  const stripe = (() => {
+    try {
+      return getStripe();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return message;
+    }
+  })();
+  if (typeof stripe === 'string') return res.status(500).send(`Webhook Error: ${stripe}`);
 
   try {
     const rawBody = await getRawBody(req);

@@ -1,16 +1,14 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
-  schemas = ["public"]
+  schemas  = ["public"]
 }
 
 model Company {
-  @@map("Company")
-  @@schema("public")
   id                      String         @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   name                    String?        @map("name")
   email                   String         @unique @map("email")
@@ -18,107 +16,112 @@ model Company {
   address                 String?        @map("address")
   website                 String?        @map("website")
   vatNumber               String?        @map("vatNumber")
-  requireSignature        Boolean        @default(false) @map("requireSignature")
-  requirePhotos           Boolean        @default(false) @map("requirePhotos")
-  defaultReportRangeDays  Int?           @default(30)    @map("defaultReportRangeDays")
+  requireSignature        Boolean?       @default(false) @map("requireSignature")
+  requirePhotos           Boolean?       @default(false) @map("requirePhotos")
+  defaultReportRangeDays  Int?           @default(30) @map("defaultReportRangeDays")
   notificationPreferences Json?          @map("notificationPreferences")
-  stripeCustomerId        String?        @unique         @map("stripeCustomerId")
-  subscriptionStatus      String         @default("trial") @map("subscriptionStatus")
-  trialEndsAt             DateTime?      @map("trialEndsAt")
+  stripeCustomerId        String?        @unique @map("stripeCustomerId")
+  subscriptionStatus      String?        @default("trial") @map("subscriptionStatus")
+  trialEndsAt             DateTime?      @map("trialEndsAt") @db.Timestamptz(6)
   plan                    String?        @default("trial") @map("plan")
-  createdAt               DateTime       @default(now())   @map("createdAt")
-  updatedAt               DateTime       @updatedAt        @map("updatedAt")
-  technicians             Technician[]
+  createdAt               DateTime?      @default(now()) @map("createdAt") @db.Timestamptz(6)
+  updatedAt               DateTime?      @default(now()) @updatedAt @map("updatedAt") @db.Timestamptz(6)
   logbookEntries          LogbookEntry[]
+  technicians             Technician[]
+
+  @@map("Company")
+  @@schema("public")
 }
 
 model Technician {
-  @@map("Technician")
-  @@schema("public")
   id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   name                    String                   @map("name")
   email                   String                   @map("email")
   companyId               String                   @map("companyId")
-  createdAt               DateTime                 @default(now()) @map("createdAt")
-  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt               DateTime?                @default(now()) @map("createdAt") @db.Timestamptz(6)
   certifications          Certification[]
   logbookEntryTechnicians LogbookEntryTechnician[]
+  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("Technician")
+  @@schema("public")
 }
 
 model Certification {
-  @@map("Certification")
-  @@schema("public")
   id           String     @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   technicianId String     @map("technicianId")
   fileUrl      String     @map("fileUrl")
-  expiryDate   DateTime?  @map("expiryDate")
-  uploadedAt   DateTime   @default(now()) @map("uploadedAt")
-  technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  expiryDate   DateTime?  @map("expiryDate") @db.Timestamptz(6)
+  uploadedAt   DateTime?  @default(now()) @map("uploadedAt") @db.Timestamptz(6)
+  technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("Certification")
+  @@schema("public")
 }
 
 model LogbookEntry {
-  @@map("LogbookEntry")
-  @@schema("public")
   id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   companyId               String                   @map("companyId")
-  date                    DateTime                 @map("date")
+  date                    DateTime                 @map("date") @db.Timestamptz(6)
   clientName              String                   @map("clientName")
   address                 String                   @map("address")
   treatment               String                   @map("treatment")
   notes                   String?                  @map("notes")
   photoUrl                String?                  @map("photoUrl")
-  photos                  LogbookPhoto[]
   signature               String?                  @map("signature")
   rooms                   Json?                    @map("rooms")
   baitBoxesPlaced         String?                  @map("baitBoxesPlaced")
   poisonUsed              String?                  @map("poisonUsed")
-  followUpDate              DateTime?              @map("followUpDate")
-  internalNotes             String?                @map("internalNotes")
-  productAmount             String?                @map("productAmount")
-  recommendation            String?                @map("recommendation")
-  baitStations              BaitStation[]
-  startTime               DateTime?                @map("startTime")
-  endTime                 DateTime?                @map("endTime")
-  status                  String                   @default("open") @map("status")
-  price                   Decimal?                 @map("price")
+  followUpDate            DateTime?                @map("followUpDate") @db.Timestamptz(6)
+  internalNotes           String?                  @map("internalNotes")
+  productAmount           String?                  @map("productAmount")
+  recommendation          String?                  @map("recommendation")
+  startTime               DateTime?                @map("startTime") @db.Timestamptz(6)
+  endTime                 DateTime?                @map("endTime") @db.Timestamptz(6)
+  status                  String?                  @default("open") @map("status")
+  price                   Decimal?                 @map("price") @db.Decimal(10, 2)
+  createdAt               DateTime?                @default(now()) @map("createdAt") @db.Timestamptz(6)
+  baitStations            BaitStation[]
+  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   logbookEntryTechnicians LogbookEntryTechnician[]
-  createdAt               DateTime                 @default(now()) @map("createdAt")
-  company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  photos                  LogbookPhoto[]
 
-  @@index([companyId])
-  @@index([date])
+  @@map("LogbookEntry")
+  @@schema("public")
 }
 
 model BaitStation {
-  @@map("BaitStation")
-  @@schema("public")
-  id             String       @id @default(cuid()) @map("id")
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   logbookEntryId String       @map("logbookEntryId")
   stationId      String       @map("stationId")
   location       String       @map("location")
   baitType       String?      @map("baitType")
   amount         String?      @map("amount")
-  createdAt      DateTime     @default(now()) @map("createdAt")
-  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
+  createdAt      DateTime?    @default(now()) @map("createdAt") @db.Timestamptz(6)
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("BaitStation")
+  @@schema("public")
 }
 
 model LogbookEntryTechnician {
-  @@map("LogbookEntryTechnician")
-  @@schema("public")
-  logbookEntryId String @map("logbookEntryId")
-  technicianId   String @map("technicianId")
-  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
-  technician     Technician   @relation(fields: [technicianId], references: [id], onDelete: Cascade)
+  logbookEntryId String       @map("logbookEntryId")
+  technicianId   String       @map("technicianId")
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  technician     Technician   @relation(fields: [technicianId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([logbookEntryId, technicianId])
+  @@map("LogbookEntryTechnician")
+  @@schema("public")
 }
 
 model LogbookPhoto {
-  @@map("LogbookPhoto")
-  @@schema("public")
-  id             String       @id @default(cuid()) @map("id")
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   logbookEntryId String       @map("logbookEntryId")
   url            String       @map("url")
-  createdAt      DateTime     @default(now()) @map("createdAt")
-  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
+  createdAt      DateTime?    @default(now()) @map("createdAt") @db.Timestamptz(6)
+  logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("LogbookPhoto")
+  @@schema("public")
 }

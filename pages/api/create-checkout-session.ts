@@ -6,8 +6,16 @@ import { logger } from '../../lib/logger';
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
-  if (!key || key.trim().length === 0) {
-    throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+  const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
+
+  if (
+    !key || 
+    key.trim().length === 0 || 
+    !isValidPrefix ||
+    key === 'sk_test_...' || 
+    key.includes('your-secret-key')
+  ) {
+    throw new Error('Stripe Secret Key is missing or using a placeholder value. Please update STRIPE_SECRET_KEY in .env.local with your actual key starting with sk_test_');
   }
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
