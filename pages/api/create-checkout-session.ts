@@ -12,17 +12,6 @@ function getStripe() {
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 
-function looksLikeDbDrift(error: unknown): boolean {
-  const message = String(error);
-  return (
-    message.includes('does not exist') ||
-    message.includes('column') ||
-    message.includes('relation') ||
-    message.includes('P2022') ||
-    message.includes('P2021')
-  );
-}
-
 type Plan = 'pro' | 'business';
 
 const PRICE_IDS: Record<Plan, string> = {
@@ -98,20 +87,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         metadata: { companyId: company.id },
       });
       stripeCustomerId = customer.id;
-      try {
-        await prisma.company.update({
-          where: { id: company.id },
-          data: { stripeCustomerId },
-        });
-      } catch (err) {
-        if (looksLikeDbDrift(err)) {
-          return res.status(500).json({
-            error: 'Database schema mismatch. Run migrations to add Company billing columns (stripeCustomerId, plan, subscriptionStatus).',
-            details: String(err),
-          });
-        }
-        throw err;
-      }
+      await prisma.company.update({
+        where: { id: company.id },
+        data: { stripeCustomerId },
+      });
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();

@@ -19,13 +19,6 @@ type LogbookEntryWithPhotos = {
   photos: LogbookPhotoRecord[];
 };
 
-
-
-function shouldFallbackFromPhotosRelation(error: unknown): boolean {
-  const message = String(error);
-  return message.includes('LogbookPhoto') || message.includes('photos');
-}
-
 async function signEntryPhotos<T extends { photoUrl: string | null; photos: { url: string }[] }>(entry: T): Promise<T> {
   const signedPhotos = await createSignedPhotoUrls(entry.photos.map((photo) => photo.url));
   const signedPrimaryPhoto = entry.photoUrl ? await createSignedPhotoUrl(entry.photoUrl) : null;
@@ -61,39 +54,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    let entries;
-    try {
-        entries = await prisma.logbookEntry.findMany({
-        where: {
-          logbookEntryTechnicians: {
-            some: {
-              technicianId: technician.id
-            }
+    const entries = await prisma.logbookEntry.findMany({
+      where: {
+        logbookEntryTechnicians: {
+          some: {
+            technicianId: technician.id
           }
+        }
+      },
+      orderBy: { date: 'desc' },
+      include: {
+        photos: {
+          select: { url: true },
+          orderBy: { createdAt: 'asc' },
         },
-        orderBy: { date: 'desc' },
-        include: {
-          photos: {
-            select: { url: true },
-            orderBy: { createdAt: 'asc' },
-          },
-        },
-      }) as unknown as LogbookEntryWithPhotos[];
+      },
+    }) as unknown as LogbookEntryWithPhotos[];
 
-    } catch (error) {
-      if (!shouldFallbackFromPhotosRelation(error)) throw error;
-      const fallback = await prisma.logbookEntry.findMany({
-        where: {
-          logbookEntryTechnicians: {
-            some: {
-              technicianId: technician.id
-            }
-          }
-        },
-        orderBy: { date: 'desc' },
-      });
-      entries = fallback.map((entry) => ({ ...entry, photos: [] })) as unknown as LogbookEntryWithPhotos[];
-    }
     return res.status(200).json(await Promise.all(entries.map((entry) => signEntryPhotos(entry))));
   }
 
@@ -111,61 +88,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? JSON.stringify(normalizedPhotoUrls)
       : normalizedPhotoUrls[0] || (typeof photoUrl === 'string' && photoUrl.trim().length > 0 ? photoUrl : null);
 
-    let entry;
-    try {
-      const newEntry = await prisma.logbookEntry.create({
-        data: {
-          companyId: technician.companyId,
-          date: new Date(date),
-          clientName,
-          address,
-          treatment,
-          notes,
-          photoUrl: primaryPhotoUrl,
-          photos: normalizedPhotoUrls.length > 0
-            ? {
-                create: normalizedPhotoUrls.map((url) => ({ url })),
-              }
-            : undefined,
-          signature,
-          logbookEntryTechnicians: {
-            create: [{ technicianId: technician.id }]
-          }
+    const newEntry = await prisma.logbookEntry.create({
+      data: {
+        companyId: technician.companyId,
+        date: new Date(date),
+        clientName,
+        address,
+        treatment,
+        notes,
+        photoUrl: primaryPhotoUrl,
+        photos: normalizedPhotoUrls.length > 0
+          ? {
+              create: normalizedPhotoUrls.map((url) => ({ url })),
+            }
+          : undefined,
+        signature,
+        logbookEntryTechnicians: {
+          create: [{ technicianId: technician.id }]
+        }
+      },
+      include: {
+        photos: {
+          select: { url: true },
+          orderBy: { createdAt: 'asc' },
         },
-        include: {
-          photos: {
-            select: { url: true },
-            orderBy: { createdAt: 'asc' },
-          },
-          logbookEntryTechnicians: {
-            include: {
-              technician: true,
-            },
+        logbookEntryTechnicians: {
+          include: {
+            technician: true,
           },
         },
-      });
-      entry = newEntry as unknown as LogbookEntryWithPhotos;
-    } catch (error) {
-      if (!shouldFallbackFromPhotosRelation(error)) throw error;
-      const fallbackEntry = await prisma.logbookEntry.create({
-        data: {
-          companyId: technician.companyId,
-          date: new Date(date),
-          clientName,
-          address,
-          treatment,
-          notes,
-          photoUrl: primaryPhotoUrl,
-          signature,
-          logbookEntryTechnicians: {
-            create: [{ technicianId: technician.id }]
-          }
-        },
-      });
-      entry = { ...fallbackEntry, photos: [], logbookEntryTechnicians: [] } as unknown as LogbookEntryWithPhotos;
-    }
+      },
+    });
 
-    return res.status(201).json(await signEntryPhotos(entry));
+    return res.status(201).json(await signEntryPhotos(newEntry as unknown as LogbookEntryWithPhotos));
   }
 
   res.setHeader('Allow', ['GET', 'POST']);

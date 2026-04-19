@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
@@ -12,21 +13,21 @@ model Company {
   @@schema("public")
   id                      String         @id @default(dbgenerated("gen_random_uuid()"))
   name                    String?
-  email                   String         @unique
+  email                   String         @unique @map("email")
   phone                   String?
   address                 String?
   website                 String?
-  vatNumber               String?
-  requireSignature        Boolean        @default(false)
-  requirePhotos           Boolean        @default(false)
-  defaultReportRangeDays  Int?           @default(30)
-  notificationPreferences Json?
-  stripeCustomerId        String?        @unique
-  subscriptionStatus      String         @default("trial")
-  trialEndsAt             DateTime?
-  plan                    String?        @default("trial")
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
+  vatNumber               String?        @map("vatNumber")
+  requireSignature        Boolean        @default(false) @map("requireSignature")
+  requirePhotos           Boolean        @default(false) @map("requirePhotos")
+  defaultReportRangeDays  Int?           @default(30)    @map("defaultReportRangeDays")
+  notificationPreferences Json?          @map("notificationPreferences")
+  stripeCustomerId        String?        @unique         @map("stripeCustomerId")
+  subscriptionStatus      String         @default("trial") @map("subscriptionStatus")
+  trialEndsAt             DateTime?      @map("trialEndsAt")
+  plan                    String?        @default("trial") @map("plan")
+  createdAt               DateTime       @default(now())   @map("createdAt")
+  updatedAt               DateTime       @updatedAt        @map("updatedAt")
   technicians             Technician[]
   logbookEntries          LogbookEntry[]
 }
@@ -34,11 +35,11 @@ model Company {
 model Technician {
   @@map("Technician")
   @@schema("public")
-  id                      String                   @id @default(dbgenerated("gen_random_uuid()"))
-  name                    String
-  email                   String
-  companyId               String
-  createdAt               DateTime                 @default(now())
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  name                    String                   @map("name")
+  email                   String                   @map("email")
+  companyId               String                   @map("companyId")
+  createdAt               DateTime                 @default(now()) @map("createdAt")
   company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   certifications          Certification[]
   logbookEntryTechnicians LogbookEntryTechnician[]
@@ -47,62 +48,65 @@ model Technician {
 model Certification {
   @@map("Certification")
   @@schema("public")
-  id           String     @id @default(dbgenerated("gen_random_uuid()"))
-  technicianId String
-  fileUrl      String
-  expiryDate   DateTime?
-  uploadedAt   DateTime   @default(now())
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  technicianId String     @map("technicianId")
+  fileUrl      String     @map("fileUrl")
+  expiryDate   DateTime?  @map("expiryDate")
+  uploadedAt   DateTime   @default(now()) @map("uploadedAt")
   technician   Technician @relation(fields: [technicianId], references: [id], onDelete: Cascade)
 }
 
 model LogbookEntry {
   @@map("LogbookEntry")
   @@schema("public")
-  id                      String                   @id @default(dbgenerated("gen_random_uuid()"))
-  companyId               String
-  date                    DateTime
-  clientName              String
-  address                 String
-  treatment               String
-  notes                   String?
-  photoUrl                String?
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  companyId               String                   @map("companyId")
+  date                    DateTime                 @map("date")
+  clientName              String                   @map("clientName")
+  address                 String                   @map("address")
+  treatment               String                   @map("treatment")
+  notes                   String?                  @map("notes")
+  photoUrl                String?                  @map("photoUrl")
   photos                  LogbookPhoto[]
-  signature               String?
-  rooms                   Json? // ["Kitchen", "Garage"]
-  baitBoxesPlaced         String? // "Yes, 6 boxes" or "No"
-  poisonUsed              String? // "Bromadiolone" or "No"
-  followUpDate              DateTime?
-  internalNotes             String?
-  productAmount             String?
-  recommendation            String?
+  signature               String?                  @map("signature")
+  rooms                   Json?                    @map("rooms")
+  baitBoxesPlaced         String?                  @map("baitBoxesPlaced")
+  poisonUsed              String?                  @map("poisonUsed")
+  followUpDate              DateTime?              @map("followUpDate")
+  internalNotes             String?                @map("internalNotes")
+  productAmount             String?                @map("productAmount")
+  recommendation            String?                @map("recommendation")
   baitStations              BaitStation[]
-  startTime               DateTime?
-  endTime                 DateTime?
-  status                  String                   @default("open")
-  price                   Decimal?                 // Job price for CLV calculations
+  startTime               DateTime?                @map("startTime")
+  endTime                 DateTime?                @map("endTime")
+  status                  String                   @default("open") @map("status")
+  price                   Decimal?                 @map("price")
   logbookEntryTechnicians LogbookEntryTechnician[]
-  createdAt               DateTime                 @default(now())
+  createdAt               DateTime                 @default(now()) @map("createdAt")
   company                 Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([date])
 }
 
 model BaitStation {
   @@map("BaitStation")
   @@schema("public")
-  id             String       @id @default(cuid())
-  logbookEntryId String
-  stationId      String
-  location       String
-  baitType       String?
-  amount         String?
-  createdAt      DateTime     @default(now())
+  id             String       @id @default(cuid()) @map("id")
+  logbookEntryId String       @map("logbookEntryId")
+  stationId      String       @map("stationId")
+  location       String       @map("location")
+  baitType       String?      @map("baitType")
+  amount         String?      @map("amount")
+  createdAt      DateTime     @default(now()) @map("createdAt")
   logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
 }
 
 model LogbookEntryTechnician {
   @@map("LogbookEntryTechnician")
   @@schema("public")
-  logbookEntryId String
-  technicianId   String
+  logbookEntryId String @map("logbookEntryId")
+  technicianId   String @map("technicianId")
   logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
   technician     Technician   @relation(fields: [technicianId], references: [id], onDelete: Cascade)
 
@@ -112,11 +116,9 @@ model LogbookEntryTechnician {
 model LogbookPhoto {
   @@map("LogbookPhoto")
   @@schema("public")
-  id             String       @id @default(cuid())
-  logbookEntryId String
-  url            String
-  createdAt      DateTime     @default(now())
+  id             String       @id @default(cuid()) @map("id")
+  logbookEntryId String       @map("logbookEntryId")
+  url            String       @map("url")
+  createdAt      DateTime     @default(now()) @map("createdAt")
   logbookEntry   LogbookEntry @relation(fields: [logbookEntryId], references: [id], onDelete: Cascade)
 }
-
-

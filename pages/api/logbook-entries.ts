@@ -5,51 +5,6 @@ import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
 import { writeAuditLog } from '../../lib/audit/log';
 import { logger } from '../../lib/logger';
-
-function looksLikeDbDrift(error: unknown): boolean {
-  const message = String(error);
-  return (
-    message.includes('does not exist') ||
-    message.includes('column') ||
-    message.includes('relation') ||
-    message.includes('P2022') ||
-    message.includes('P2021')
-  );
-}
-
-type RawLogbookEntryFallback = {
-  id: string;
-  companyId: string;
-  date: Date;
-  clientName: string;
-  address: string;
-  treatment: string;
-  notes: string | null;
-  photoUrl: string | null;
-  signature: string | null;
-  rooms: unknown;
-  baitBoxesPlaced: string | null;
-  poisonUsed: string | null;
-  followUpDate: Date | null;
-  internalNotes: string | null;
-  productAmount: string | null;
-  recommendation: string | null;
-  startTime: Date | null;
-  endTime: Date | null;
-  status: string;
-  createdAt: Date;
-};
-
-function shouldFallbackFromPhotosRelation(error: unknown): boolean {
-  const message = String(error);
-  return message.includes('LogbookPhoto') || message.includes('photos');
-}
-
-function shouldFallbackFromJsonParse(error: unknown): boolean {
-  const message = String(error);
-  return message.includes('Unexpected end of JSON input') || message.includes('JSON');
-}
-
 function tryParseJson(value: unknown) {
   if (typeof value !== 'string') return value;
   try {
@@ -137,52 +92,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id: companyId as string, email: user.email },
       });
       if (!company) return res.status(403).json({ error: 'Forbidden' });
+      const entries = await prisma.logbookEntry.findMany({
+        where,
+        orderBy: { date: 'desc' },
+        include: {
+          photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
+          logbookEntryTechnicians: { include: { technician: true } },
+        },
+      });
 
-      let entries;
-      try {
-        entries = await prisma.logbookEntry.findMany({
-          where,
-          orderBy: { date: 'desc' },
-          include: {
-            photos: { select: { url: true }, orderBy: { createdAt: 'asc' } },
-            logbookEntryTechnicians: { include: { technician: true } },
-          },
-        });
-      } catch (err) {
-        if (!shouldFallbackFromPhotosRelation(err) && !shouldFallbackFromJsonParse(err)) throw err;
-
-        const searchTerm = typeof req.query.search === 'string' && req.query.search.trim().length > 0
-          ? `%${req.query.search.trim()}%`
-          : null;
-
-        const fallbackQuery = searchTerm
-          ? Prisma.sql`
-              SELECT "id", "companyId", "date", "clientName", "address", "treatment",
-                     "notes", "photoUrl", "signature", "rooms", "baitBoxesPlaced",
-                     "poisonUsed", "followUpDate", "internalNotes", "productAmount", "recommendation",
-                     "startTime", "endTime", "status", "createdAt"
-              FROM "LogbookEntry"
-              WHERE "companyId" = ${companyId} AND ("clientName" ILIKE ${searchTerm} OR "address" ILIKE ${searchTerm})
-              ORDER BY "date" DESC
-            `
-          : Prisma.sql`
-              SELECT "id", "companyId", "date", "clientName", "address", "treatment",
-                     "notes", "photoUrl", "signature", "rooms", "baitBoxesPlaced",
-                     "poisonUsed", "followUpDate", "internalNotes", "productAmount", "recommendation",
-                     "startTime", "endTime", "status", "createdAt"
-              FROM "LogbookEntry"
-              WHERE "companyId" = ${companyId}
-              ORDER BY "date" DESC
-            `;
-
-        const fallback = await prisma.$queryRaw<RawLogbookEntryFallback[]>(fallbackQuery);
-        entries = fallback.map((entry) => ({
-          ...entry,
-          rooms: normalizeRoomsValue(entry.rooms) ?? undefined,
-          photos: [],
-          logbookEntryTechnicians: [],
-        }));
-      }
       return res.status(200).json(await Promise.all(entries.map(signEntryPhotos)));
     }
 
@@ -283,12 +201,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       } catch (err) {
         logger.error(`Create error: ${String(err)}`);
-        if (looksLikeDbDrift(err)) {
-          return res.status(500).json({
-            error: 'Database schema mismatch. Run migrations to align the DB with Prisma.',
-            details: String(err),
-          });
-        }
         return res.status(500).json({ error: 'Failed to create logbook entry', details: String(err) });
       }
 

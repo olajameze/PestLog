@@ -23,11 +23,6 @@ type ReportEntryRecord = {
   photos?: ReportPhotoRecord[];
 };
 
-function shouldFallbackFromPhotosRelation(error: unknown): boolean {
-  const message = String(error);
-  return message.includes('LogbookPhoto') || message.includes('photos');
-}
-
 async function signEntryPhotos(entry: ReportEntryRecord & { photos?: ReportPhotoRecord[] }): Promise<ReportEntryRecord & { photos?: ReportPhotoRecord[]; photoUrls?: string[] }> {
   const photoUrlsFromPrimary = (() => {
     if (!entry.photoUrl) return [];
@@ -170,50 +165,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
   }
 
-  let entries: ReportEntryRecord[];
-  try {
-    entries = await prisma.logbookEntry.findMany({
-      where: whereClause,
-      orderBy: { date: 'desc' },
-      select: {
-        id: true,
-        date: true,
-        clientName: true,
-        address: true,
-        treatment: true,
-        notes: true,
-        rooms: true,
-        baitBoxesPlaced: true,
-        poisonUsed: true,
-        photoUrl: true,
-        photos: {
-          select: { url: true },
-          orderBy: { createdAt: 'asc' },
-        },
-        signature: true,
+  const entries = await prisma.logbookEntry.findMany({
+    where: whereClause,
+    orderBy: { date: 'desc' },
+    select: {
+      id: true,
+      date: true,
+      clientName: true,
+      address: true,
+      treatment: true,
+      notes: true,
+      rooms: true,
+      baitBoxesPlaced: true,
+      poisonUsed: true,
+      photoUrl: true,
+      photos: {
+        select: { url: true },
+        orderBy: { createdAt: 'asc' },
       },
-    });
-  } catch (error) {
-    if (!shouldFallbackFromPhotosRelation(error)) throw error;
-    const fallback = await prisma.logbookEntry.findMany({
-      where: whereClause,
-      orderBy: { date: 'desc' },
-      select: {
-        id: true,
-        date: true,
-        clientName: true,
-        address: true,
-        treatment: true,
-        notes: true,
-        rooms: true,
-        baitBoxesPlaced: true,
-        poisonUsed: true,
-        photoUrl: true,
-        signature: true,
-      },
-    });
-    entries = fallback.map((entry) => ({ ...entry, photos: [] }));
-  }
+      signature: true,
+    },
+  }) as ReportEntryRecord[];
 
   const certWhere = ownerMode ? { technicianId } : { technicianId: technician!.id };
   const certifications = await prisma.certification.findMany({
