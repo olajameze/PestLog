@@ -11,12 +11,12 @@ datasource db {
 model Company {
   @@map("Company")
   @@schema("public")
-  id                      String         @id @default(dbgenerated("gen_random_uuid()"))
-  name                    String?
+  id                      String         @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  name                    String?        @map("name")
   email                   String         @unique @map("email")
-  phone                   String?
-  address                 String?
-  website                 String?
+  phone                   String?        @map("phone")
+  address                 String?        @map("address")
+  website                 String?        @map("website")
   vatNumber               String?        @map("vatNumber")
   requireSignature        Boolean        @default(false) @map("requireSignature")
   requirePhotos           Boolean        @default(false) @map("requirePhotos")

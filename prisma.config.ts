@@ -5,9 +5,8 @@ import { normalizePostgresUrlForPrisma } from "./lib/normalizePostgresUrl";
 // Explicitly load .env.local for local development
 config({ path: '.env.local' });
 
-// Force the correct URLs to avoid conflicts with local dev tools
-// Use pooled URL for Prisma CLI operations (works despite prepared statement warnings)
-const databaseUrl = normalizePostgresUrlForPrisma(process.env.DATABASE_URL || '');
+// CLI operations require a direct, non-pooled connection to avoid prepared statement errors from PgBouncer.
+const databaseUrl = normalizePostgresUrlForPrisma(process.env.DIRECT_URL || process.env.DATABASE_URL || '');
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
