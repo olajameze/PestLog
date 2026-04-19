@@ -192,6 +192,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         photoUrl,
         photoUrls,
         signature,
+        price,
       } = req.body;
 
       if (
@@ -243,6 +244,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
         status: status || 'open',
+        price: price ? new Prisma.Decimal(price) : null,
       };
 
       const normalizedRooms = normalizeRoomsValue(rooms);
