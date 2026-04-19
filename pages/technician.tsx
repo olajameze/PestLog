@@ -24,6 +24,7 @@ type LogbookEntry = {
   photoUrls?: string[];
   photos?: { url: string }[];
   signature?: string;
+  price?: number;
 };
 
 function isRenderableImageSrc(value: string): boolean {

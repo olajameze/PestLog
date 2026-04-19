@@ -11,6 +11,10 @@ import SettingsTab from '../components/settings/SettingsTab';
 import DashboardEnhancements from '../components/dashboard/DashboardEnhancements';
 import { useToast } from '../components/ui/ToastProvider';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import OfflineBanner from '../components/offline/OfflineBanner';
+import OnboardingTour from '../components/onboarding/OnboardingTour';
+import { ErrorBoundary } from '../components/ui/ErrorBoundary';
+import { Skeleton } from '../components/ui/Skeleton';
 import { checkPlan } from '../lib/planGuard';
 
 interface User {
@@ -83,6 +87,7 @@ interface LogbookEntry {
   productAmount?: string;
   recommendation?: string;
   baitStations?: BaitStationForm[];
+  price?: number;
 }
 
 function isRenderableImageSrc(value: string): boolean {
@@ -702,23 +707,38 @@ export default function Dashboard() {
     }
   };
 
-  if (!user) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+if (!user) return (
+  <div className="min-h-screen flex items-center justify-center p-8">
+    <Skeleton className="h-12 w-64 mb-4" />
+    <div className="animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 p-8 rounded-2xl shadow-sm">
+      <Skeleton className="h-8 w-64 mx-auto mb-4" />
+      <div className="space-y-4">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    </div>
+  </div>
+);
 
   return (
     <div className="min-h-screen bg-offwhite page-fade-in">
+      <OnboardingTour />
       <div className="flex lg:pl-0">
         <Sidebar 
           activeTab={currentTab as string} 
           onTabChange={(tab: string) => setActiveTab(tab as Tab)} 
           onSignOut={handleSignOut}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          {company ? (
-            <>
-              <div className="mb-6 rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
-                <h1 className="text-4xl font-bold text-navy">
-                  {currentTab === 'technicians' ? 'Technician Management' : currentTab === 'logbook' ? 'Treatment Logbook' : 'Settings'}
-                </h1>
+        <OfflineBanner />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-24">
+          <ErrorBoundary>
+            {company ? (
+              <>
+                <div className="mb-6 rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
+                  <h1 className="text-4xl font-bold text-navy">
+                    {currentTab === 'technicians' ? 'Technician Management' : currentTab === 'logbook' ? 'Treatment Logbook' : 'Settings'}
+                  </h1>
+
                 <p className="mt-1 text-zinc-600">
                   {currentTab === 'technicians'
                     ? 'Manage your team and track certification status'
@@ -1658,4 +1678,3 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
     </form>
   );
 }
-

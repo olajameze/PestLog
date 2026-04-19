@@ -280,23 +280,25 @@ Set these in Vercel Dashboard → Settings → Environment Variables:
 
 ```bash
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+NEXT_PUBLIC_SUPABASE_URL="https://ozmqpbouelfinhpzcfvs.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_AkO1Y2WmezhvACqn1Z2YYQ_6RvpaMPx"
 
 # Database (PostgreSQL)
-DATABASE_URL=postgresql://user:password@host:5432/pesttrace
-POSTGRES_PRISMA_URL=postgresql://...  # Pooled connection
-POSTGRES_URL_NON_POOLING=postgresql://...  # Direct connection for migrations
+# IMPORTANT: DATABASE_URL must match POSTGRES_PRISMA_URL in Vercel
+# Using Supabase Transaction Pooler (Port 6543) for Serverless
+DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD_ENCODED@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+POSTGRES_PRISMA_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD_ENCODED@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+POSTGRES_URL_NON_POOLING="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD_ENCODED@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require"
 
 # Stripe (LIVE KEYS FOR PRODUCTION)
-STRIPE_SECRET_KEY=sk_live_51234567890abcdef...
-STRIPE_WEBHOOK_SECRET=whsec_live_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_SECRET_KEY="sk_live_REDACTED"
+STRIPE_WEBHOOK_SECRET="whsec_REDACTED"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_live_REDACTED"
 
 # Email Service
-RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
-SUPPORT_EMAIL=pesttrace@gmail.com
-NEXT_PUBLIC_SUPPORT_EMAIL=pesttrace@gmail.com
+RESEND_API_KEY="re_REDACTED"
+SUPPORT_EMAIL="pesttrace@gmail.com"
+NEXT_PUBLIC_SUPPORT_EMAIL="pesttrace@gmail.com"
 
 # NextAuth (Generate with: openssl rand -base64 32)
 NEXTAUTH_SECRET=8QN9GC9GKM43jtEhh068Yaj8BPGfqBsESCLgDkp8Gmg=
@@ -305,6 +307,20 @@ NEXTAUTH_URL=https://www.pesttrace.com
 # App Config
 NODE_ENV=production
 NEXT_PUBLIC_SITE_URL=https://www.pesttrace.com
+
+---
+
+## 9. 🛠️ Critical Post-Deployment Fixes
+
+### Issue: 500 Error / Missing Columns in `prisma.company.update()`
+**Reason**: The production database schema is out of sync with the Prisma Client.
+**Fix**: Run the following command in your local terminal to apply all migrations to Supabase:
+
+```bash
+# Use the DIRECT connection string (Port 5432) for migrations
+export DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require"
+npx prisma migrate deploy
+```
 ```
 
 ### Deployment Commands

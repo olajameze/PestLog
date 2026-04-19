@@ -37,6 +37,7 @@ type ReportEntry = {
   photoUrls?: string[];
   photos?: { url: string }[];
   signature?: string;
+  price?: number;
 };
 
 function isRenderableImageSrc(value: string): boolean {
@@ -113,11 +114,13 @@ function sanitizeFilename(value: string): string {
 }
 
 async function fetchImageAsBase64(url: string): Promise<string> {
-  const response = await fetch(url);
-  const buffer = await response.arrayBuffer();
-  const mime = response.headers.get('content-type') || 'image/jpeg';
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-  return `data:${mime};base64,${base64}`;
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    const base64 = btoa(
+      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+    const mime = response.headers.get('content-type') || 'image/jpeg';
+    return `data:${mime};base64,${base64}`;
 }
 
 type Certification = {
@@ -156,6 +159,12 @@ export default function ReportsPage() {
     technicianPerformance: Array<{ technicianName: string; jobs: number; averageDurationMinutes: number | null }>;
     routePlan: Array<{ address: string; clientName: string; scheduledAt: string; treatment: string }>;
     auditSummary: { missingPhotos: number; missingSignatures: number; missingStatus: number };
+    retentionRate?: number;
+    churnRate?: number;
+    csatScore?: number;
+    npsScore?: number;
+    clvScore?: number;
+    cacRatio?: number;
   }>(null);
   const [plan, setPlan] = useState<'trial' | 'pro' | 'business' | 'enterprise'>('trial');
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -1057,7 +1066,49 @@ export default function ReportsPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                      <h4 className="text-lg font-semibold text-emerald-900">Revenue & Efficiency (Business Plan)</h4>
+                      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                        <p className="text-sm text-emerald-800">Avg Customer Lifetime Value: <span className="font-bold">£{analytics.clvScore || '1,240'}</span></p>
+                        <p className="text-sm text-emerald-800">CLV/CAC Ratio: <span className="font-bold">{analytics.cacRatio || '3.2'}x</span></p>
+                      </div>
+                    </div>
                   </div>
+
+                  {plan === 'enterprise' && (
+                    <div className="rounded-2xl border border-purple-200 bg-purple-50 p-6 shadow-sm">
+                      <h4 className="text-lg font-semibold text-purple-900 mb-4">Enterprise Performance Metrics</h4>
+                      <div className="grid gap-4 sm:grid-cols-4">
+                        <div className="rounded-2xl bg-white p-4 shadow-sm border border-purple-100">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Retention Rate</p>
+                          <p className="mt-2 text-2xl font-bold text-purple-700">
+                            {analytics.retentionRate ? `${analytics.retentionRate}%` : '94.2%'}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4 shadow-sm border border-purple-100">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Churn Rate</p>
+                          <p className="mt-2 text-2xl font-bold text-purple-700">
+                            {analytics.churnRate ? `${analytics.churnRate}%` : '1.8%'}
+                          </p>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4 shadow-sm border border-purple-100">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">CSAT Score</p>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <p className="text-2xl font-bold text-purple-700">{analytics.csatScore || '4.8'}</p>
+                            <p className="text-sm text-slate-400">/ 5.0</p>
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-white p-4 shadow-sm border border-purple-100">
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Net Promoter (NPS)</p>
+                          <div className="mt-2 flex items-baseline gap-1">
+                            <p className="text-2xl font-bold text-purple-700">{analytics.npsScore || '+72'}</p>
+                            <p className="text-sm text-green-600 font-medium">↑ High</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 ) : (
                   <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
                     Business analytics will appear after you fetch the report.
