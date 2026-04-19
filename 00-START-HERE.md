@@ -241,12 +241,12 @@ NEXTAUTH_URL=http://localhost:3000
 
 ### Production (Vercel Dashboard)
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyxxxx...
-DATABASE_URL=postgresql://prod-server/pesttrace-prod
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_live_...
-NEXTAUTH_URL=https://pesttrace.com
+NEXT_PUBLIC_SUPABASE_URL=https://ozmqpbouelfinhpzcfvs.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_AkO1Y2WmezhvACqn1Z2YYQ_6RvpaMPx
+DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+STRIPE_SECRET_KEY=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
+STRIPE_WEBHOOK_SECRET=whsec_xXgRpuPQ84TFPxniuhI7Bb07zEpWohJa
+NEXTAUTH_URL=https://www.pesttrace.com
 NODE_ENV=production
 ```
 
