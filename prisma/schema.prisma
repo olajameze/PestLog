@@ -10,7 +10,7 @@ datasource db {
 model Company {
   @@map("Company")
   @@schema("public")
-  id                      String         @id @default(cuid())
+  id                      String         @id @default(dbgenerated("gen_random_uuid()"))
   name                    String?
   email                   String         @unique
   phone                   String?
@@ -34,7 +34,7 @@ model Company {
 model Technician {
   @@map("Technician")
   @@schema("public")
-  id                      String                   @id @default(cuid())
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()"))
   name                    String
   email                   String
   companyId               String
@@ -47,7 +47,7 @@ model Technician {
 model Certification {
   @@map("Certification")
   @@schema("public")
-  id           String     @id @default(cuid())
+  id           String     @id @default(dbgenerated("gen_random_uuid()"))
   technicianId String
   fileUrl      String
   expiryDate   DateTime?
@@ -58,7 +58,7 @@ model Certification {
 model LogbookEntry {
   @@map("LogbookEntry")
   @@schema("public")
-  id                      String                   @id @default(cuid())
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()"))
   companyId               String
   date                    DateTime
   clientName              String
