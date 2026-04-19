@@ -23,7 +23,7 @@ export default async function handler(
 
   try {
     // Test database connection
-    const result = await prisma.$queryRaw`SELECT 1`;
+    await prisma.$queryRaw`SELECT 1`;
     const latency = Date.now() - startTime;
 
     return res.status(200).json({
