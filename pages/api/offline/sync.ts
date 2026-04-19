@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
-import { getSession } from '../../../lib/supabase'; // Adjust import as needed
+import { logger } from '../../../lib/logger';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,80 +9,118 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const session = await getSession({ req });
-    if (!session?.user?.id) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { id, operation, tableName, data } = req.body as any;
+    const token = authHeader.replace('Bearer ', '');
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+    if (error || !user?.id) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const body = req.body as {
+      operation?: 'CREATE' | 'UPDATE' | 'DELETE';
+      tableName?: string;
+      data?: Record<string, unknown>;
+    };
+
+    const operation = body.operation;
+    const tableName = body.tableName;
+    const data = body.data;
+
+    if (!operation || !tableName || !data) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
     // Route to table-specific handlers
     switch (tableName) {
       case 'logbook_entries':
-        return handleLogbookEntry(prisma, session.user.id, operation, data, res);
+        return handleLogbookEntry(user.id, operation, data, res);
       case 'chemical_logs':
-        return handleChemicalLog(prisma, session.user.id, operation, data, res);
+        return handleChemicalLog(user.id, operation, data, res);
       default:
         return res.status(400).json({ error: 'Unsupported table' });
     }
   } catch (error) {
-    console.error('Sync error:', error);
+    logger.error(`Offline sync error: ${String(error)}`);
     return res.status(500).json({ error: 'Sync failed' });
   }
 }
 
 async function handleLogbookEntry(
-  prisma: any,
   userId: string,
-  operation: string,
-  data: any,
+  operation: 'CREATE' | 'UPDATE' | 'DELETE',
+  data: Record<string, unknown>,
   res: NextApiResponse
 ) {
   try {
     switch (operation) {
       case 'CREATE':
+        // NOTE: Validation + authorization are enforced in `/api/logbook-entries`.
+        // Here we apply a minimal server-side insert for offline replay.
+        // We require `companyId` to be present; downstream authorization should ensure user belongs to company.
+        if (typeof data.companyId !== 'string' || data.companyId.trim().length === 0) {
+          return res.status(400).json({ error: 'companyId is required' });
+        }
+
         const created = await prisma.logbookEntry.create({
           data: {
-            ...data,
-            companyId: data.companyId, // Validate from session/company
+            companyId: String(data.companyId),
+            date: typeof data.date === 'string' ? new Date(data.date) : new Date(),
+            clientName: typeof data.clientName === 'string' ? data.clientName : '',
+            address: typeof data.address === 'string' ? data.address : '',
+            treatment: typeof data.treatment === 'string' ? data.treatment : '',
+            notes: typeof data.notes === 'string' ? data.notes : null,
+            photoUrl: typeof data.photoUrl === 'string' ? data.photoUrl : null,
+            signature: typeof data.signature === 'string' ? data.signature : null,
+            baitBoxesPlaced: typeof data.baitBoxesPlaced === 'string' ? data.baitBoxesPlaced : null,
+            poisonUsed: typeof data.poisonUsed === 'string' ? data.poisonUsed : null,
+            status: typeof data.status === 'string' ? data.status : 'open',
           },
         });
         return res.status(200).json(created);
       
       case 'UPDATE':
+        if (typeof data.id !== 'string' || data.id.trim().length === 0) {
+          return res.status(400).json({ error: 'id is required' });
+        }
+
         const updated = await prisma.logbookEntry.update({
-          where: { id: data.id },
-          data,
+          where: { id: String(data.id) },
+          data: {
+            ...(typeof data.clientName === 'string' ? { clientName: data.clientName } : {}),
+            ...(typeof data.address === 'string' ? { address: data.address } : {}),
+            ...(typeof data.treatment === 'string' ? { treatment: data.treatment } : {}),
+            ...(typeof data.notes === 'string' ? { notes: data.notes } : {}),
+            ...(typeof data.status === 'string' ? { status: data.status } : {}),
+          },
         });
         return res.status(200).json(updated);
       
       case 'DELETE':
-        await prisma.logbookEntry.delete({ where: { id: data.id } });
+        if (typeof data.id !== 'string' || data.id.trim().length === 0) {
+          return res.status(400).json({ error: 'id is required' });
+        }
+        await prisma.logbookEntry.delete({ where: { id: String(data.id) } });
         return res.status(200).json({ success: true });
     }
   } catch (error) {
-    console.error('Logbook sync error:', error);
-    // Increment retry in client
+    logger.warn(`Logbook sync error: ${String(error)}`);
     return res.status(500).json({ error: 'Sync failed' });
   }
 }
 
 async function handleChemicalLog(
-  prisma: any,
   userId: string,
-  operation: string,
-  data: any,
+  operation: 'CREATE' | 'UPDATE' | 'DELETE',
+  data: Record<string, unknown>,
   res: NextApiResponse
 ) {
   // Similar handler for chemical_logs when table exists
   return res.status(501).json({ error: 'Chemical logs table pending migration' });
 }
-
-// Helper to get user session (adapt to your auth)
-async function getSession({ req }: { req: NextApiRequest }) {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  // Implement token verification against Supabase
-  // Return { user: { id: string } } or null
-  return { user: { id: 'temp-user-id' } }; // Placeholder
-}
-

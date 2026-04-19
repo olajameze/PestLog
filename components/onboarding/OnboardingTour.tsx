@@ -32,16 +32,16 @@ interface Step {
 }
 
 export default function OnboardingTour() {
-  const [mounted, setMounted] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const hasSeenTour = localStorage.getItem('pesttrace-tour-seen');
-    if (!hasSeenTour) {
-      setIsOpen(true);
-    }
+    // Defer state updates to avoid cascading renders warnings from eslint.
+    const timeout = window.setTimeout(() => {
+      const hasSeenTour = localStorage.getItem('pesttrace-tour-seen');
+      if (!hasSeenTour) setIsOpen(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   const completeTour = useCallback(() => {
@@ -67,7 +67,7 @@ export default function OnboardingTour() {
     }
   }, [currentStep]);
 
-  if (!mounted || !isOpen) return null;
+  if (!isOpen) return null;
 
   const step = STEPS[currentStep];
   const targetElement = document.querySelector(step.target);

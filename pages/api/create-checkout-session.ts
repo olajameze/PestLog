@@ -2,17 +2,33 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key || key.trim().length === 0) {
+    throw new Error('Stripe is not configured (missing STRIPE_SECRET_KEY).');
+  }
+  return new Stripe(key, { apiVersion: '2024-06-20' });
+}
+
+function looksLikeDbDrift(error: unknown): boolean {
+  const message = String(error);
+  return (
+    message.includes('does not exist') ||
+    message.includes('column') ||
+    message.includes('relation') ||
+    message.includes('P2022') ||
+    message.includes('P2021')
+  );
+}
 
 type Plan = 'pro' | 'business';
 
 const PRICE_IDS: Record<Plan, string> = {
   // Replace these with your Stripe Dashboard Price IDs.
-  pro: 'price_1TJsS6C3CXyzwZzXmqVCJy86',
-  business: 'price_1TJsSfC3CXyzwZzX4liw2ahT',
+  pro: process.env.STRIPE_PRICE_ID_PRO || 'price_1TJsS6C3CXyzwZzXmqVCJy86',
+  business: process.env.STRIPE_PRICE_ID_BUSINESS || 'price_1TJsSfC3CXyzwZzX4liw2ahT',
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -20,6 +36,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
   }
+
+  // Fail fast with a clear message (prevents opaque 500s)
+  const stripe = (() => {
+    try {
+      return getStripe();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return res.status(500).json({ error: message });
+    }
+  })();
+  if (!(stripe instanceof Stripe)) return;
 
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -39,6 +66,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const selectedPlan = plan as Plan;
   const priceId = PRICE_IDS[selectedPlan];
+  if (!priceId || !priceId.startsWith('price_')) {
+    return res.status(500).json({
+      error: `Stripe price id not configured for ${selectedPlan}. Set STRIPE_PRICE_ID_${selectedPlan.toUpperCase()}.`,
+    });
+  }
 
   // Resolve company for owner or technician account.
   let company = await prisma.company.findUnique({
@@ -66,10 +98,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         metadata: { companyId: company.id },
       });
       stripeCustomerId = customer.id;
-      await prisma.company.update({
-        where: { id: company.id },
-        data: { stripeCustomerId },
-      });
+      try {
+        await prisma.company.update({
+          where: { id: company.id },
+          data: { stripeCustomerId },
+        });
+      } catch (err) {
+        if (looksLikeDbDrift(err)) {
+          return res.status(500).json({
+            error: 'Database schema mismatch. Run migrations to add Company billing columns (stripeCustomerId, plan, subscriptionStatus).',
+            details: String(err),
+          });
+        }
+        throw err;
+      }
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -102,6 +144,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ url: session.url });
   } catch (error) {
-    res.status(500).json({ error: (error as Error).message || 'Unable to create checkout session.' });
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Checkout session failed: ${message}`);
+    res.status(500).json({ error: message || 'Unable to create checkout session.' });
   }
 }

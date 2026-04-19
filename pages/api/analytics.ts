@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../lib/prisma';
 import { supabase } from '../../lib/supabase';
+import { logger } from '../../lib/logger';
+import type { Prisma } from '@prisma/client';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -52,17 +54,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
+    type Entry = Prisma.LogbookEntryGetPayload<{
+      include: { photos: true; logbookEntryTechnicians: true };
+    }>;
+
     // 3. Calculation Logic
     const totalJobs = entries.length;
-    const completedJobs = entries.filter((e: any) => e.status === 'completed').length;
+    const completedJobs = (entries as Entry[]).filter((entry) => entry.status === 'completed').length;
     
     // Revenue-based metrics (Business/Enterprise only)
-    const totalRevenue = entries.reduce((sum: number, entry: any) => {
+    const totalRevenue = (entries as Entry[]).reduce((sum, entry) => {
       return sum + (entry.price ? Number(entry.price) : 0);
     }, 0);
 
     // Identify unique clients in this period to calculate CLV
-    const uniqueClients = new Set(entries.map((e: any) => `${e.clientName}-${e.address}`));
+    const uniqueClients = new Set((entries as Entry[]).map((entry) => `${entry.clientName}-${entry.address}`));
     
     // CLV = Total Revenue / Total Unique Clients
     const clvScore = uniqueClients.size > 0 
@@ -75,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const cacRatio = estimatedCAC > 0 ? Number((clvScore / estimatedCAC).toFixed(2)) : 0;
 
     // 4. Group Top Treatments
-    const treatmentCounts = entries.reduce((acc: Record<string, number>, curr: any) => {
+    const treatmentCounts = (entries as Entry[]).reduce((acc: Record<string, number>, curr) => {
       acc[curr.treatment] = (acc[curr.treatment] || 0) + 1;
       return acc;
     }, {});
@@ -90,14 +96,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       completedJobs,
       openJobs: totalJobs - completedJobs,
       averageDurationMinutes: 45, // Placeholder if duration fields aren't in schema
-      averagePhotosPerJob: totalJobs > 0 ? entries.reduce((s: number, e: any) => s + e.photos.length, 0) / totalJobs : 0,
+      averagePhotosPerJob: totalJobs > 0 ? (entries as Entry[]).reduce((sum, entry) => sum + entry.photos.length, 0) / totalJobs : 0,
       topTreatments,
       clvScore,
       cacRatio,
       auditSummary: { missingPhotos: 0, missingSignatures: 0, missingStatus: 0 }
     });
   } catch (error) {
-    console.error('Analytics API error:', error);
+    logger.error(`Analytics API error: ${String(error)}`);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

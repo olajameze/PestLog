@@ -3,6 +3,19 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
+import { writeAuditLog } from '../../lib/audit/log';
+import { logger } from '../../lib/logger';
+
+function looksLikeDbDrift(error: unknown): boolean {
+  const message = String(error);
+  return (
+    message.includes('does not exist') ||
+    message.includes('column') ||
+    message.includes('relation') ||
+    message.includes('P2022') ||
+    message.includes('P2021')
+  );
+}
 
 type RawLogbookEntryFallback = {
   id: string;
@@ -269,7 +282,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
       } catch (err) {
-        console.error('Create error:', err);
+        logger.error(`Create error: ${String(err)}`);
+        if (looksLikeDbDrift(err)) {
+          return res.status(500).json({
+            error: 'Database schema mismatch. Run migrations to align the DB with Prisma.',
+            details: String(err),
+          });
+        }
         return res.status(500).json({ error: 'Failed to create logbook entry', details: String(err) });
       }
 
@@ -290,13 +309,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       });
 
+      await writeAuditLog({
+        userId: user.id,
+        action: 'CREATE',
+        tableName: 'logbook_entries',
+        recordId: newEntry.id,
+        newValues: {
+          companyId,
+          date,
+          clientName,
+          address,
+          treatment,
+          technicianIds,
+        },
+        ipAddress: (req.headers['x-forwarded-for'] as string | undefined) ?? req.socket.remoteAddress ?? null,
+      });
+
       return res.status(201).json(await signEntryPhotos(fullEntry!));
     }
 
     res.setHeader('Allow', ['GET', 'POST']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (err) {
-    console.error('Logbook API error:', err);
+    logger.error(`Logbook API error: ${String(err)}`);
     return res.status(500).json({ error: 'Logbook request failed', details: String(err) });
   }
 }

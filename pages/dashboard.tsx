@@ -16,6 +16,7 @@ import OnboardingTour from '../components/onboarding/OnboardingTour';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { Skeleton } from '../components/ui/Skeleton';
 import { checkPlan } from '../lib/planGuard';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 
 interface User {
   id: string;
@@ -799,6 +800,7 @@ if (!user) return (
           ) : (
             <CompanySetupTab />
           )}
+          </ErrorBoundary>
         </main>
       </div>
       <ConfirmDialog
@@ -1317,6 +1319,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const isDrawing = useRef(false);
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
+  const { isOnline } = useOfflineQueue();
 
   const getCanvasPoint = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
@@ -1467,13 +1470,23 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
 
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token ?? null;
+    const canUploadPhotos = Boolean(accessToken) && isOnline;
 
     const photoFiles = photoInputRef.current?.files
       ? Array.from(photoInputRef.current.files).slice(0, 4)
       : [];
     const uploadedPhotoPaths: string[] = [];
 
-    if (photoFiles.length > 0) {
+    if (!canUploadPhotos && photoFiles.length > 0) {
+      showToast(
+        'Offline photo upload',
+        'Photos require an internet connection. Save the entry now and add photos when back online.',
+        'info'
+      );
+    }
+
+    if (canUploadPhotos && photoFiles.length > 0) {
       for (let i = 0; i < photoFiles.length; i++) {
         const file = photoFiles[i]!;
         const safeName = file.name.replace(/[^\w.\-]+/g, '_') || 'photo.jpg';
@@ -1517,19 +1530,8 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       }),
       ...(validBaitStations.length > 0 && { baitStations: validBaitStations }),
     };
-    
-    const res = await fetch('/api/logbook-entries', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session?.access_token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    
-    if (res.ok) {
-      const entry = await res.json();
-      onAdd(entry);
+
+    const resetForm = () => {
       setDate('');
       setClientName('');
       setAddress('');
@@ -1545,11 +1547,82 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       setPoisonUsed('');
       setBaitStations([]);
       if (photoInputRef.current) photoInputRef.current.value = '';
-      showToast('Entry saved', 'Logbook entry saved successfully!', 'success');
-    } else {
-      const error = await res.json();
+    };
+
+    if (isOnline && accessToken) {
+      const res = await fetch('/api/logbook-entries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const entry = (await res.json()) as LogbookEntry;
+        onAdd(entry);
+        resetForm();
+        showToast('Entry saved', 'Logbook entry saved successfully!', 'success');
+        setLoading(false);
+        return;
+      }
+
+      const error = (await res.json().catch(() => ({}))) as { error?: string };
       showToast('Save failed', error.error || 'Error adding entry', 'error');
+      setLoading(false);
+      return;
     }
+
+    if (!accessToken) {
+      showToast('Sign in required', 'Please sign in again to save entries.', 'error');
+      setLoading(false);
+      return;
+    }
+
+    // Offline: queue write for replay
+    try {
+      await fetch('/api/offline/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ operation: 'CREATE', tableName: 'logbook_entries', data: payload }),
+      });
+    } catch {
+      // Ignore network failures; local queue banner will indicate queued writes.
+    }
+
+    // Always queue locally so it survives page reloads.
+    // Reuse the offline queue hook via a lightweight call to the IndexedDB wrapper.
+    const { queueOperation } = await import('../lib/offline/db');
+    const userId = session?.user?.id;
+    if (userId) {
+      await queueOperation(userId, 'CREATE', 'logbook_entries', payload);
+    }
+
+    onAdd({
+      id: `offline-${Date.now()}`,
+      date,
+      clientName,
+      address,
+      treatment,
+      notes: notes || undefined,
+      photoUrl: undefined,
+      photoUrls: undefined,
+      photos: [],
+      signature: signatureDataUrl || undefined,
+      rooms: roomsPayload,
+      baitBoxesPlaced: baitBoxesPlaced || undefined,
+      poisonUsed: poisonUsed || undefined,
+      followUpDate: followUpDate || undefined,
+      internalNotes: internalNotes || undefined,
+      productAmount: productAmount || undefined,
+      recommendation: recommendation || undefined,
+    });
+    resetForm();
+    showToast('Saved offline', 'Entry queued and will sync when you reconnect.', 'success');
     setLoading(false);
   };
 

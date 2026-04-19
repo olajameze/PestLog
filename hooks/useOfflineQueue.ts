@@ -6,14 +6,44 @@ import {
   markSynced, 
   getQueueStats 
 } from '../lib/offline/db';
-import { useSession } from '@supabase/auth-helpers-react'; // If available, else use custom session hook
+
+type OfflineOperation = 'CREATE' | 'UPDATE' | 'DELETE';
+
+type QueuePayload = {
+  id: string;
+  userId: string;
+  operation: OfflineOperation;
+  tableName: string;
+  data: Record<string, unknown>;
+  createdAt: number;
+  syncedAt?: number;
+  retryCount: number;
+};
 
 export function useOfflineQueue() {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [queueStats, setQueueStats] = useState({ pending: 0, syncing: 0 });
-  const session = useSession(); // Replace with your session hook
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setUserId(data.session?.user.id ?? null);
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user.id ?? null);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     
@@ -37,24 +67,24 @@ export function useOfflineQueue() {
   }, []);
 
   const queueMutation = async (
-    operation: 'CREATE' | 'UPDATE' | 'DELETE',
+    operation: OfflineOperation,
     tableName: string,
-    data: Record<string, any>
+    data: Record<string, unknown>
   ) => {
-    if (isOnline && session?.user?.id) {
+    if (isOnline && userId) {
       // Try online first
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (!currentSession?.user?.id) throw new Error('No session');
         
-        // Direct Supabase/Prisma call via API
-        const res = await fetch(`/api/${tableName}`, {
-          method: operation !== 'DELETE' ? 'POST' : 'DELETE',
+        // Send to sync endpoint (server decides how to apply)
+        const res = await fetch('/api/offline/sync', {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${currentSession.access_token}`,
           },
-          body: JSON.stringify({ operation, data }),
+          body: JSON.stringify({ operation, tableName, data }),
         });
         
         if (res.ok) {
@@ -64,38 +94,39 @@ export function useOfflineQueue() {
         }
       } catch {
         // Fallback to queue
-        if (session?.user?.id) {
-          await queueOperation(session.user.id, operation, tableName, data);
+        if (userId) {
+          await queueOperation(userId, operation, tableName, data);
         }
         throw new Error('Queued offline');
       }
-    } else if (session?.user?.id) {
-      await queueOperation(session.user.id, operation, tableName, data);
+    } else if (userId) {
+      await queueOperation(userId, operation, tableName, data);
       throw new Error('Queued offline');
     }
   };
 
   const syncQueue = async () => {
-    if (!isOnline || !session?.user?.id) return;
+    if (!isOnline || !userId) return;
     
     const pending = await getPendingQueue();
     for (const item of pending) {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession?.access_token) continue;
         const res = await fetch('/api/offline/sync', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${currentSession.access_token}`,
           },
-          body: JSON.stringify(item),
+          body: JSON.stringify(item satisfies QueuePayload),
         });
         
         if (res.ok) {
           await markSynced(item.id);
         }
-      } catch (error) {
-        console.warn('Sync failed for item', item.id, error);
+      } catch {
+        // Best-effort; leave queued for retry.
       }
     }
   };
@@ -104,7 +135,8 @@ export function useOfflineQueue() {
     if (isOnline) {
       syncQueue();
     }
-  }, [isOnline]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOnline, userId]);
 
   return {
     isOnline,
@@ -120,7 +152,7 @@ export function useOfflineMutation(
 ) {
   const { queueMutation } = useOfflineQueue();
   
-  const mutate = async (operation: 'CREATE' | 'UPDATE' | 'DELETE', data: Record<string, any>) => {
+  const mutate = async (operation: OfflineOperation, data: Record<string, unknown>) => {
     return queueMutation(operation, tableName, data);
   };
 
