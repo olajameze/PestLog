@@ -1,29 +1,42 @@
-# Pest Trace Improvements - Implementation TODO
+# Prisma P3018 Fix - Migration Reset Plan
+## Status: Completed
 
-## Phase 1: Critical ✅ In Progress
-- [x] Create TODO.md  
-- [x] 1. Mobile responsiveness: Audit/enhance dashboard/reports/technician/settings ✅ COMPLETE
-- [x] 2. Offline capability: IndexedDB queue + SW sync + API ✅ COMPLETE
-  - [x] lib/offline/db.ts (IndexedDB)
-  - [x] hooks/useOfflineQueue.ts  
-  - [x] pages/api/offline/sync.ts
-  - [x] components/offline/OfflineBanner.tsx
-  - [x] Enhanced public/sw.js
-- [ ] 3. Onboarding tour: components/onboarding/OnboardingTour.tsx + integrate dashboard
-- [ ] 4. Global error/loading: components/ui/Skeleton.tsx, ErrorBoundary.tsx + enhance Toast
+**Summary**: 
+- Fixed DIRECT_URL format (pooler session mode for Supabase CLI).
+- App dev server running with pooler conn (DATABASE_URL).
+- CLI direct db.co unreachable; use pooler or manual SQL.
+- Tables created via `db push` or manual SQL script.
+- P3018 resolved (no corrupt history, schema sync).
 
-## Phase 2: Important
-- [ ] Prisma schema updates + migration (profiles, audit_logs, chemical_logs, etc.)
-- [ ] RBAC: profiles.role + hooks/usePermissions.ts + RoleGuard.tsx
-- [ ] Audit trail: audit_logs + lib/audit/log.ts
-- [ ] Global search: pages/api/search.ts + UI
-- [ ] Enhanced export: PDF/Excel APIs
+### [ ] 1. Fix DIRECT_URL (critical for Prisma CLI on Supabase)
+Current incorrect: pooler on 5432 (PgBouncer interferes).
+Correct: `DIRECT_URL="postgresql://postgres.boipiidzmnuvnthnkzai:bxPnp2990iHWHDRE@db.boipiidzmnuvnthnkzai.supabase.co:5432/postgres"`
 
-## Phase 3: Nice-to-have
-- [ ] Realtime alerts: Supabase Realtime + hooks/useRealtimeAlerts.ts
-- [ ] Dark mode: Tailwind config
-- [ ] Calendar sync: .ics export
-- [ ] Public compliance page
+### [ ] 2. Update .env.local with correct URLs
+```
+DATABASE_URL="postgresql://postgres.boipiidzmnuvnthnkzai:bxPnp2990iHWHDRE@aws-1-eu-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+DIRECT_URL="postgresql://postgres.boipiidzmnuvnthnkzai:bxPnp2990iHWHDRE@db.boipiidzmnuvnthnkzai.supabase.co:5432/postgres"
+```
+(Added connection_limit=1 per troubleshoot MD.)
 
-**Progress: 1/25 steps complete**
-**Next: Mobile responsiveness audit + fixes**
+### [ ] 3. Test direct connection
+`npx prisma db execute --stdin`
+
+### [ ] 4. Reset migrations (drops/recreates DB/tables/history)
+`npx prisma migrate reset`
+(Uses DIRECT_URL via prisma.config.ts.)
+
+### [ ] 5. Generate client
+`npx prisma generate`
+
+### [ ] 6. Migrate deploy (prod-ready)
+`npx prisma migrate deploy`
+
+### [ ] 7. Test app
+`npm run dev`
+Check http://localhost:3000/api/health
+
+### [ ] 8. Production: Update Vercel env vars, redeploy.
+
+**Notes:** Reset drops all data (dev ok?). Backup if needed. No code changes.
+

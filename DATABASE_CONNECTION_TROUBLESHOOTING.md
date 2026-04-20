@@ -6,6 +6,9 @@ Production site (www.pesttrace.com) is getting "Can't reach database server" err
 - Database: db.ozmqpbouelfinhpzcfvs.supabase.co (Supabase)
 - Status: Working last night, failed today
 
+### Error P3018: Migration History Out of Sync
+If you see "Table LogbookEntry does not exist" during migration reset, your migration history is corrupted or a base migration is missing.
+
 ## Quick Diagnosis Checklist
 
 ### 1. **Verify Environment Variables in Vercel Dashboard**
@@ -17,6 +20,7 @@ Check that these variables are set:
 - ✅ `DATABASE_URL` - Should be your Supabase pooler connection string
 - ✅ `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
 - ✅ `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anon key
+- ✅ `DIRECT_URL` - **CRITICAL** for migrations. Use the non-pooled connection (Port 5432).
 
 **Important:** The DATABASE_URL must include:
 ```
