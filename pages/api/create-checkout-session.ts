@@ -24,9 +24,9 @@ type Plan = 'pro' | 'business' | 'enterprise';
 
 const PRICE_IDS: Record<Plan, string> = {
   // Replace these with your Stripe Dashboard Price IDs.
-  pro: process.env.STRIPE_PRICE_ID_PRO || 'price_1TJsS6C3CXyzwZzXmqVCJy86',
-  business: process.env.STRIPE_PRICE_ID_BUSINESS || 'price_1TJsSfC3CXyzwZzX4liw2ahT',
-  enterprise: process.env.STRIPE_PRICE_ID_ENTERPRICE || 'prod_UMVBnmyTeyD8mg',
+  pro: process.env.STRIPE_PRICE_ID_PRO || 'prod_UN1BAV1VreJvdg',
+  business: process.env.STRIPE_PRICE_ID_BUSINESS || 'prod_UN1CxyNG4fYmcb',
+  enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE || 'prod_UN1Dd3wE5xv3ho',
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -89,6 +89,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     let stripeCustomerId = company.stripeCustomerId;
+
+    // If a customer ID exists, verify it belongs to the current Stripe mode (Test/Live)
+    if (stripeCustomerId) {
+      try {
+        await stripe.customers.retrieve(stripeCustomerId);
+      } catch (e) {
+        // If Stripe returns a 404 or "resource_missing", the ID is from a different environment
+        const stripeError = e as { status?: number; code?: string };
+        if (stripeError.status === 404 || stripeError.code === 'resource_missing') {
+          logger.warn(`Stripe Customer ${stripeCustomerId} not found in this mode. Resetting...`);
+          stripeCustomerId = null;
+        } else {
+          throw e;
+        }
+      }
+    }
+
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
         email: user.email,
@@ -132,7 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ url: session.url });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? `${error.message} ${error.stack}` : String(error);
     logger.error(`Checkout session failed: ${message}`);
     res.status(500).json({ error: message || 'Unable to create checkout session.' });
   }

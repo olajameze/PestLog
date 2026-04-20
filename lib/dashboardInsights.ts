@@ -48,8 +48,9 @@ function entryHasSignature(entry: { signature: string | null }): boolean {
   return Boolean(entry.signature && entry.signature.trim().length > 0);
 }
 
-function isEntryCompliant(entry: { status: string; photoUrl: string | null; photos: { url: string }[]; signature: string | null }, policy: CompanyPolicy): boolean {
-  const completed = entry.status.trim().toLowerCase() !== 'open';
+function isEntryCompliant(entry: { status: string | null; photoUrl: string | null; photos: { url: string }[]; signature: string | null }, policy: CompanyPolicy): boolean {
+  const status = entry.status?.trim().toLowerCase() || 'open';
+  const completed = status !== 'open';
   const photoOk = !policy.requirePhotos || entryHasPhoto(entry);
   const sigOk = !policy.requireSignature || entryHasSignature(entry);
   return completed && photoOk && sigOk;
@@ -117,159 +118,170 @@ export async function buildDashboardInsights(
     })),
   );
 
-  const appointments = entriesToday.map((e) => {
-    const techNames = e.logbookEntryTechnicians.map((x) => x.technician.name).join(', ') || 'Unassigned';
-    const t = e.startTime ?? e.date;
-    const time = t.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-    const completed = e.status.trim().toLowerCase() !== 'open';
-    const lat = 51.45 + (hashStringToPercent(e.address, 0) / 5000);
-    const lng = -2.58 - (hashStringToPercent(e.address, 1) / 5000);
-    return {
-      id: e.id,
-      clientName: e.clientName,
-      address: e.address,
-      time,
-      status: completed ? ('completed' as const) : ('pending' as const),
-      technician: techNames,
-      locationLabel: e.address.slice(0, 32) + (e.address.length > 32 ? '…' : ''),
-      lat,
-      lng,
-    };
-  });
+  // Helper to safely get status (never null)
+function getStatus(entry: { status: string | null }): string {
+  return entry.status?.trim()?.toLowerCase() || 'open';
+}
 
-  const completedToday = appointments.filter((a) => a.status === 'completed').length;
-  const scheduledToday = appointments.length;
-  const percentComplete = scheduledToday === 0 ? 0 : Math.round((completedToday / scheduledToday) * 100);
+const appointments = entriesToday.map((e) => {
+  const techNames = e.logbookEntryTechnicians.map((x) => x.technician.name).join(', ') || 'Unassigned';
+  const t = e.startTime ?? e.date;
+  const time = t ? t.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+  const statusLower = getStatus(e);
+  const completed = statusLower !== 'open';
+  const lat = 51.45 + (hashStringToPercent(e.address, 0) / 5000);
+  const lng = -2.58 - (hashStringToPercent(e.address, 1) / 5000);
+  return {
+    id: e.id,
+    clientName: e.clientName,
+    address: e.address,
+    time,
+    status: completed ? ('completed' as const) : ('pending' as const),
+    technician: techNames,
+    locationLabel: e.address.slice(0, 32) + (e.address.length > 32 ? '…' : ''),
+    lat,
+    lng,
+  };
+});
 
-  const locations = entriesToday.slice(0, 8).map((e, index) => {
-    const completed = e.status.trim().toLowerCase() !== 'open';
-    const key = `${e.address}-${index}`;
-    return {
-      label: e.clientName,
-      status: completed ? ('completed' as const) : ('pending' as const),
-      xPercent: hashStringToPercent(key, 0),
-      yPercent: hashStringToPercent(key, 1),
-    };
-  });
+const completedToday = appointments.filter((a) => a.status === 'completed').length;
+const scheduledToday = appointments.length;
+const percentComplete = scheduledToday === 0 ? 0 : Math.round((completedToday / scheduledToday) * 100);
 
-  const bucketCount = Math.min(12, Math.max(4, Math.ceil(days / 7)));
-  const bucketMs = (rangeEnd.getTime() - rangeStart.getTime() + 1) / bucketCount;
-  const series: { date: string; rate: number }[] = [];
-  for (let b = 0; b < bucketCount; b += 1) {
-    const from = new Date(rangeStart.getTime() + b * bucketMs);
-    const to = new Date(rangeStart.getTime() + (b + 1) * bucketMs - 1);
-    const slice = entriesInRange.filter((e) => e.date >= from && e.date <= to);
-    const rate =
-      slice.length === 0
-        ? 0
-        : Math.round(
-            (slice.filter((e) => isEntryCompliant(e, policy)).length / slice.length) * 100,
-          );
-    series.push({
-      date: `${from.getDate()}/${from.getMonth() + 1}`,
-      rate,
-    });
-  }
+const locations = entriesToday.slice(0, 8).map((e, index) => {
+  const statusLower = getStatus(e);
+  const completed = statusLower !== 'open';
+  const key = `${e.address}-${index}`;
+  return {
+    label: e.clientName,
+    status: completed ? ('completed' as const) : ('pending' as const),
+    xPercent: hashStringToPercent(key, 0),
+    yPercent: hashStringToPercent(key, 1),
+  };
+});
 
-  const currentRate =
-    entriesInRange.length === 0
+const bucketCount = Math.min(12, Math.max(4, Math.ceil(days / 7)));
+const bucketMs = (rangeEnd.getTime() - rangeStart.getTime() + 1) / bucketCount;
+const series: { date: string; rate: number }[] = [];
+for (let b = 0; b < bucketCount; b += 1) {
+  const from = new Date(rangeStart.getTime() + b * bucketMs);
+  const to = new Date(rangeStart.getTime() + (b + 1) * bucketMs - 1);
+  const slice = entriesInRange.filter((e) => e.date >= from && e.date <= to);
+  const rate =
+    slice.length === 0
       ? 0
       : Math.round(
-          (entriesInRange.filter((e) => isEntryCompliant(e, policy)).length / entriesInRange.length) *
-            100,
+          (slice.filter((e) => isEntryCompliant(e, policy)).length / slice.length) * 100,
         );
+  series.push({
+    date: `${from.getDate()}/${from.getMonth() + 1}`,
+    rate,
+  });
+}
 
-  const openActions = entriesInRange
-    .filter((e) => !isEntryCompliant(e, policy))
-    .slice(0, 5)
-    .map((e) => ({
+const currentRate =
+  entriesInRange.length === 0
+    ? 0
+    : Math.round(
+        (entriesInRange.filter((e) => isEntryCompliant(e, policy)).length / entriesInRange.length) *
+          100,
+      );
+
+const openActions = entriesInRange
+  .filter((e) => !isEntryCompliant(e, policy))
+  .slice(0, 5)
+  .map((e) => {
+    const statusLower = getStatus(e);
+    return {
       id: e.id,
-      title: e.status.trim().toLowerCase() === 'open' ? 'Job still open' : 'Compliance gap on closed job',
+      title: statusLower === 'open' ? 'Job still open' : 'Compliance gap on closed job',
       area: e.clientName,
       dueDate: e.followUpDate ? e.followUpDate.toLocaleDateString() : 'Review',
-    }));
+    };
+  });
 
-  const chemicalMap = new Map<string, { volume: number; compliant: number; total: number }>();
-  for (const e of entriesInRange) {
-    const label = parsePoisonLabel(e.poisonUsed, e.treatment);
-    const vol = parseVolumeMl(e.productAmount) || 120;
-    const row = chemicalMap.get(label) ?? { volume: 0, compliant: 0, total: 0 };
-    row.volume += vol;
-    row.total += 1;
-    if (e.status.trim().toLowerCase() !== 'open') row.compliant += 1;
-    chemicalMap.set(label, row);
+const chemicalMap = new Map<string, { volume: number; compliant: number; total: number }>();
+for (const e of entriesInRange) {
+  const label = parsePoisonLabel(e.poisonUsed, e.treatment);
+  const vol = parseVolumeMl(e.productAmount) || 120;
+  const row = chemicalMap.get(label) ?? { volume: 0, compliant: 0, total: 0 };
+  row.volume += vol;
+  row.total += 1;
+  const statusLower = getStatus(e);
+  if (statusLower !== 'open') row.compliant += 1;
+  chemicalMap.set(label, row);
+}
+
+const chemicalLog = [...chemicalMap.entries()]
+  .sort((a, b) => b[1].volume - a[1].volume)
+  .slice(0, 6)
+  .map(([chemical, agg], i) => ({
+    id: `chem-${i}-${chemical}`,
+    chemical,
+    volumeMl: agg.volume,
+    status: (agg.compliant / agg.total >= 0.85 ? 'compliant' : 'non-compliant') as 'compliant' | 'non-compliant',
+    stockRemaining: Math.max(8, Math.min(92, 100 - (agg.volume % 60))),
+  }));
+
+const urgentAlerts: DashboardData['urgentAlerts'] = [];
+const soon = new Date();
+soon.setDate(soon.getDate() + 30);
+for (const c of certs) {
+  if (!c.expiryDate) continue;
+  if (c.expiryDate <= soon && c.expiryDate >= now) {
+    urgentAlerts.push({
+      id: `cert-${c.id}`,
+      title: `Certification expiring: ${c.technicianName}`,
+      description: `Expires ${c.expiryDate.toLocaleDateString()}. Renew before work is blocked on audits.`,
+      severity: c.expiryDate.getTime() - now.getTime() < 7 * 86400000 ? 'high' : 'medium',
+    });
   }
+}
 
-  const chemicalLog = [...chemicalMap.entries()]
-    .sort((a, b) => b[1].volume - a[1].volume)
-    .slice(0, 6)
-    .map(([chemical, agg], i) => ({
-      id: `chem-${i}-${chemical}`,
-      chemical,
-      volumeMl: agg.volume,
-      status: (agg.compliant / agg.total >= 0.85 ? 'compliant' : 'non-compliant') as 'compliant' | 'non-compliant',
-      stockRemaining: Math.max(8, Math.min(92, 100 - (agg.volume % 60))),
-    }));
+for (const e of entriesInRange) {
+  if (e.followUpDate && e.followUpDate < now && getStatus(e) === 'open') {
+    urgentAlerts.push({
+      id: `fu-${e.id}`,
+      title: `Follow-up overdue: ${e.clientName}`,
+      description: `Follow-up was due ${e.followUpDate.toLocaleDateString()}. Job is still open.`,
+      severity: 'high',
+    });
+  }
+}
 
-  const urgentAlerts: DashboardData['urgentAlerts'] = [];
-  const soon = new Date();
-  soon.setDate(soon.getDate() + 30);
-  for (const c of certs) {
-    if (!c.expiryDate) continue;
-    if (c.expiryDate <= soon && c.expiryDate >= now) {
+if (policy.requirePhotos) {
+  const recent = entriesInRange.filter((e) => (now.getTime() - e.date.getTime()) / 86400000 <= 14);
+  for (const e of recent) {
+    if (!entryHasPhoto(e)) {
       urgentAlerts.push({
-        id: `cert-${c.id}`,
-        title: `Certification expiring: ${c.technicianName}`,
-        description: `Expires ${c.expiryDate.toLocaleDateString()}. Renew before work is blocked on audits.`,
-        severity: c.expiryDate.getTime() - now.getTime() < 7 * 86400000 ? 'high' : 'medium',
+        id: `photo-${e.id}`,
+        title: 'Job missing photos',
+        description: `${e.clientName} (${e.date.toLocaleDateString()}) has no photos attached.`,
+        severity: 'medium',
       });
     }
   }
+}
 
-  for (const e of entriesInRange) {
-    if (e.followUpDate && e.followUpDate < now && e.status.trim().toLowerCase() === 'open') {
-      urgentAlerts.push({
-        id: `fu-${e.id}`,
-        title: `Follow-up overdue: ${e.clientName}`,
-        description: `Follow-up was due ${e.followUpDate.toLocaleDateString()}. Job is still open.`,
-        severity: 'high',
-      });
-    }
-  }
+const clientCounts = new Map<string, number>();
+for (const e of entriesInRange) {
+  const k = normalizeClientKey(e.clientName);
+  if (!k) continue;
+  clientCounts.set(k, (clientCounts.get(k) ?? 0) + 1);
+}
+const uniqueClients = clientCounts.size;
+const totalJobs = entriesInRange.length;
+const repeatClients = [...clientCounts.values()].filter((n) => n >= 2).length;
+const retentionRate =
+  uniqueClients === 0 ? 0 : Math.round((repeatClients / uniqueClients) * 100);
 
-  if (policy.requirePhotos) {
-    const recent = entriesInRange.filter((e) => (now.getTime() - e.date.getTime()) / 86400000 <= 14);
-    for (const e of recent) {
-      if (!entryHasPhoto(e)) {
-        urgentAlerts.push({
-          id: `photo-${e.id}`,
-          title: 'Job missing photos',
-          description: `${e.clientName} (${e.date.toLocaleDateString()}) has no photos attached.`,
-          severity: 'medium',
-        });
-      }
-    }
+const openByTreatment = new Map<string, number>();
+for (const e of entriesInRange) {
+  if (getStatus(e) === 'open') {
+    const t = e.treatment.trim() || 'General';
+    openByTreatment.set(t, (openByTreatment.get(t) ?? 0) + 1);
   }
-
-  const clientCounts = new Map<string, number>();
-  for (const e of entriesInRange) {
-    const k = normalizeClientKey(e.clientName);
-    if (!k) continue;
-    clientCounts.set(k, (clientCounts.get(k) ?? 0) + 1);
-  }
-  const uniqueClients = clientCounts.size;
-  const totalJobs = entriesInRange.length;
-  const repeatClients = [...clientCounts.values()].filter((n) => n >= 2).length;
-  const retentionRate =
-    uniqueClients === 0 ? 0 : Math.round((repeatClients / uniqueClients) * 100);
-
-  const openByTreatment = new Map<string, number>();
-  for (const e of entriesInRange) {
-    if (e.status.trim().toLowerCase() === 'open') {
-      const t = e.treatment.trim() || 'General';
-      openByTreatment.set(t, (openByTreatment.get(t) ?? 0) + 1);
-    }
-  }
+}
   const reasons = [...openByTreatment.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
