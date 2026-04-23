@@ -14,7 +14,7 @@ type LogbookEntryWithPhotos = {
   notes: string | null;
   photoUrl: string | null;
   signature: string | null;
-  createdAt: Date;
+  createdAt: Date | null;
   technicianIds: string[];
   photos: LogbookPhotoRecord[];
 };
