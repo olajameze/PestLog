@@ -22,14 +22,24 @@ Check that these variables are set:
 - ✅ `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anon key
 - ✅ `DIRECT_URL` - **CRITICAL** for migrations. Use the non-pooled connection (Port 5432).
 
+**Prisma Schema Requirement (v7+):**
+Since you are using a `prisma.config.ts`, your `schema.prisma` should only contain the `url`. The `directUrl` must be defined in `prisma.config.ts`.
+prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  schemas   = ["public"]
+}
+
+
 **Important:** The DATABASE_URL must include:
 ?pgbouncer=true&connection_limit=1
-```
+
 
 Example format:
-```
+
 postgres://postgres.ozmqpbouelfinhpzcfvs:PASSWORD@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
-```
+
 
 ### 2. **Check Supabase Database Status**
 1. Go to [Supabase Dashboard](https://app.supabase.com)
