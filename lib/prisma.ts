@@ -4,13 +4,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { normalizePostgresUrlForPrisma } from './normalizePostgresUrl';
 
 const prismaClientSingleton = () => {
-  const connectionString = normalizePostgresUrlForPrisma(process.env.DATABASE_URL || '');
+  const connectionString = normalizePostgresUrlForPrisma(process.env.DIRECT_URL || '');
   const pool = new Pool({ 
     connectionString,
-    // Required for Supabase pooled connections
+    // Required for Supabase connections
     ssl: { rejectUnauthorized: false },
-    // Optimized for serverless: prevent connection exhaustion
-    max: 1 
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
