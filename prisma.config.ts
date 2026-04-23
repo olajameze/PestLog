@@ -1,6 +1,5 @@
 import { config } from "dotenv";
 import { defineConfig } from "prisma/config";
-import { normalizePostgresUrlForPrisma } from "./lib/normalizePostgresUrl";
 
 // Explicitly load .env.local for local development
 config({ path: '.env.local' });
