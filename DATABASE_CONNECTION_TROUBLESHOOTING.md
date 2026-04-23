@@ -3,6 +3,7 @@
 // Issue
 Production site is getting "Can't reach database server" errors:
 // Error: code: P1001
+// Error: code: P1000 (Authentication Failed)
 // Database: db.[PROJECT_ID].supabase.co (Supabase)
 // Status: Working last night, failed today
 
@@ -76,6 +77,7 @@ npx prisma db execute --stdin < /dev/null
 | Symptom | Cause | Solution |
 |---------|-------|----------|
 | "Can't reach database server" | Environment variable not set in Vercel | Add DATABASE_URL to Vercel Environment Variables |
+| "Authentication failed" (P1000) | Wrong password or unencoded special chars | URL-encode password (e.g. # to %23) and check credentials |
 | Works locally but fails in production | Different DATABASE_URL in production | Ensure production URL has `pgbouncer=true` |
 | Intermittent failures | Connection pool exhausted | Increase connection timeout (done) or reduce max connections |
 | Persistent timeout | Supabase database down | Check Supabase status page |
