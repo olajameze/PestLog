@@ -345,6 +345,7 @@ Fetches compliance reports.
 | "Stripe webhook not receiving" | Confirm webhook endpoint in Stripe Dashboard vs. deployed URL |
 | "Auth not working" | Check `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 | "Photo upload fails" | Verify Supabase storage bucket `logbook-photos` exists and is public |
+| "Still on Trial after Upgrade" | 1. Run Stripe CLI listener locally. 2. Verify `STRIPE_WEBHOOK_SECRET`. 3. Check `client_reference_id` in Stripe logs. |
 | "PWA not installing on mobile" | Check manifest.json is accessible at `/manifest.json` |
 
 ---

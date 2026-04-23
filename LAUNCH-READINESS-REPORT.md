@@ -280,15 +280,15 @@ Set these in Vercel Dashboard → Settings → Environment Variables:
 
 ```bash
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL="https://ozmqpbouelfinhpzcfvs.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_AkO1Y2WmezhvACqn1Z2YYQ_6RvpaMPx"
+NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
 
 # Database (PostgreSQL)
 # IMPORTANT: DATABASE_URL must match POSTGRES_PRISMA_URL in Vercel
 # Using Supabase Transaction Pooler (Port 6543) for Serverless
-DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD_ENCODED@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-POSTGRES_PRISMA_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD_ENCODED@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-POSTGRES_URL_NON_POOLING="postgresql://postgres.ozmqpbouelfinhpzcfvs:YOUR_DB_PASSWORD_ENCODED@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require"
+DATABASE_URL="your_db_url"
+POSTGRES_PRISMA_URL="your_prisma_url"
+POSTGRES_URL_NON_POOLING="your_non_pooling_url"
 
 # Stripe (LIVE KEYS FOR PRODUCTION)
 STRIPE_SECRET_KEY="sk_live_REDACTED"
@@ -301,7 +301,7 @@ SUPPORT_EMAIL="pesttrace@gmail.com"
 NEXT_PUBLIC_SUPPORT_EMAIL="pesttrace@gmail.com"
 
 # NextAuth (Generate with: openssl rand -base64 32)
-NEXTAUTH_SECRET=8QN9GC9GKM43jtEhh068Yaj8BPGfqBsESCLgDkp8Gmg=
+NEXTAUTH_SECRET="your_nextauth_secret"
 NEXTAUTH_URL=https://www.pesttrace.com
 
 # App Config
@@ -318,7 +318,7 @@ NEXT_PUBLIC_SITE_URL=https://www.pesttrace.com
 
 ```bash
 # Use the DIRECT connection string (Port 5432) for migrations
-export DATABASE_URL="postgresql://postgres.ozmqpbouelfinhpzcfvs:MissShabbat1962%23@db.ozmqpbouelfinhpzcfvs.supabase.co:5432/postgres?sslmode=require"
+export DATABASE_URL="your_direct_database_url"
 npx prisma migrate deploy
 ```
 ```
