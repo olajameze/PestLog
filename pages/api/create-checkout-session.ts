@@ -23,10 +23,9 @@ function getStripe() {
 type Plan = 'pro' | 'business' | 'enterprise';
 
 const PRICE_IDS: Record<Plan, string> = {
-  // Replace these with your Stripe Dashboard Price IDs.
-  pro: process.env.STRIPE_PRICE_ID_PRO || 'prod_UN1BAV1VreJvdg',
-  business: process.env.STRIPE_PRICE_ID_BUSINESS || 'prod_UN1CxyNG4fYmcb',
-  enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE || 'prod_UN1Dd3wE5xv3ho',
+  pro: process.env.STRIPE_PRICE_ID_PRO || '',
+  business: process.env.STRIPE_PRICE_ID_BUSINESS || '',
+  enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE || '',
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -41,7 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return getStripe();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      return res.status(500).json({ error: message });
+      logger.error(`Stripe initialization failed: ${message}`);
+      return res.status(500).json({ error: 'Payment service configuration error.' });
     }
   })();
   if (!(stripe instanceof Stripe)) return;
@@ -64,9 +64,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const selectedPlan = plan as Plan;
   const priceId = PRICE_IDS[selectedPlan];
-  if (!priceId || (!priceId.startsWith('price_') && !priceId.startsWith('prod_'))) {
+  if (!priceId || !priceId.startsWith('price_')) {
     return res.status(500).json({
-      error: `Stripe price id not configured for ${selectedPlan}. Set STRIPE_PRICE_ID_${selectedPlan.toUpperCase()}.`,
+      error: `Stripe price id not configured for ${selectedPlan}. Ensure it starts with 'price_' in your environment variables.`,
     });
   }
 
@@ -125,10 +125,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       typeof req.headers.origin === 'string' && req.headers.origin.trim().length > 0
         ? req.headers.origin
         : undefined;
-    const origin = appUrl || vercelUrl || requestOrigin || 'https://pest-trek.vercel.app';
+    const origin = appUrl || vercelUrl || requestOrigin || 'http://localhost:3000';
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
+      metadata: {
+        companyId: company.id,
+        plan: selectedPlan,
+      },
       line_items: [
         {
           price: priceId,
@@ -138,6 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       mode: 'subscription',
       subscription_data: {
         metadata: {
+          companyId: company.id,
           plan: selectedPlan,
         },
       },
@@ -149,8 +154,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ url: session.url });
   } catch (error) {
-    const message = error instanceof Error ? `${error.message} ${error.stack}` : String(error);
-    logger.error(`Checkout session failed: ${message}`);
-    res.status(500).json({ error: message || 'Unable to create checkout session.' });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Checkout session failed: ${errorMessage}`);
+    res.status(500).json({ error: 'Unable to create checkout session. Please try again later.' });
   }
 }

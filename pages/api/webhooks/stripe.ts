@@ -66,7 +66,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return message;
     }
   })();
-  if (typeof stripe === 'string') return res.status(500).send(`Webhook Error: ${stripe}`);
+  if (typeof stripe === 'string') {
+    logger.error(`Stripe initialization error in webhook: ${stripe}`);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 
   try {
     const rawBody = await getRawBody(req);
@@ -87,33 +90,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // client_reference_id was set in create-checkout-session.ts as "companyId:plan"
         if (clientReferenceId) {
           const [companyId, plan] = clientReferenceId.split(':');
+          // Ensure plan is one of the valid types, defaulting to 'pro' if not recognized
+          const validPlans = ['free', 'pro', 'business', 'enterprise'] as const;
+          const resolvedPlan = validPlans.find(p => p === plan) ?? 'pro';
+
           await prisma.company.update({
             where: { id: companyId },
             data: {
               stripeCustomerId,
-              plan: plan || 'pro',
+              plan: resolvedPlan,
               subscriptionStatus: 'active',
-              trialEndsAt: null, // User has converted to a paid plan
+              // Force clear trial dates upon successful checkout completion
+              trialEndsAt: null,
             },
           });
           
           // Trigger the upgrade notification email defined in pages/api/subscription.ts
-          await sendSubscriptionUpgradeEmail(companyId, plan || 'pro');
+          await sendSubscriptionUpgradeEmail(companyId, resolvedPlan);
         }
         break;
       }
 
+      case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const stripeCustomerId = subscription.customer as string;
         const status = subscription.status;
         const plan = subscription.metadata.plan;
 
+        const validPlans = ['pro', 'business', 'enterprise'] as const;
+        const resolvedPlan = validPlans.find(p => p === plan);
+
         await prisma.company.update({
           where: { stripeCustomerId },
           data: {
             subscriptionStatus: status,
-            ...(plan && { plan }),
+            ...(resolvedPlan && { plan: resolvedPlan }),
+            // If Stripe says the sub is active, we MUST clear our local trial restriction
+            ...(status === 'active' && { trialEndsAt: null }),
           },
         });
         break;

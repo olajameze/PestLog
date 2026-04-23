@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true },
+    select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true },
   });
 
   let technician = null;
@@ -106,11 +106,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ? checkPlan(companyForPlan.plan, ['pro', 'business', 'enterprise'])
     : companyForPlan.subscriptionStatus === 'active';
 
-  const trialEndsAt = 'trialEndsAt' in companyForPlan ? (companyForPlan as { trialEndsAt?: string | null }).trialEndsAt : null;
-  const trialExpired = trialEndsAt ? new Date(trialEndsAt).getTime() < Date.now() : false;
+  // If they have premium access via a plan string or 'active' status, bypass trial checks entirely
+  if (hasPremiumAccess) {
+    // Access granted
+  } else {
+    const trialEndsAt = companyForPlan.trialEndsAt;
+    const trialExpired = trialEndsAt ? new Date(trialEndsAt).getTime() < Date.now() : true;
 
-  if (!hasPremiumAccess && trialExpired) {
-    return res.status(403).json({ error: 'Upgrade to Pro+ plan required for reports. Trial expired.' });
+    if (trialExpired) {
+      return res.status(403).json({ error: 'Upgrade to Pro+ plan required for reports. Trial expired.' });
+    }
   }
 
   if (req.method !== 'GET') {

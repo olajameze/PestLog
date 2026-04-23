@@ -2,10 +2,23 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { logger } from '../../lib/logger';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
+  
+  if (
+    !key || 
+    key.trim().length === 0 || 
+    !isValidPrefix ||
+    key === 'sk_test_...' || 
+    key.includes('your-secret-key')
+  ) {
+    throw new Error('Stripe Secret Key is missing or using a placeholder value. Please update STRIPE_SECRET_KEY in .env.local with your actual key starting with sk_test_');
+  }
+  return new Stripe(key, { apiVersion: '2024-06-20' });
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -23,6 +36,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (error || !user || !user.email) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Fail fast with a clear message (prevents opaque 500s)
+  const stripe = (() => {
+    try {
+      return getStripe();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error(`Stripe initialization failed: ${message}`);
+      return res.status(500).json({ error: 'Payment service configuration error.' });
+    }
+  })();
+  if (!(stripe instanceof Stripe)) return;
 
   let company = await prisma.company.findUnique({
     where: { email: user.email },
@@ -43,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
     const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined;
-    const returnUrl = `${appUrl || vercelUrl || 'https://pest-trek.vercel.app'}/dashboard`;
+    const returnUrl = `${appUrl || vercelUrl || 'http://localhost:3000'}/dashboard`;
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: company.stripeCustomerId,
       return_url: process.env.STRIPE_PORTAL_RETURN_URL || returnUrl,

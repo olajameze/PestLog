@@ -1,20 +1,19 @@
 # Database Connection Troubleshooting Guide
 
-## Issue
-Production site (www.pesttrace.com) is getting "Can't reach database server" errors:
-- Error code: P1001
-- Database: db.ozmqpbouelfinhpzcfvs.supabase.co (Supabase)
-- Status: Working last night, failed today
+// Issue
+Production site is getting "Can't reach database server" errors:
+// Error: code: P1001
+// Database: db.[PROJECT_ID].supabase.co (Supabase)
+// Status: Working last night, failed today
 
-### Error P3018: Migration History Out of Sync
+''Error P3018: Migration History Out of Sync
 If you see "Table LogbookEntry does not exist" during migration reset, your migration history is corrupted or a base migration is missing.
 
 ## Quick Diagnosis Checklist
 
-### 1. **Verify Environment Variables in Vercel Dashboard**
-```
+//**Verify Environment Variables in Vercel Dashboard**
+
 Go to: Vercel Dashboard → Your Project → Settings → Environment Variables
-```
 
 Check that these variables are set:
 - ✅ `DATABASE_URL` - Should be your Supabase pooler connection string
@@ -23,7 +22,6 @@ Check that these variables are set:
 - ✅ `DIRECT_URL` - **CRITICAL** for migrations. Use the non-pooled connection (Port 5432).
 
 **Important:** The DATABASE_URL must include:
-```
 ?pgbouncer=true&connection_limit=1
 ```
 
@@ -91,15 +89,15 @@ npx prisma db execute --stdin < /dev/null
 4. **Review recent changes** - Any recent Supabase updates or maintenance?
 5. **Check Vercel logs** - For more detailed error information
 
-## Contact Support
+// Contact Support
 If the issue persists:
-- **Supabase Support**: https://app.supabase.com/support
+// Supabase Support: https://app.supabase.com/support
 - **Vercel Support**: https://vercel.com/help
 - Check status pages:
   - https://status.supabase.com
   - https://www.vercel-status.com
 
-## Recent Changes Made
+// Recent Changes Made
 - ✅ Increased connection timeout from 2s to 10s
 - ✅ Added statement timeout of 30s
 - ✅ Adjusted max connections to 2 (optimal for serverless)

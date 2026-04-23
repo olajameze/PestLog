@@ -7,6 +7,7 @@ import type {
 type CompanyPolicy = {
   requirePhotos: boolean;
   requireSignature: boolean;
+  plan?: 'free' | 'pro' | 'business' | 'enterprise';
 };
 
 const ESTIMATED_GBP_PER_VISIT = 135;
@@ -214,7 +215,8 @@ for (const e of entriesInRange) {
 
 const chemicalLog = [...chemicalMap.entries()]
   .sort((a, b) => b[1].volume - a[1].volume)
-  .slice(0, 6)
+  // Higher plans see more chemical history
+  .slice(0, policy.plan === 'enterprise' ? 20 : policy.plan === 'business' ? 12 : 6)
   .map(([chemical, agg], i) => ({
     id: `chem-${i}-${chemical}`,
     chemical,
@@ -256,7 +258,7 @@ if (policy.requirePhotos) {
       urgentAlerts.push({
         id: `photo-${e.id}`,
         title: 'Job missing photos',
-        description: `${e.clientName} (${e.date.toLocaleDateString()}) has no photos attached.`,
+        description: `${e.clientName} has no photos attached. This is required by your current ${policy.plan || 'pro'} plan policy.`,
         severity: 'medium',
       });
     }

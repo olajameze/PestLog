@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 1. Get the company associated with the user
     const company = await prisma.company.findUnique({
       where: { email: user.email },
-      select: { id: true, plan: true }
+      select: { id: true, plan: true, trialEndsAt: true }
     });
 
     if (!company) {

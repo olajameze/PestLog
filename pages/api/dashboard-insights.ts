@@ -17,6 +17,8 @@ async function resolveCompanyForUser(token: string) {
       id: true,
       requirePhotos: true,
       requireSignature: true,
+      plan: true, // Ensure plan is selected for direct company access
+      trialEndsAt: true,
     },
   });
   if (direct) return direct;
@@ -25,10 +27,17 @@ async function resolveCompanyForUser(token: string) {
     where: { email: user.email },
     include: {
       company: {
-        select: { id: true, requirePhotos: true, requireSignature: true },
+        select: {
+          id: true,
+          requirePhotos: true,
+          requireSignature: true,
+          plan: true, // Ensure plan is selected for technician's company
+          trialEndsAt: true,
+        },
       },
     },
   });
+  // Return the company object directly, which now includes the plan
   return technician?.company ?? null;
 }
 
@@ -54,7 +63,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     raw === '7' || raw === '30' || raw === '90' ? raw : '30';
 
   try {
-    const data = await buildDashboardInsights(prisma, company.id, company, range);
+    const validPlans = ['free', 'pro', 'business', 'enterprise'] as const;
+    const resolvedPlan = validPlans.find(p => p === company.plan) ?? 'pro';
+
+    const policy = {
+      requirePhotos: company.requirePhotos ?? false,
+      requireSignature: company.requireSignature ?? false,
+      plan: resolvedPlan,
+    };
+    const data = await buildDashboardInsights(prisma, company.id, policy, range);
     return res.status(200).json(data);
   } catch (error) {
     console.error('dashboard-insights', error);
