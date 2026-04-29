@@ -7,12 +7,16 @@ config({ path: '.env.local' });
 // Force the correct URLs to avoid conflicts with local dev tools
 // CLI operations like 'db pull' and 'db push' require a direct, non-pooled connection (port 5432) 
 // to avoid prepared statement errors from PgBouncer.
-const databaseUrl = process.env.DIRECT_URL || process.env.DATABASE_URL || '';
+const databaseUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.warn("WARNING: Neither DIRECT_URL nor DATABASE_URL is set. Prisma CLI may fail.");
+}
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: databaseUrl,
+    url: databaseUrl ?? "",
   },
   migrations: {
     path: "prisma/migrations",
