@@ -39,6 +39,11 @@ type Certification = {
   signedUrl?: string;
 };
 
+type RoomForm = {
+  name: string;
+  note: string;
+};
+
 function isRenderableImageSrc(value: string): boolean {
   return (
     value.startsWith('http://') ||
@@ -74,11 +79,42 @@ function supabaseImageLoader({ src }: { src: string }): string {
 
 const treatments = [
   'General Pest Control',
-  'Rodent Control',
-  'Termite Treatment',
-  'Mosquito Treatment',
-  'Fumigation',
-  'Inspection',
+  'Emergency Pest Call-out',
+  'Rodent Control - Rats',
+  'Rodent Control - Mice',
+  'Squirrel Control',
+  'Rabbit Control',
+  'Mole Control',
+  'Bed Bug Treatment',
+  'Flea Treatment',
+  'Cockroach Treatment',
+  'Ant Treatment',
+  'Wasp Nest Treatment',
+  'Hornet Nest Treatment',
+  'Fly Control',
+  'Cluster Fly Treatment',
+  'Moth Treatment',
+  'Carpet Beetle Treatment',
+  'Silverfish Treatment',
+  'Stored Product Insect Treatment',
+  'Spider Control',
+  'Woodlice Control',
+  'Termite Inspection/Treatment',
+  'Bird Control - Pigeon Proofing',
+  'Bird Control - Gull Deterrent',
+  'Bird Mite Treatment',
+  'Drain Survey and Treatment',
+  'Drain Fly Treatment',
+  'Fogging Treatment',
+  'ULV Treatment',
+  'Heat Treatment',
+  'Fumigation Service',
+  'Sanitisation/Disinfection',
+  'Proofing/Exclusion Work',
+  'Follow-up Inspection',
+  'Monitoring Visit',
+  'Bait Station Service',
+  'Audit/Compliance Inspection',
 ];
 
 export default function TechnicianPage() {
@@ -94,7 +130,7 @@ export default function TechnicianPage() {
   const [address, setAddress] = useState('');
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
-  const [rooms, setRooms] = useState('');
+  const [rooms, setRooms] = useState<RoomForm[]>([]);
   const [baitBoxesPlaced, setBaitBoxesPlaced] = useState('');
   const [poisonUsed, setPoisonUsed] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
@@ -108,6 +144,22 @@ export default function TechnicianPage() {
   const [certUploading, setCertUploading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawing = useRef(false);
+
+  const addRoom = () => {
+    setRooms((prev) => [...prev, { name: '', note: '' }]);
+  };
+
+  const updateRoom = (index: number, field: keyof RoomForm, value: string) => {
+    setRooms((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [field]: value };
+      return next;
+    });
+  };
+
+  const removeRoom = (index: number) => {
+    setRooms((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -382,7 +434,9 @@ export default function TechnicianPage() {
           address,
           treatment,
           notes,
-          rooms: rooms.split(',').map((room) => room.trim()).filter((room) => room.length > 0),
+          rooms: rooms
+            .map((room) => room.name.trim())
+            .filter((room) => room.length > 0),
           baitBoxesPlaced,
           poisonUsed,
           followUpDate: followUpDate || undefined,
@@ -397,7 +451,7 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
-      setRooms('');
+      setRooms([]);
       setBaitBoxesPlaced('');
       setPoisonUsed('');
       setFollowUpDate('');
@@ -427,7 +481,9 @@ export default function TechnicianPage() {
         address,
         treatment,
         notes,
-        rooms: rooms.split(',').map((room) => room.trim()).filter((room) => room.length > 0),
+        rooms: rooms
+          .map((room) => room.name.trim())
+          .filter((room) => room.length > 0),
         baitBoxesPlaced,
         poisonUsed,
         followUpDate: followUpDate || undefined,
@@ -445,7 +501,7 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
-      setRooms('');
+      setRooms([]);
       setBaitBoxesPlaced('');
       setPoisonUsed('');
       setFollowUpDate('');
@@ -678,18 +734,52 @@ export default function TechnicianPage() {
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Rooms and Follow-up */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="form-group">
-                <label htmlFor="technician-entry-rooms" className="form-label">Rooms (comma separated)</label>
-                <input
-                  id="technician-entry-rooms"
-                  type="text"
-                  value={rooms}
-                  onChange={(e) => setRooms(e.target.value)}
-                  placeholder="Kitchen, Loft, Utility room"
-                  className="form-input"
-                />
+                <div className="flex items-center justify-between mb-2">
+                  <label className="form-label mb-0">Rooms Worked In</label>
+                  <button
+                    type="button"
+                    onClick={addRoom}
+                    className="text-sm font-medium text-primary-700 hover:text-primary-800"
+                  >
+                    + Add room
+                  </button>
+                </div>
+                {rooms.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500">
+                    No rooms added yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {rooms.map((room, index) => (
+                      <div key={`${index}-${room.name}`} className="rounded-lg border border-gray-200 p-3">
+                        <input
+                          type="text"
+                          value={room.name}
+                          onChange={(e) => updateRoom(index, 'name', e.target.value)}
+                          placeholder="Room name (e.g. Kitchen)"
+                          className="form-input mb-2"
+                        />
+                        <input
+                          type="text"
+                          value={room.note}
+                          onChange={(e) => updateRoom(index, 'note', e.target.value)}
+                          placeholder="Optional room note"
+                          className="form-input"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeRoom(index)}
+                          className="mt-2 text-xs font-medium text-red-600 hover:text-red-700"
+                        >
+                          Remove room
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="form-group">
                 <label htmlFor="technician-entry-followup" className="form-label">Follow-up Date (optional)</label>
