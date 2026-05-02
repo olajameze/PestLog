@@ -15,6 +15,8 @@ export default function SignIn() {
   const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
   const { showToast } = useToast();
+  const role = typeof router.query.role === 'string' ? router.query.role : 'admin';
+  const isTechnicianFlow = role === 'technician';
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,10 +48,7 @@ export default function SignIn() {
         setLoading(false);
         return;
       }
-      const technicianRes = await fetch('/api/technician-profile', {
-        headers: { Authorization: `Bearer ${data.session.access_token}` },
-      });
-      if (technicianRes.ok) {
+      if (isTechnicianFlow) {
         setSuccessMessage('Signed in successfully. Redirecting to technician workspace...');
         showToast('Signed in', 'Redirecting to technician workspace', 'success');
         router.push('/technician');
@@ -63,7 +62,14 @@ export default function SignIn() {
   };
 
   return (
-    <AuthLayout title="Welcome back to Pest Trace" subtitle="Sign in to access your compliance dashboard">
+    <AuthLayout
+      title={isTechnicianFlow ? 'Technician sign in' : 'Admin sign in'}
+      subtitle={
+        isTechnicianFlow
+          ? 'Sign in to access technician logbook and reports.'
+          : 'Sign in to access your compliance dashboard.'
+      }
+    >
       <form className={`space-y-6 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignIn}>
         <FormInput
           label="Email Address"
@@ -104,15 +110,29 @@ export default function SignIn() {
         </div>
         <div className="text-center text-sm text-zinc-600">
           Don&apos;t have an account?{' '}
-          <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">
+          <Link
+            href={isTechnicianFlow ? '/auth/signup?role=technician' : '/auth/signup'}
+            className="font-semibold text-primary-600 hover:text-primary-700"
+          >
             Create account
           </Link>
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-sm text-amber-900">
-          Technician access: use the exact email your admin added in the Technicians tab.{' '}
-          <Link href="/auth/signup?role=technician" className="font-semibold text-primary-700 hover:text-primary-800">
-            Sign up as Technician
-          </Link>
+          {isTechnicianFlow ? (
+            <>
+              Technician access: use the exact email your admin added in the Technicians tab.{' '}
+              <Link href="/auth/signin?role=admin" className="font-semibold text-primary-700 hover:text-primary-800">
+                Admin sign in
+              </Link>
+            </>
+          ) : (
+            <>
+              Need technician access?{' '}
+              <Link href="/auth/signin?role=technician" className="font-semibold text-primary-700 hover:text-primary-800">
+                Technician sign in
+              </Link>
+            </>
+          )}
         </div>
       </form>
     </AuthLayout>

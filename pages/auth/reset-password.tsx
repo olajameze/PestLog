@@ -1,49 +1,54 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import Button from '../../components/ui/Button';
 import FormInput from '../../components/ui/FormInput';
 import { useToast } from '../../components/ui/ToastProvider';
 
-function getQueryStringValue(query: URLSearchParams, key: string) {
-  return query.get(key) ?? undefined;
-}
-
 export default function ResetPassword() {
   const { showToast } = useToast();
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const recoveryParams = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    return new URLSearchParams(window.location.search);
-  }, []);
-
-  const { validRecoveryLink, invalidLinkMessage } = useMemo(() => {
-    if (!recoveryParams) {
-      return { validRecoveryLink: false, invalidLinkMessage: '' };
+  const recoveryValidation = useMemo(() => {
+    if (!router.isReady) {
+      return {
+        checked: false,
+        validRecoveryLink: true,
+        invalidLinkMessage: '',
+      };
     }
-    const type = getQueryStringValue(recoveryParams, 'type');
-    const accessToken = getQueryStringValue(recoveryParams, 'access_token');
+
+    const type = typeof router.query.type === 'string' ? router.query.type : undefined;
+    const accessToken = typeof router.query.access_token === 'string' ? router.query.access_token : undefined;
+
     if (type !== 'recovery' || !accessToken) {
       return {
+        checked: true,
         validRecoveryLink: false,
         invalidLinkMessage: 'This reset link is invalid or incomplete. Please request a new one.',
       };
     }
-    return { validRecoveryLink: true, invalidLinkMessage: '' };
-  }, [recoveryParams]);
+
+    return {
+      checked: true,
+      validRecoveryLink: true,
+      invalidLinkMessage: '',
+    };
+  }, [router.isReady, router.query.type, router.query.access_token]);
 
   const handleReset = async (event: React.FormEvent) => {
     event.preventDefault();
     setErrorMessage('');
     setSuccessMessage('');
 
-    if (!validRecoveryLink) {
+    if (!recoveryValidation.validRecoveryLink) {
       setErrorMessage('Invalid or expired password recovery link.');
       return;
     }
@@ -75,11 +80,11 @@ export default function ResetPassword() {
     setLoading(false);
   };
 
-  if (invalidLinkMessage) {
+  if (recoveryValidation.checked && recoveryValidation.invalidLinkMessage) {
     return (
       <AuthLayout title="Invalid reset link" subtitle="Please request a new recovery email to reset your password.">
         <div className="space-y-6 page-fade-in">
-          <div className="form-feedback form-feedback-error">{invalidLinkMessage}</div>
+          <div className="form-feedback form-feedback-error">{recoveryValidation.invalidLinkMessage}</div>
           <div className="text-sm text-zinc-600">
             <Link href="/auth/forgot-password" className="font-semibold text-primary-600 hover:text-primary-700">
               Request a new recovery link

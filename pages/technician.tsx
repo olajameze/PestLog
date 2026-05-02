@@ -341,30 +341,30 @@ export default function TechnicianPage() {
 
     if (!profile) return;
     setPhotoUploading(true);
-    const uploadedPaths: string[] = [];
+    const uploadResults = await Promise.all(
+      selectedFiles.map(async (file, index) => {
+        const sanitizedFileName = file.name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-._]/g, '');
+        const filePath = `${profile.companyId}/${profile.id}/${Date.now()}-${index}-${sanitizedFileName}`;
+        const { error: uploadError } = await supabase.storage
+          .from('logbook-photos')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            contentType: file.type,
+            upsert: false,
+          });
+        return { filePath, uploadError };
+      }),
+    );
 
-    for (const file of selectedFiles) {
-      const sanitizedFileName = file.name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-._]/g, '');
-      const filePath = `${profile.companyId}/${profile.id}/${Date.now()}-${sanitizedFileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('logbook-photos')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          contentType: file.type,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        showToast('Photo upload failed', uploadError.message, 'error');
-        console.error('Photo upload failed:', uploadError);
-        setPhotoUploading(false);
-        return;
-      }
-
-      uploadedPaths.push(filePath);
+    const failedUpload = uploadResults.find((result) => result.uploadError);
+    if (failedUpload?.uploadError) {
+      showToast('Photo upload failed', failedUpload.uploadError.message, 'error');
+      console.error('Photo upload failed:', failedUpload.uploadError);
+      setPhotoUploading(false);
+      return;
     }
 
-    setPhotoUrls(uploadedPaths);
+    setPhotoUrls(uploadResults.map((result) => result.filePath));
     setPhotoUploading(false);
   };
 

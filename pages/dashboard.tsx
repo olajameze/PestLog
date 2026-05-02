@@ -458,19 +458,22 @@ export default function Dashboard() {
         setCompany(companyData);
       }
       if (companyData) {
-        const techRes = await fetch('/api/technicians', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        const techData = await techRes.json();
+        const [techRes, subRes] = await Promise.all([
+          fetch('/api/technicians', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+          fetch('/api/subscription', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }),
+        ]);
+
+        const techData = await techRes.json().catch(() => []);
         setTechnicians(Array.isArray(techData) ? techData : []);
         if (!techRes.ok) {
           setAppError(techData?.error || 'Unable to load technicians.');
           showToast('Load failed', techData?.error || 'Unable to load technicians.', 'error');
         }
 
-        const subRes = await fetch('/api/subscription', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
         if (subRes.ok) {
           const subData = await subRes.json();
           setSubscription(subData);
@@ -1123,10 +1126,10 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
 }
 
 function LogbookTab({ companyId, technicians }: { companyId: string; technicians: Technician[] }) {
-  return <LogbookEntries companyId={companyId} technicians={technicians} />;
+  return <LogbookEntries companyId={companyId} technicians={technicians} allowCreate={false} />;
 }
 
-function LogbookEntries({ companyId, technicians }: { companyId: string; technicians: Technician[] }) {
+function LogbookEntries({ companyId, technicians, allowCreate }: { companyId: string; technicians: Technician[]; allowCreate: boolean }) {
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [filteredEntries, setFilteredEntries] = useState<LogbookEntry[]>([]);
   const [search, setSearch] = useState('');
@@ -1261,22 +1264,30 @@ function LogbookEntries({ companyId, technicians }: { companyId: string; technic
         />
         <Button onClick={exportToPDF} variant="secondary" size="lg">📥 Export PDF</Button>
       </div>
-      <Card>
-        <AddLogbookEntryForm
-          companyId={companyId}
-          technicians={technicians}
-          onAdd={(entry) => {
-            setEntries((prevEntries) => [entry, ...prevEntries]);
-            setFilteredEntries((prevFiltered) => {
-              if (!search.trim()) return [entry, ...prevFiltered];
-              const lowerSearch = search.toLowerCase();
-              return entry.clientName.toLowerCase().includes(lowerSearch) || entry.address.toLowerCase().includes(lowerSearch)
-                ? [entry, ...prevFiltered]
-                : prevFiltered;
-            });
-          }}
-        />
-      </Card>
+      {allowCreate ? (
+        <Card>
+          <AddLogbookEntryForm
+            companyId={companyId}
+            technicians={technicians}
+            onAdd={(entry) => {
+              setEntries((prevEntries) => [entry, ...prevEntries]);
+              setFilteredEntries((prevFiltered) => {
+                if (!search.trim()) return [entry, ...prevFiltered];
+                const lowerSearch = search.toLowerCase();
+                return entry.clientName.toLowerCase().includes(lowerSearch) || entry.address.toLowerCase().includes(lowerSearch)
+                  ? [entry, ...prevFiltered]
+                  : prevFiltered;
+              });
+            }}
+          />
+        </Card>
+      ) : (
+        <Card className="border-blue-200 bg-blue-50">
+          <div className="p-4 text-sm text-blue-900">
+            Admin accounts can review/export logbook records here. New log entries are created from technician accounts in the technician workspace.
+          </div>
+        </Card>
+      )}
       {entries.length === 0 ? (
         <Card className="text-center py-12">
           <p className="text-zinc-600 text-lg">No logbook entries yet.</p>
@@ -1520,21 +1531,25 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
     }
 
     if (canUploadPhotos && photoFiles.length > 0) {
-      for (let i = 0; i < photoFiles.length; i++) {
-        const file = photoFiles[i]!;
-        const safeName = file.name.replace(/[^\w.\-]+/g, '_') || 'photo.jpg';
-        const filePath = `private/${companyId}/${technicianId}/${Date.now()}-${i}-${safeName}`;
-        const { error } = await supabase.storage
-          .from('logbook-photos')
-          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+      const uploadResults = await Promise.all(
+        photoFiles.map(async (file, i) => {
+          const safeName = file.name.replace(/[^\w.\-]+/g, '_') || 'photo.jpg';
+          const filePath = `private/${companyId}/${technicianId}/${Date.now()}-${i}-${safeName}`;
+          const { error } = await supabase.storage
+            .from('logbook-photos')
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+          return { filePath, error };
+        }),
+      );
 
-        if (error) {
-          showToast('Photo upload failed', error.message, 'error');
-          setLoading(false);
-          return;
-        }
-        uploadedPhotoPaths.push(filePath);
+      const failedUpload = uploadResults.find((result) => result.error);
+      if (failedUpload?.error) {
+        showToast('Photo upload failed', failedUpload.error.message, 'error');
+        setLoading(false);
+        return;
       }
+
+      uploadedPhotoPaths.push(...uploadResults.map((result) => result.filePath));
     }
     
     const roomsPayload = rooms

@@ -18,7 +18,8 @@ export default function SignUp() {
   const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
   const { showToast } = useToast();
-  const isTechnicianSignup = router.query.role === 'technician';
+  const role = typeof router.query.role === 'string' ? router.query.role : 'admin';
+  const isTechnicianSignup = role === 'technician';
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +34,11 @@ export default function SignUp() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: isTechnicianSignup
+          ? `${window.location.origin}/technician`
+          : `${window.location.origin}/dashboard`,
         data: {
-          businessName,
+          businessName: isTechnicianSignup ? '' : businessName,
           fullName,
         },
       },
@@ -149,7 +152,7 @@ export default function SignUp() {
       ) : (
         <p className="mt-2 text-center text-sm text-zinc-600">
           Creating an owner/admin account?{' '}
-          <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">
+          <Link href="/auth/signup?role=admin" className="font-semibold text-primary-600 hover:text-primary-700">
             Switch to Business Sign-up
           </Link>
         </p>

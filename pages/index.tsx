@@ -131,9 +131,14 @@ export default function Home() {
           <a href="#features" className="hover:text-slate-900 transition">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
         </div>
-        <Link href="/auth/signin" className="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-semibold hover:bg-slate-800 transition shadow-sm">
-          Log in
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/auth/signin?role=admin" className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition shadow-sm">
+            Admin Login
+          </Link>
+          <Link href="/auth/signin?role=technician" className="bg-slate-100 text-slate-900 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-200 transition">
+            Technician Login
+          </Link>
+        </div>
       </nav>
 
       {/* Hero Section */}
@@ -153,6 +158,19 @@ export default function Home() {
             <button className="bg-slate-50 text-slate-900 px-10 py-5 rounded-2xl font-bold text-xl hover:bg-slate-100 transition">
               See How It Works
             </button>
+          </div>
+          <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
+            <Link href="/auth/signin?role=admin" className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
+              Continue as Admin
+            </Link>
+            <Link href="/auth/signin?role=technician" className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition">
+              Continue as Technician
+            </Link>
+          </div>
+          <div className="mt-4 max-w-3xl mx-auto rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <span className="font-semibold text-slate-800">Admin</span> accounts manage team members, billing, plans, and reports.
+            {' '}
+            <span className="font-semibold text-slate-800">Technician</span> accounts are for field work: logging jobs, uploading certificates, and viewing assigned reports.
           </div>
           <div className="mt-8 text-sm text-slate-400 font-medium flex justify-center gap-6">
             {trustMicrocopy.map(item => <span key={item} className="flex items-center gap-1.5"><span className="text-emerald-500">✓</span> {item}</span>)}
