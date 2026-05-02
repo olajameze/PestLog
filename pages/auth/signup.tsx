@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/router';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import FormInput from '../../components/ui/FormInput';
+import PasswordField from '../../components/ui/PasswordField';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 
@@ -20,6 +21,9 @@ export default function SignUp() {
   const { showToast } = useToast();
   const role = typeof router.query.role === 'string' ? router.query.role : 'admin';
   const isTechnicianSignup = role === 'technician';
+  const prefilledInviteEmail =
+    typeof router.query.email === 'string' ? decodeURIComponent(router.query.email) : '';
+  const resolvedEmail = isTechnicianSignup && prefilledInviteEmail ? prefilledInviteEmail : email;
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +35,7 @@ export default function SignUp() {
     }
     setLoading(true);
     const { error } = await supabase.auth.signUp({
-      email,
+      email: resolvedEmail,
       password,
       options: {
         emailRedirectTo: isTechnicianSignup
@@ -56,12 +60,12 @@ export default function SignUp() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email, fullName, businessName }),
+          body: JSON.stringify({ email: resolvedEmail, fullName, businessName }),
         });
       } catch (sendError) {
         console.error('Welcome email failed', sendError);
       }
-      router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
+      router.push(`/auth/verify?email=${encodeURIComponent(resolvedEmail)}`);
     }
     setLoading(false);
   };
@@ -78,6 +82,11 @@ export default function SignUp() {
       {isTechnicianSignup ? (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           Technician sign-up: your account email must match an existing technician record from your admin dashboard.
+        </div>
+      ) : null}
+      {isTechnicianSignup && prefilledInviteEmail ? (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          Invite detected. Your technician email is pre-filled below. Set a password to activate your account.
         </div>
       ) : null}
       <form className={`space-y-4 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignUp}>
@@ -103,24 +112,23 @@ export default function SignUp() {
           label="Email Address"
           id="email"
           type="email"
-          value={email}
+          value={resolvedEmail}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@company.com"
+          readOnly={isTechnicianSignup && Boolean(prefilledInviteEmail)}
           required
         />
-        <FormInput
+        <PasswordField
           label="Password"
           id="password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="At least 8 characters"
           required
         />
-        <FormInput
+        <PasswordField
           label="Confirm Password"
           id="confirm-password"
-          type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Re-enter your password"

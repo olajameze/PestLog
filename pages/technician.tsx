@@ -616,6 +616,9 @@ export default function TechnicianPage() {
     return <div className="min-h-screen flex items-center justify-center bg-offwhite">Access denied.</div>;
   }
 
+  const followUpCount = entries.filter((entry) => Boolean(entry.followUpDate)).length;
+  const photoCoverageCount = entries.filter((entry) => parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0).length;
+
   return (
     <div className="min-h-screen bg-offwhite">
       <div className="flex min-w-0">
@@ -641,12 +644,29 @@ export default function TechnicianPage() {
             <p className="text-sm text-gray-600">Signed in as {profile.name} ({profile.email})</p>
             <p className="text-sm text-gray-500">Company: {profile.companyName}</p>
           </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Logged Jobs</p>
+              <p className="mt-1 text-base font-semibold text-emerald-900">{entries.length}</p>
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-700">Follow-ups</p>
+              <p className="mt-1 text-base font-semibold text-amber-900">{followUpCount}</p>
+            </div>
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-blue-700">Jobs With Photos</p>
+              <p className="mt-1 text-base font-semibold text-blue-900">{photoCoverageCount}</p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-3">Add New Entry</h2>
             <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full"></div>
+          </div>
+          <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            Quick guide: fill required fields, add optional rooms/photos/signature, then save. If you are offline, entries are queued and synced automatically once online.
           </div>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Date and Client Name Row */}

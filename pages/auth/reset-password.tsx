@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import Button from '../../components/ui/Button';
-import FormInput from '../../components/ui/FormInput';
+import PasswordField from '../../components/ui/PasswordField';
 import { useToast } from '../../components/ui/ToastProvider';
 
 export default function ResetPassword() {
@@ -98,19 +98,17 @@ export default function ResetPassword() {
   return (
     <AuthLayout title="Reset your password" subtitle="Create a new secure password to regain access.">
       <form onSubmit={handleReset} className="space-y-6 page-fade-in">
-        <FormInput
+        <PasswordField
           label="New password"
           id="reset-password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="New secure password"
           required
         />
-        <FormInput
+        <PasswordField
           label="Confirm password"
           id="reset-password-confirm"
-          type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Confirm new password"

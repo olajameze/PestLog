@@ -267,6 +267,7 @@ export default function Dashboard() {
   const [certFile, setCertFile] = useState<{ file: File; dataUrl: string; contentType: string } | null>(null);
   const [certExpiry, setCertExpiry] = useState('');
   const [certLoading, setCertLoading] = useState(false);
+  const [inviteStatusByTechnician, setInviteStatusByTechnician] = useState<Record<string, string>>({});
   const router = useRouter();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
@@ -735,6 +736,40 @@ export default function Dashboard() {
       const newTech = await res.json();
       setTechnicians([...technicians, newTech]);
       showToast('Technician added', `${newTech.name} was added.`, 'success');
+      try {
+        const inviteRes = await fetch('/api/technicians/invite', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ technicianId: newTech.id }),
+        });
+        if (inviteRes.ok) {
+          setInviteStatusByTechnician((prev) => ({
+            ...prev,
+            [newTech.id]: new Date().toISOString(),
+          }));
+          showToast(
+            'Invite sent',
+            `Setup email sent to ${newTech.email}. They can set a password and sign in as technician.`,
+            'success',
+          );
+        } else {
+          const inviteErr = await inviteRes.json().catch(() => ({ error: 'Invite not sent' }));
+          showToast(
+            'Technician added',
+            `${newTech.name} was added. Invite email was not sent: ${inviteErr.error || 'Unknown error'}.`,
+            'info',
+          );
+        }
+      } catch {
+        showToast(
+          'Technician added',
+          `${newTech.name} was added. Invite email could not be sent right now.`,
+          'info',
+        );
+      }
       return true;
     } else {
       const err = await res.json();
@@ -764,6 +799,41 @@ export default function Dashboard() {
       setTechnicians(technicians.filter(t => t.id !== technicianId));
       showToast('Technician removed', 'The technician was removed.', 'success');
     }
+  };
+
+  const handleInviteTechnician = async (technicianId: string) => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Invite sending is disabled in preview mode.', 'info');
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+    const res = await fetch('/api/technicians/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ technicianId }),
+    });
+    if (res.ok) {
+      const tech = technicians.find((item) => item.id === technicianId);
+      setInviteStatusByTechnician((prev) => ({
+        ...prev,
+        [technicianId]: new Date().toISOString(),
+      }));
+      showToast(
+        'Invite sent',
+        `Invite email sent${tech?.email ? ` to ${tech.email}` : ''}.`,
+        'success',
+      );
+      return;
+    }
+    const err = await res.json().catch(() => ({ error: 'Invite failed' }));
+    showToast('Invite failed', err.error || 'Unable to send technician invite.', 'error');
   };
 
 if (!user) return (
@@ -805,6 +875,20 @@ if (!user) return (
                     ? 'Record pest control treatments and maintain compliance records'
                     : 'Manage account and billing preferences'}
                 </p>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Plan</p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-900">{(company.plan || 'trial').toUpperCase()}</p>
+                  </div>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-blue-700">Team Size</p>
+                    <p className="mt-1 text-sm font-semibold text-blue-900">{technicians.length} technicians</p>
+                  </div>
+                  <div className="rounded-xl border border-purple-100 bg-purple-50 px-4 py-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-purple-700">Subscription</p>
+                    <p className="mt-1 text-sm font-semibold text-purple-900">{subscription?.status || company.subscriptionStatus || 'trial'}</p>
+                  </div>
+                </div>
               </div>
               {trialBanner ? (
                 <Card className="mb-6 border-blue-200 bg-blue-50">
@@ -827,6 +911,8 @@ if (!user) return (
                   technicians={technicians} 
                   onAddTechnician={handleAddTechnician} 
                   onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
+                  onInviteTechnician={handleInviteTechnician}
+                  inviteStatusByTechnician={inviteStatusByTechnician}
                   isPro={isPro}
                   setSelectedTechId={setSelectedTechId}
                   setShowCertModal={setShowCertModal}
@@ -1070,10 +1156,12 @@ interface Certification {
   uploadedAt: string;
 }
 
-function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
+function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onInviteTechnician, inviteStatusByTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
   technicians: Technician[];
   onAddTechnician: (name: string, email: string) => Promise<boolean>;
   onRemoveTechnician: (id: string) => void;
+  onInviteTechnician: (id: string) => Promise<void>;
+  inviteStatusByTechnician: Record<string, string>;
   isPro: boolean;
   setSelectedTechId: (id: string) => void;
   setShowCertModal: (open: boolean) => void;
@@ -1101,6 +1189,10 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
           <h2 className="text-3xl font-bold text-navy mb-2">Add New Technician</h2>
           <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full"></div>
         </div>
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Workflow: add technician, then click <span className="font-semibold text-slate-800">Send Invite</span>.
+          They receive a setup link, create their password, and sign in via technician login.
+        </div>
         <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-12">
           <div className="sm:col-span-5">
             <FormInput label="Full Name" id="tech-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Full Name" required />
@@ -1125,6 +1217,13 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
               <div>
                 <h3 className="text-2xl font-semibold text-navy">{tech.name}</h3>
                 <p className="text-zinc-600">{tech.email}</p>
+                {inviteStatusByTechnician[tech.id] ? (
+                  <p className="mt-1 text-xs text-emerald-700">
+                    Invite last sent {new Date(inviteStatusByTechnician[tech.id]).toLocaleString()}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-zinc-500">No invite sent yet</p>
+                )}
               </div>
               <div className="flex gap-2">
                 <Button 
@@ -1140,6 +1239,9 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
                   {isPro ? 'Manage Certification' : 'Pro Required'}
                 </Button>
                 <Button variant="danger" size="sm" onClick={() => onRemoveTechnician(tech.id)}>Remove</Button>
+                <Button variant="secondary" size="sm" onClick={() => void onInviteTechnician(tech.id)}>
+                  {inviteStatusByTechnician[tech.id] ? 'Resend Invite' : 'Send Invite'}
+                </Button>
               </div>
             </Card>
           ))}

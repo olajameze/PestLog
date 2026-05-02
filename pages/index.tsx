@@ -173,6 +173,12 @@ export default function Home() {
             {' '}
             <span className="font-semibold text-slate-800">Technician</span> accounts are for field work: logging jobs, uploading certificates, and viewing assigned reports.
           </div>
+          <div className="mt-4 max-w-3xl mx-auto rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm text-emerald-900">
+            <p className="font-semibold">How sign-up works</p>
+            <p className="mt-1">1) Business owners sign up normally and add technicians in dashboard.</p>
+            <p>2) Technicians receive an invite email and set their own password.</p>
+            <p>3) Technicians then sign in via Technician Login to access only their technician workspace.</p>
+          </div>
           <div className="mt-8 text-sm text-slate-400 font-medium flex justify-center gap-6">
             {trustMicrocopy.map(item => <span key={item} className="flex items-center gap-1.5"><span className="text-emerald-500">✓</span> {item}</span>)}
           </div>

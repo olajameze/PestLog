@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import FormInput from '../../components/ui/FormInput';
+import PasswordField from '../../components/ui/PasswordField';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 
@@ -80,10 +81,9 @@ export default function SuperAdminSignInPage() {
           required
           placeholder="super-admin@yourdomain.com"
         />
-        <FormInput
+        <PasswordField
           label="Password"
           id="super-admin-password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required

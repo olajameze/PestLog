@@ -179,6 +179,56 @@ The Pest Trace team`;
   });
 }
 
+export async function sendTechnicianInviteEmail(params: {
+  email: string;
+  technicianName?: string;
+  companyName?: string;
+}) {
+  const inviteLink = `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(params.email)}`;
+  const signinLink = `${appUrl}/auth/signin?role=technician`;
+  const safeName = params.technicianName ? escapeHtml(params.technicianName) : 'there';
+  const safeCompany = params.companyName ? escapeHtml(params.companyName) : 'your team';
+
+  const inner = `
+    <p>Hi ${safeName},</p>
+    <p>You were invited to join <strong>${safeCompany}</strong> on Pest Trace as a technician.</p>
+    <p>Use the button below to create your technician password and activate your account.</p>
+    <p style="text-align:center;">
+      <a href="${inviteLink}" style="background-color:#10b981;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;display:inline-block;">
+        Set up technician account
+      </a>
+    </p>
+    <p>After setup, sign in any time at <a href="${signinLink}">${signinLink}</a>.</p>
+    <p>If your account already exists, use “Forgot password” on the technician sign-in page.</p>
+    <p>Need help? Contact <a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>.</p>
+    <p>Thanks,<br />The Pest Trace team</p>
+  `;
+
+  const text = `Hi ${params.technicianName ?? 'there'},
+
+You were invited to join ${params.companyName ?? 'your team'} on Pest Trace as a technician.
+
+Set up your technician account:
+${inviteLink}
+
+After setup, sign in at:
+${signinLink}
+
+If your account already exists, use "Forgot password" on technician sign-in.
+
+Need help? Contact ${supportEmail}.
+
+Thanks,
+The Pest Trace team`;
+
+  await sendMail({
+    to: [params.email],
+    subject: 'You are invited to Pest Trace as a technician',
+    html: brandEmailHtml('Technician invite', inner),
+    text,
+  });
+}
+
 export async function sendVerificationEmail(email: string, token: string, userName?: string) {
   const verificationUrl = `${appUrl}/auth/verify?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
   const greeting = userName ? escapeHtml(userName) : 'there';

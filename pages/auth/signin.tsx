@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import Button from '../../components/ui/Button';
 import FormInput from '../../components/ui/FormInput';
+import PasswordField from '../../components/ui/PasswordField';
 import { useToast } from '../../components/ui/ToastProvider';
 
 export default function SignIn() {
@@ -80,10 +81,9 @@ export default function SignIn() {
           placeholder="you@company.com"
           required
         />
-        <FormInput
+        <PasswordField
           label="Password"
           id="password"
-          type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
