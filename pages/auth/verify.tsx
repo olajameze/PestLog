@@ -81,7 +81,7 @@ export default function VerifyPage() {
             <Button type="button" onClick={handleResend} disabled={loading || !email.trim()}>
               {loading ? 'Sending...' : 'Resend verification email'}
             </Button>
-            <Link href="/auth/signin" className="inline-flex items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50">
+            <Link href="/auth/signin" className="inline-flex w-full items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 py-3 text-center text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 sm:w-auto">
               Back to sign in
             </Link>
           </div>

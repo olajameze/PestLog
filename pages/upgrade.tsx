@@ -159,7 +159,7 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="mx-auto max-w-3xl min-w-0 space-y-6">
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8 text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-3">Upgrade to Pest Trace</h1>
@@ -172,7 +172,7 @@ export default function UpgradePage() {
           {company && (
             <div className="rounded-xl border border-gray-100 bg-white p-4 sm:p-6 hover-lift">
               <p className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Company</p>
-              <p className="mt-2 text-lg sm:text-xl font-semibold text-navy">{company.name || company.email}</p>
+              <p className="mt-2 break-words text-lg font-semibold text-navy sm:text-xl">{company.name || company.email}</p>
             </div>
           )}
 
@@ -184,14 +184,14 @@ export default function UpgradePage() {
                 Status: <span className="font-bold text-navy">{subscription?.status || 'None'}</span>
               </p>
               {trialEndsDate && trialDaysLeft > 0 && (
-                <p className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600">
                   ✓ Access ends in <strong>{trialDaysLeft}</strong> day{trialDaysLeft === 1 ? '' : 's'} <span className="text-gray-500">({trialEndsDate.toLocaleDateString()})</span>
                   {trialDaysLeft <= 2 && (
                     <p className="mt-1 text-sm font-semibold text-orange-600">
                       ⏰ Access ending soon! Upgrade now to retain full Pest Trace access.
                     </p>
                   )}
-                </p>
+                </div>
               )}
               {subscription?.status !== 'active' && trialEndsDate && trialDaysLeft <= 0 && (
                 <p className="text-sm font-semibold text-red-600">
@@ -243,7 +243,7 @@ export default function UpgradePage() {
           <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm ring-1 ring-amber-100">
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£340.00 GBP</p>
-            <p className="mt-1 text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
+            <p className="mt-1 break-words text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
               <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
               <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
@@ -261,17 +261,17 @@ export default function UpgradePage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
           {subscription?.status === 'active' ? (
-            <button onClick={handleManageSubscription} disabled={actionLoading} className="btn btn-success hover:shadow-md hover-lift">
+            <button onClick={handleManageSubscription} disabled={actionLoading} className="btn btn-success w-full sm:w-auto hover:shadow-md hover-lift">
               {actionLoading ? 'Opening portal...' : 'Manage Subscription'}
             </button>
           ) : null}
-          <button className="btn btn-secondary hover:shadow-md hover-lift" onClick={() => router.push('/dashboard')}>
+          <button className="btn btn-secondary w-full sm:w-auto hover:shadow-md hover-lift" onClick={() => router.push('/dashboard')}>
             Back to Dashboard
           </button>
           <button 
-            className="btn btn-danger hover:shadow-md hover-lift" 
+            className="btn btn-danger w-full sm:w-auto hover:shadow-md hover-lift" 
             onClick={async () => {
               if (!confirm('⚠️ PERMANENT account deletion!\\n\\nCancels subscription, deletes ALL data (jobs, photos, techs, certs, reports). Cannot be undone.\\n\\nAre you 100% sure?')) return;
               if (!confirm('FINAL WARNING: All data LOST FOREVER. Type DELETE to continue.')) return;
