@@ -236,6 +236,9 @@ for (const c of certs) {
       title: `Certification expiring: ${c.technicianName}`,
       description: `Expires ${c.expiryDate.toLocaleDateString()}. Renew before work is blocked on audits.`,
       severity: c.expiryDate.getTime() - now.getTime() < 7 * 86400000 ? 'high' : 'medium',
+      action: {
+        type: 'open_technicians',
+      },
     });
   }
 }
@@ -247,6 +250,11 @@ for (const e of entriesInRange) {
       title: `Follow-up overdue: ${e.clientName}`,
       description: `Follow-up was due ${e.followUpDate.toLocaleDateString()}. Job is still open.`,
       severity: 'high',
+      action: {
+        type: 'open_reports',
+        search: e.clientName,
+        followUpOnly: true,
+      },
     });
   }
 }
@@ -260,6 +268,10 @@ if (policy.requirePhotos) {
         title: 'Job missing photos',
         description: `${e.clientName} has no photos attached. This is required by your current ${policy.plan || 'pro'} plan policy.`,
         severity: 'medium',
+        action: {
+          type: 'open_reports',
+          search: e.clientName,
+        },
       });
     }
   }

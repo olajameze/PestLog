@@ -38,6 +38,7 @@ export default function SignUp() {
           ? `${window.location.origin}/technician`
           : `${window.location.origin}/dashboard`,
         data: {
+          role: isTechnicianSignup ? 'technician' : 'admin',
           businessName: isTechnicianSignup ? '' : businessName,
           fullName,
         },

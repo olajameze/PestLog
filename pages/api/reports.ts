@@ -166,6 +166,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       OR: [
         { clientName: { contains: search, mode: 'insensitive' } },
         { address: { contains: search, mode: 'insensitive' } },
+        { treatment: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+        { poisonUsed: { contains: search, mode: 'insensitive' } },
       ],
     };
     whereClause = {

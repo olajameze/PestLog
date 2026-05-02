@@ -44,6 +44,11 @@ export interface UrgentAlert {
   title: string;
   description: string;
   severity: 'high' | 'medium' | 'low';
+  action?: {
+    type: 'open_reports' | 'open_technicians';
+    search?: string;
+    followUpOnly?: boolean;
+  };
 }
 
 export interface CustomerValue {

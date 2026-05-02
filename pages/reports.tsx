@@ -490,6 +490,22 @@ export default function ReportsPage() {
   const [quickSearchResults, setQuickSearchResults] = useState<SearchHit[]>([]);
   const [jobFilter, setJobFilter] = useState<'all' | 'follow-up'>('all');
 
+  useEffect(() => {
+    if (!router.isReady) return;
+
+    const querySearch = typeof router.query.search === 'string' ? router.query.search : '';
+    const queryStartDate = typeof router.query.startDate === 'string' ? router.query.startDate : '';
+    const queryEndDate = typeof router.query.endDate === 'string' ? router.query.endDate : '';
+    const queryFollowUpOnly =
+      router.query.followUpOnly === '1' ||
+      router.query.followUpOnly === 'true';
+
+    if (querySearch) setSearch(querySearch);
+    if (queryStartDate) setStartDate(queryStartDate);
+    if (queryEndDate) setEndDate(queryEndDate);
+    if (queryFollowUpOnly) setJobFilter('follow-up');
+  }, [router.isReady, router.query.search, router.query.startDate, router.query.endDate, router.query.followUpOnly]);
+
   const visibleEntries = report
     ? report.entries.filter((entry) => (jobFilter === 'follow-up' ? entryNeedsFollowUp(entry) : true))
     : [];

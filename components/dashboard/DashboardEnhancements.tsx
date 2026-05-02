@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useRouter } from 'next/router';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import TodaySchedule from './TodaySchedule';
@@ -11,13 +12,15 @@ import CSATScore from './CSATScore';
 import { useUserPlan } from '../../lib/auth/plan';
 import { useDateRange } from '../../lib/hooks/useDateRange';
 import { useDashboardData } from '../../lib/hooks/useDashboardData';
-import { logger } from '../../lib/logger';
+import { useToast } from '../ui/ToastProvider';
 
 interface DashboardEnhancementsProps {
   plan?: string;
 }
 
 export default function DashboardEnhancements({ plan }: DashboardEnhancementsProps) {
+  const router = useRouter();
+  const { showToast } = useToast();
   const userPlan = useUserPlan(plan);
   const { range, setRange, options } = useDateRange();
   const { data, loading, refresh } = useDashboardData(range);
@@ -30,6 +33,41 @@ export default function DashboardEnhancements({ plan }: DashboardEnhancementsPro
     if (userPlan === 'business') return 'Business customers have CLV tracking and ratio insights.';
     return 'Upgrade to Business to unlock customer analytics and retention reporting.';
   }, [userPlan]);
+
+  const openReports = (query: Record<string, string>) => {
+    router.push({ pathname: '/reports', query });
+  };
+
+  const handleUrgentAlertAction = (alert?: { action?: { type: 'open_reports' | 'open_technicians'; search?: string; followUpOnly?: boolean } }) => {
+    if (!alert?.action) {
+      openReports({});
+      return;
+    }
+
+    if (alert.action.type === 'open_technicians') {
+      router.push('/dashboard?tab=technicians');
+      return;
+    }
+
+    const query: Record<string, string> = {};
+    if (alert.action.search) query.search = alert.action.search;
+    if (alert.action.followUpOnly) query.followUpOnly = '1';
+    openReports(query);
+  };
+
+  const handleScheduleMapClick = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    openReports({ startDate: today, endDate: today });
+  };
+
+  const handleComplianceDrilldown = () => {
+    openReports({ followUpOnly: '1' });
+  };
+
+  const handleChemicalDetails = () => {
+    showToast('Tip', 'Use report search to find jobs by treatment or poison used.', 'info');
+    openReports({});
+  };
 
   return (
     <section aria-labelledby="dashboard-enhancements-heading" className="space-y-6">
@@ -63,13 +101,13 @@ export default function DashboardEnhancements({ plan }: DashboardEnhancementsPro
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <UrgentAlerts alerts={data?.urgentAlerts ?? []} loading={loading} onActionClick={() => logger.info('Urgent alert clicked')} />
-        <TodaySchedule schedule={data?.todaySchedule} loading={loading} onMapClick={() => logger.info('Schedule map clicked')} />
+        <UrgentAlerts alerts={data?.urgentAlerts ?? []} loading={loading} onActionClick={handleUrgentAlertAction} />
+        <TodaySchedule schedule={data?.todaySchedule} loading={loading} onMapClick={handleScheduleMapClick} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <ComplianceMonitor compliance={data?.compliance} loading={loading} onTrendClick={() => logger.info('Compliance trend clicked')} />
-        <ChemicalLog chemicalLog={data?.chemicalLog ?? []} loading={loading} onRowClick={() => logger.info('Chemical log row clicked')} />
+        <ComplianceMonitor compliance={data?.compliance} loading={loading} onTrendClick={handleComplianceDrilldown} />
+        <ChemicalLog chemicalLog={data?.chemicalLog ?? []} loading={loading} onRowClick={handleChemicalDetails} />
       </div>
 
       <details className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm" open>
