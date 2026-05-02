@@ -27,7 +27,7 @@ export default function LandingHeader() {
           href="/auth/signin"
           className="hidden rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-white hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 md:inline-flex"
         >
-          Sign In
+          Business Login
         </Link>
       </div>
       {menuOpen ? (
@@ -37,7 +37,7 @@ export default function LandingHeader() {
             <a href="#pricing" onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-2 transition hover:bg-zinc-100">Pricing</a>
             <a href="#faq" onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-2 transition hover:bg-zinc-100">FAQ</a>
             <Link href="/auth/signin" onClick={() => setMenuOpen(false)} className="rounded-lg bg-primary-500 px-3 py-2 text-center text-white transition hover:bg-primary-600">
-              Sign In
+              Business Login
             </Link>
           </div>
         </div>

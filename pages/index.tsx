@@ -113,7 +113,7 @@ export default function Home() {
       <PWAInstallPrompt />
 
       {/* Navigation */}
-      <nav className="flex items-center justify-between px-6 py-6 max-w-7xl mx-auto">
+      <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
         <Link href="/" className="flex items-center gap-2">
           <Image 
             src="/pest-trace.png" 
@@ -123,7 +123,7 @@ export default function Home() {
             priority
             className="w-10 h-10 object-contain"
           />
-          <span className="text-2xl font-bold tracking-tight text-slate-900">
+          <span className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
             Pest<span className="text-emerald-600">Trace</span>
           </span>
         </Link>
@@ -131,11 +131,11 @@ export default function Home() {
           <a href="#features" className="hover:text-slate-900 transition">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/auth/signin?role=admin" className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition shadow-sm">
-            Admin Login
+        <div className="ml-auto flex w-full items-center justify-end gap-2 sm:w-auto">
+          <Link href="/auth/signin?role=admin" className="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-800 transition shadow-sm">
+            Business Login
           </Link>
-          <Link href="/auth/signin?role=technician" className="bg-slate-100 text-slate-900 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-200 transition">
+          <Link href="/auth/signin?role=technician" className="bg-slate-100 text-slate-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-200 transition">
             Technician Login
           </Link>
         </div>
@@ -161,7 +161,7 @@ export default function Home() {
           </div>
           <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
             <Link href="/auth/signin?role=admin" className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-              Continue as Admin
+              Continue as Business Admin
             </Link>
             <Link href="/auth/signin?role=technician" className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition">
               Continue as Technician
