@@ -1,15 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let adminClient: SupabaseClient | null | undefined;
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL env var');
+/**
+ * Service-role Supabase client. Returns null if URL or service key env vars are missing
+ * (avoids throwing at module load so routes like /api/health can return JSON).
+ */
+export function getSupabaseAdmin(): SupabaseClient | null {
+  if (adminClient !== undefined) return adminClient;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    adminClient = null;
+    return null;
+  }
+  adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+  return adminClient;
 }
-
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: { persistSession: false },
-});
 
 const LOGBOOK_BUCKET = 'logbook-photos';
 const SIGNED_URL_EXPIRES_IN_SECONDS = 60 * 60;
@@ -49,10 +58,13 @@ function extractStoragePath(value: string): string {
 }
 
 export async function createSignedPhotoUrl(pathOrUrl: string): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return pathOrUrl;
+
   const path = extractStoragePath(pathOrUrl);
   if (!path) return pathOrUrl;
 
-  const { data, error } = await supabaseAdmin.storage
+  const { data, error } = await admin.storage
     .from(LOGBOOK_BUCKET)
     .createSignedUrl(path, SIGNED_URL_EXPIRES_IN_SECONDS);
 
@@ -64,18 +76,17 @@ export async function createSignedPhotoUrl(pathOrUrl: string): Promise<string> {
   return pathOrUrl;
 }
 
-
 export async function getPublicPhotoUrl(pathOrUrl: string): Promise<string> {
+  const admin = getSupabaseAdmin();
+  if (!admin) return pathOrUrl;
+
   const path = extractStoragePath(pathOrUrl);
   if (!path) return pathOrUrl;
 
-  const { data } = supabaseAdmin.storage.from(LOGBOOK_BUCKET).getPublicUrl(path);
+  const { data } = admin.storage.from(LOGBOOK_BUCKET).getPublicUrl(path);
   return data?.publicUrl || pathOrUrl;
 }
 
 export async function createSignedPhotoUrls(pathsOrUrls: string[]): Promise<string[]> {
   return Promise.all(pathsOrUrls.map((value) => createSignedPhotoUrl(value)));
 }
-
-
-

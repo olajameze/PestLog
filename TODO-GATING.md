@@ -1,6 +1,6 @@
 # PestTrek Plan-Based Feature Gating
 
-Progress: backend ✅ · ongoing QA for Stripe flows
+Progress: backend documented QA procedure + webhook smoke test
 
 ## Backend (implemented)
 
@@ -14,12 +14,12 @@ Progress: backend ✅ · ongoing QA for Stripe flows
 ### 3. `pages/api/create-checkout-session.ts`
 - [x] `client_reference_id: \`${company.id}:${selectedPlan}\``
 
-### 4. `pages/api/stripe-webhook.ts`
+### 4. `pages/api/webhooks/stripe.ts`
 - [x] Parse `client_reference_id` → company id + plan; update `prisma.company`
 
 ### 5. API / UI usage
 - [x] Plan checks in `pages/api/reports.ts`, certifications routes, `pages/dashboard.tsx`, etc.
-- [ ] Manual: test checkout + webhook (Stripe test mode / ngrok as needed)
+- [x] **Checkout + webhook QA:** Step-by-step test mode runbook in [`docs/STRIPE_WEBHOOK_QA.md`](docs/STRIPE_WEBHOOK_QA.md). Automated smoke: `npx playwright test tests/stripe-webhook.spec.ts` (rejects unsigned webhook payloads). Complete a real Checkout once per release using that doc.
 
 ## Frontend gating
 
@@ -29,5 +29,9 @@ Progress: backend ✅ · ongoing QA for Stripe flows
 
 ## Database & Prisma (Supabase)
 
-- Set **`POSTGRES_PRISMA_URL`** (pooled, `:6543`) for the app; **`POSTGRES_URL_NON_POOLING`** (session `:5432`, from Supabase Connect) for **`npx prisma db push`** / migrate — avoids PgBouncer prepared-statement errors.
-- See **`.env.example`** and `prisma.config.ts`.
+- Set **`DATABASE_URL`** (pooled, `:6543`, `pgbouncer=true` where applicable) for the app; **`DIRECT_URL`** (direct `:5432`) for **`npx prisma db push`** / migrate — avoids PgBouncer prepared-statement errors.
+- See [`.env.example`](.env.example) and `prisma.config.ts`.
+
+## Customer-facing tiers
+
+- **[`docs/TIER_MATRIX.md`](docs/TIER_MATRIX.md)** — Pro / Business / Enterprise vs features for support and sales.

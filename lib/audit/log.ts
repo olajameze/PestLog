@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '../supabase-admin';
+import { getSupabaseAdmin } from '../supabase-admin';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE';
 
@@ -15,7 +15,10 @@ export type AuditLogInsert = {
 export async function writeAuditLog(entry: AuditLogInsert): Promise<void> {
   // Best-effort: if the table doesn't exist yet (migration not applied),
   // we silently no-op to avoid breaking core flows.
-  const { error } = await supabaseAdmin.from('audit_logs').insert({
+  const admin = getSupabaseAdmin();
+  if (!admin) return;
+
+  const { error } = await admin.from('audit_logs').insert({
     user_id: entry.userId,
     action: entry.action,
     table_name: entry.tableName,

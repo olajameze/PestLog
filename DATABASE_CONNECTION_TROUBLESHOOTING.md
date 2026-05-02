@@ -10,6 +10,18 @@ Production site is getting "Can't reach database server" errors:
 ''Error P3018: Migration History Out of Sync
 If you see "Table LogbookEntry does not exist" during migration reset, your migration history is corrupted or a base migration is missing.
 
+## Where this app runs (Supabase pooler mode)
+
+**Pest Trace** uses **Next.js API routes** (Prisma + `pg`) and is normally deployed on **Vercel** — i.e. **serverless / short-lived** Node processes, not a single long-lived Postgres client.
+
+For that deployment model, use Supabase **connection pooler — transaction mode** (port **6543**): many short connections, compatible with Prisma + PgBouncer. Set **`DATABASE_URL`** to the pooler URL and include `pgbouncer=true` (see example below). The app prefers `DATABASE_URL` over `DIRECT_URL` at runtime in [`lib/prisma.ts`](lib/prisma.ts).
+
+Use **`DIRECT_URL`** (direct host, port **5432**) only for **Prisma CLI** / migrations via [`prisma.config.ts`](prisma.config.ts), not for routine API traffic.
+
+If you instead run this codebase on a **long-running container or VM** and IPv6 to the direct host is a problem, follow Supabase docs for **session mode** on the pooler. If the client is **browser-only** (Supabase JS + PostgREST) with **no** Prisma on the server, you do not set `DATABASE_URL` on the client — only server-side code uses Postgres URLs.
+
+Supabase docs: [Connect to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres) (transaction vs session vs direct).
+
 ## Quick Diagnosis Checklist
 
 //**Verify Environment Variables in Vercel Dashboard**
@@ -19,7 +31,7 @@ Go to: Vercel Dashboard → Your Project → Settings → Environment Variables
 Check that these variables are set:
 - ✅ `DATABASE_URL` - Should be your Supabase pooler connection string
 - ✅ `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- ✅ `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` - Your Supabase anon key
+- ✅ `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon (publishable) key from Project Settings → API
 - ✅ `DIRECT_URL` - **CRITICAL** for migrations. Use the non-pooled connection (Port 5432).
 
 **Prisma Schema Requirement (v7+):**

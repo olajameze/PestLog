@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
-import { supabaseAdmin } from '../../lib/supabase-admin';
+import { getSupabaseAdmin } from '../../lib/supabase-admin';
 import { prisma } from '../../lib/prisma';
 
 export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
@@ -26,9 +26,16 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
   }
 
   try {
-    // Service role check (will throw at import if env missing).
-    const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
-    checks.supabase_service_role = { ok: !error, detail: error ? error.message : undefined };
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      checks.supabase_service_role = {
+        ok: false,
+        detail: 'Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL',
+      };
+    } else {
+      const { error } = await admin.from('profiles').select('id').limit(1);
+      checks.supabase_service_role = { ok: !error, detail: error ? error.message : undefined };
+    }
   } catch (e) {
     checks.supabase_service_role = { ok: false, detail: String(e) };
   }

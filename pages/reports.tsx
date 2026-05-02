@@ -259,7 +259,7 @@ export default function ReportsPage() {
             const subData = await subRes.json();
             const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
             setPlan(
-              queryPlan && (queryPlan === 'pro' || queryPlan === 'business')
+              queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
                 ? queryPlan
                 : subData.plan || 'trial'
             );
@@ -270,7 +270,7 @@ export default function ReportsPage() {
             }
           } else {
             const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
-            if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business')) {
+            if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
               setPlan(queryPlan);
             }
           }
@@ -308,13 +308,13 @@ export default function ReportsPage() {
         const subData = await subRes.json();
         const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
         setPlan(
-          queryPlan && (queryPlan === 'pro' || queryPlan === 'business')
+          queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
             ? queryPlan
             : subData.plan || 'trial'
         );
       } else {
         const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
-        if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business')) {
+        if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
           setPlan(queryPlan);
         }
       }
@@ -333,16 +333,18 @@ export default function ReportsPage() {
     if (!queryPlan) return;
 
     setUpgradeConfirmedPlan(queryPlan);
-    if (queryPlan === 'pro' || queryPlan === 'business') {
+    if (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise') {
       setPlan(queryPlan);
     }
 
     const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
-    showToast(
-      'Subscription upgraded',
-      `Your plan is now ${planLabel}. Enhanced reporting is available on this page.`,
-      'success'
-    );
+    const upgradeBlurb =
+      queryPlan === 'enterprise'
+        ? 'Enterprise reporting, analytics, and API access are available.'
+        : queryPlan === 'business'
+          ? 'Business reporting and analytics are available on this page.'
+          : 'Enhanced reporting is available on this page.';
+    showToast('Subscription upgraded', `Your plan is now ${planLabel}. ${upgradeBlurb}`, 'success');
 
     const refreshSubscriptionPlan = async () => {
       const { data: { session } } = await supabase.auth.getSession();

@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
-import { supabaseAdmin } from '../../lib/supabase-admin';
+import { getSupabaseAdmin } from '../../lib/supabase-admin';
 
 type ProfileRow = { role?: string | null };
 
@@ -20,7 +20,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } = await supabase.auth.getUser(token);
   if (error || !user?.id) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { data: profile } = await supabaseAdmin
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return res.status(503).json({ error: 'Audit service is not configured (missing Supabase service role).' });
+  }
+
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -28,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (profile?.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
 
-  const { data: rows, error: auditError } = await supabaseAdmin
+  const { data: rows, error: auditError } = await admin
     .from('audit_logs')
     .select('*')
     .order('created_at', { ascending: false })

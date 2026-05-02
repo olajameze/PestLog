@@ -28,9 +28,15 @@ A compliance logbook SaaS for pest control businesses.
 
 1. Clone the repo
 2. Install dependencies: `npm install`
-3. Copy `.env.example` to `.env` and set variables (especially `POSTGRES_PRISMA_URL` and `POSTGRES_URL_NON_POOLING` for Supabase)
+3. Copy [`.env.example`](.env.example) to `.env.local` and set variables (`DATABASE_URL`, `DIRECT_URL`, Supabase keys — see file comments)
 4. Apply the schema: `npx prisma db push` (or `npx prisma migrate dev` once you have migrations)
 5. Run the development server: `npm run dev`
+
+## Plans and billing QA
+
+- **[docs/TIER_MATRIX.md](docs/TIER_MATRIX.md)** — which features belong to Trial / Pro / Business / Enterprise (aligned with code).
+- **[docs/STRIPE_WEBHOOK_QA.md](docs/STRIPE_WEBHOOK_QA.md)** — Stripe test-mode checkout + webhook checklist.
+- Webhook smoke (no real Stripe call): `npm run e2e:webhook`
 
 ## Deployment
 
@@ -38,19 +44,13 @@ Deployed on Vercel with custom domain pesttrace.com.
 
 ## Environment Variables
 
-Set the following in your `.env` or Vercel environment:
+Set the following in `.env.local` or Vercel (see [`.env.example`](.env.example) for the full list):
 
-- `POSTGRES_PRISMA_URL` (pooled; used by the Next.js app)
-- `POSTGRES_URL_NON_POOLING` (session/direct; used by Prisma CLI — avoids pooler prepared-statement errors)
-- NEXT_PUBLIC_SUPABASE_URL
-- NEXT_PUBLIC_SUPABASE_ANON_KEY
-- SUPABASE_SERVICE_ROLE_KEY
-- STRIPE_SECRET_KEY
-- STRIPE_PUBLISHABLE_KEY
-- STRIPE_WEBHOOK_SECRET
-- RESEND_API_KEY
-- NEXTAUTH_SECRET
-- NEXTAUTH_URL
+- `DATABASE_URL` — pooled Supabase Postgres URL for the app (port 6543, `pgbouncer=true`)
+- `DIRECT_URL` — direct Postgres URL for Prisma CLI / migrations (port 5432)
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (and optional price IDs for checkout)
+- `RESEND_API_KEY`, `NEXTAUTH_URL` (and other email/auth vars as needed)
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

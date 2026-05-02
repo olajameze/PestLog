@@ -25,7 +25,7 @@ export default function UpgradePage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'business' | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<'pro' | 'business' | 'enterprise' | null>(null);
   const [trialDaysLeft, setTrialDaysLeft] = useState(0);
   const [trialEndsDate, setTrialEndsDate] = useState<Date | null>(null);
 
@@ -91,7 +91,7 @@ export default function UpgradePage() {
     loadData();
   }, [isPreviewMode, router]);
 
-  const handleSubscribe = async (plan: 'pro' | 'business') => {
+  const handleSubscribe = async (plan: 'pro' | 'business' | 'enterprise') => {
     if (isPreviewMode) {
       showToast('Preview mode', 'Checkout is disabled in preview mode.', 'info');
       return;
@@ -235,19 +235,29 @@ export default function UpgradePage() {
             </button>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm ring-1 ring-amber-100">
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
-            <p className="mt-2 text-lg font-semibold text-zinc-700">Custom pricing</p>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£60<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <p className="mt-1 text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
+              <li>• Everything in Business</li>
               <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
-              <li>• Customer Satisfaction (CSAT) &amp; Net Promoter Score (NPS) with trend analysis</li>
+              <li>• CSAT &amp; NPS with trend analysis</li>
+              <li>• Enterprise API key access</li>
             </ul>
+            <button
+              type="button"
+              onClick={() => handleSubscribe('enterprise')}
+              disabled={actionLoading}
+              className="btn btn-primary mt-6 w-full"
+            >
+              {actionLoading && selectedPlan === 'enterprise' ? 'Redirecting...' : 'Choose Enterprise'}
+            </button>
             <a
               href={`mailto:${supportAddr}?subject=${encodeURIComponent('Pest Trace Enterprise Enquiry')}`}
-              className="btn btn-secondary mt-6 w-full inline-flex items-center justify-center"
+              className="mt-3 block text-center text-sm font-medium text-primary-600 underline-offset-2 hover:underline"
             >
-              Contact Sales
+              Contact sales for volume or SLA
             </a>
           </div>
         </div>

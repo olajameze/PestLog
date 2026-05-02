@@ -472,13 +472,15 @@ export default function Dashboard() {
       const cleanedQuery = { ...router.query };
       const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
 
-      if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business')) {
+      if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
         const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
-        showToast(
-          'Subscription active',
-          `You upgraded to ${planLabel}. Your ${queryPlan === 'business' ? 'business reporting and analytics' : 'Pro reports and certifications'} are now available.`,
-          'success'
-        );
+        const detail =
+          queryPlan === 'enterprise'
+            ? 'Enterprise reporting, retention analytics, and API features are now available.'
+            : queryPlan === 'business'
+              ? 'Business reporting and analytics are now available.'
+              : 'Pro reports and certifications are now available.';
+        showToast('Subscription active', `You upgraded to ${planLabel}. ${detail}`, 'success');
         await router.replace('/reports');
         return;
       }

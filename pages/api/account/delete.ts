@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
-import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 import { sendAccountDeletionEmail } from '../../../lib/email';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -40,6 +40,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!company) {
     return res.status(400).json({ error: 'Company not found' });
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  if (!supabaseAdmin) {
+    return res.status(503).json({
+      error: 'Account deletion is unavailable: Supabase service role is not configured.',
+    });
   }
 
   try {

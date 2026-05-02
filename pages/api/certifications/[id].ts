@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../lib/supabase';
-import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 import { prisma } from '../../../lib/prisma';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -48,7 +48,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const storagePath = certification.fileUrl;
   if (storagePath) {
-    const { error: storageError } = await supabaseAdmin.storage.from('logbook-photos').remove([storagePath]);
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      return res.status(503).json({ error: 'Storage admin is not configured.' });
+    }
+    const { error: storageError } = await admin.storage.from('logbook-photos').remove([storagePath]);
     if (storageError && storageError.status !== 404) {
       console.error('Failed to remove certification file from storage:', storageError);
     }

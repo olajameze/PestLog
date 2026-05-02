@@ -1,5 +1,7 @@
 # Plan Gating
 
+See **[TIER_MATRIX.md](TIER_MATRIX.md)** for the full customer-facing plan vs feature table (aligned with code).
+
 Plan gating is implemented for the new dashboard analytics components.
 
 ## How it works

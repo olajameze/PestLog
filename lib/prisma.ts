@@ -4,7 +4,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { normalizePostgresUrlForPrisma } from './normalizePostgresUrl';
 
 const prismaClientSingleton = () => {
-  const connectionString = normalizePostgresUrlForPrisma(process.env.DIRECT_URL || process.env.DATABASE_URL || '');
+  // Prefer pooled DATABASE_URL at runtime (Supabase pooler + pgbouncer=true).
+  // Use DIRECT_URL in prisma.config.ts for CLI/migrations only.
+  const connectionString = normalizePostgresUrlForPrisma(
+    process.env.DATABASE_URL || process.env.DIRECT_URL || '',
+  );
   const pool = new Pool({ 
     connectionString,
     // Required for Supabase connections

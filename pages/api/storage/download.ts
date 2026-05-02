@@ -1,10 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+
+  const admin = getSupabaseAdmin();
+  if (!admin) {
+    return res.status(503).json({ error: 'Storage service is not configured.' });
   }
 
   const path = req.query.path;
@@ -15,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const sanitizedPath = path.replace(/^\//, '');
   const fileName = sanitizedPath.split('/').pop() || 'certificate';
 
-  const { data, error } = await supabaseAdmin.storage.from('logbook-photos').download(sanitizedPath);
+  const { data, error } = await admin.storage.from('logbook-photos').download(sanitizedPath);
   if (error || !data) {
     console.error('Certificate download failed:', error, 'path:', sanitizedPath);
     return res.status(404).json({ error: 'Certificate not found', details: error?.message });
