@@ -3,6 +3,7 @@ import { getClientSupportEmail } from '../../lib/supportEmail';
 
 export default function LandingFooter() {
   const supportAddr = getClientSupportEmail();
+  const currentYear = new Date().getFullYear();
   return (
     <footer className="bg-navy border-t border-slate-800 py-8 text-slate-300">
       <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 text-sm sm:grid-cols-12 sm:px-6">
@@ -25,6 +26,11 @@ export default function LandingFooter() {
             <Link href="/contact" className="transition hover:text-white">
               Contact
             </Link>
+            {process.env.NODE_ENV !== 'production' ? (
+              <Link href="/auth/super-admin" className="transition hover:text-white">
+                Super Admin
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -45,7 +51,7 @@ export default function LandingFooter() {
       </div>
 
       <div className="mx-auto mt-8 flex w-full max-w-6xl flex-col gap-3 border-t border-slate-800 px-4 pt-8 text-xs text-slate-500 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-        <p>© 2026 Pest Trace. All rights reserved.</p>
+        <p>© {currentYear} Pest Trace. All rights reserved.</p>
         <p>Compliance reporting designed for pest control teams.</p>
       </div>
     </footer>

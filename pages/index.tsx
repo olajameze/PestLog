@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
+import LandingFooter from '../components/landing/LandingFooter';
 import { 
   featureCards, 
   pricingPlans, 
@@ -284,34 +285,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-16 px-6 border-t border-slate-100 bg-white">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
-          <div className="md:col-span-5 space-y-4 text-center md:text-left">
-            <div className="text-2xl font-bold">Pest<span className="text-emerald-600">Trace</span></div>
-            <p className="text-slate-500 text-sm leading-relaxed max-w-sm mx-auto md:mx-0">
-              The UK&apos;s leading digital compliance logbook for pest control professionals. 
-              Designed to exceed CRRU stewardship requirements and eliminate paperwork.
-            </p>
-          </div>
-
-          <div className="md:col-span-4 flex flex-col items-center md:items-start gap-3 text-sm text-slate-400">
-            <p>© {new Date().getFullYear()} PestTrace. All rights reserved.</p>
-            <p className="text-xs font-medium">
-              Created and developed by <a href="https://jgdev.co.uk" target="_blank" rel="noopener noreferrer" className="text-slate-900 underline decoration-emerald-500/30 underline-offset-4 hover:text-emerald-600 transition-colors">jgdev.co.uk</a>
-            </p>
-          </div>
-
-          <div className="md:col-span-3 flex flex-wrap justify-center md:justify-end gap-x-8 gap-y-4 text-sm font-bold text-slate-600">
-            <Link href="/privacy" className="hover:text-emerald-600 transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-emerald-600 transition-colors">Terms</Link>
-            <Link href="/contact" className="hover:text-emerald-600 transition-colors">Contact</Link>
-            {process.env.NODE_ENV !== 'production' ? (
-              <Link href="/auth/super-admin" className="hover:text-emerald-600 transition-colors">Super Admin</Link>
-            ) : null}
-          </div>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   );
 }
