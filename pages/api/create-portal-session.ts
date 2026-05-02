@@ -49,16 +49,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   })();
   if (!(stripe instanceof Stripe)) return;
 
-  let company = await prisma.company.findUnique({
+  const company = await prisma.company.findUnique({
     where: { email: user.email },
   });
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
       where: { email: user.email },
-      include: { company: true },
+      select: { id: true },
     });
-    company = technician?.company ?? null;
+    if (technician) {
+      return res.status(403).json({
+        error: 'Technician accounts cannot access billing portal.',
+        code: 'ROLE_TECHNICIAN',
+      });
+    }
   }
 
   if (!company || !company.stripeCustomerId) {

@@ -4,7 +4,7 @@ import { prisma } from '../../lib/prisma';
 import { buildDashboardInsights } from '../../lib/dashboardInsights';
 import type { DashboardDateRangeOption } from '../../lib/api/mockDashboardData';
 
-async function resolveCompanyForUser(token: string) {
+async function resolveOwnerCompanyForUser(token: string) {
   const {
     data: { user },
     error,
@@ -21,24 +21,7 @@ async function resolveCompanyForUser(token: string) {
       trialEndsAt: true,
     },
   });
-  if (direct) return direct;
-
-  const technician = await prisma.technician.findFirst({
-    where: { email: user.email },
-    include: {
-      company: {
-        select: {
-          id: true,
-          requirePhotos: true,
-          requireSignature: true,
-          plan: true, // Ensure plan is selected for technician's company
-          trialEndsAt: true,
-        },
-      },
-    },
-  });
-  // Return the company object directly, which now includes the plan
-  return technician?.company ?? null;
+  return direct;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -53,8 +36,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const company = await resolveCompanyForUser(token);
+  const company = await resolveOwnerCompanyForUser(token);
   if (!company) {
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (user?.email) {
+      const technician = await prisma.technician.findFirst({
+        where: { email: user.email },
+        select: { id: true },
+      });
+      if (technician) {
+        return res.status(403).json({
+          error: 'Technician accounts cannot view dashboard insights.',
+          code: 'ROLE_TECHNICIAN',
+        });
+      }
+    }
     return res.status(403).json({ error: 'Company not found' });
   }
 

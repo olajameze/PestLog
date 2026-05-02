@@ -44,16 +44,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid session id' });
   }
 
-  let company = await prisma.company.findUnique({
+  const company = await prisma.company.findUnique({
     where: { email: user.email },
     select: { id: true, stripeCustomerId: true },
   });
   if (!company) {
     const technician = await prisma.technician.findFirst({
       where: { email: user.email },
-      include: { company: { select: { id: true, stripeCustomerId: true } } },
+      select: { id: true },
     });
-    company = technician?.company ?? null;
+    if (technician) {
+      return res.status(403).json({
+        error: 'Technician accounts cannot confirm billing checkouts.',
+        code: 'ROLE_TECHNICIAN',
+      });
+    }
   }
   if (!company) return res.status(404).json({ error: 'Company not found' });
 

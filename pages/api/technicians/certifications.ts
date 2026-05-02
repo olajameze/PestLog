@@ -44,7 +44,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       include: { company: true },
     });
 
-    if (!technician || technician.company.email !== user.email) {
+    if (!technician) {
+      return res.status(404).json({ error: 'Technician not found' });
+    }
+
+    const ownerCompany = await prisma.company.findUnique({
+      where: { email: user.email },
+      select: { id: true },
+    });
+    const actingTechnician = await prisma.technician.findFirst({
+      where: { email: user.email },
+      select: { id: true, companyId: true },
+    });
+
+    const isOwnerForTechnician = Boolean(ownerCompany && ownerCompany.id === technician.companyId);
+    const isSelfUpload = Boolean(actingTechnician && actingTechnician.id === technician.id);
+
+    if (!isOwnerForTechnician && !isSelfUpload) {
       return res.status(403).json({ error: 'Forbidden' });
     }
 

@@ -26,10 +26,21 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter, Inter, sans-serif);
   font-size: 16px;
+  overflow-x: hidden;
 }
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+/* Safe area utilities for installed PWAs */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.5rem);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 a,

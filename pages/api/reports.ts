@@ -125,6 +125,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const queryTechnicianId = req.query.technicianId as string;
   const search = (req.query.search as string) || '';
+  const followUpOnly =
+    req.query.followUpOnly === '1' ||
+    req.query.followUpOnly === 'true';
   let technicianId: string;
 
   if (ownerMode) {
@@ -170,6 +173,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
   }
 
+  if (followUpOnly) {
+    const followUpClause: LogbookEntryWhereInput = {
+      OR: [
+        { followUpDate: { not: null } },
+        { notes: { contains: 'follow-up', mode: 'insensitive' } },
+        { notes: { contains: 'follow up', mode: 'insensitive' } },
+        { notes: { contains: 'return visit', mode: 'insensitive' } },
+        { notes: { contains: 'revisit', mode: 'insensitive' } },
+        { notes: { contains: 'reschedule', mode: 'insensitive' } },
+      ],
+    };
+    whereClause = {
+      AND: [whereClause, followUpClause],
+    };
+  }
+
   const entries = await prisma.logbookEntry.findMany({
     where: whereClause,
     orderBy: { date: 'desc' },
@@ -179,6 +198,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       clientName: true,
       address: true,
       treatment: true,
+      status: true,
+      followUpDate: true,
       notes: true,
       rooms: true,
       baitBoxesPlaced: true,

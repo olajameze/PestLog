@@ -58,6 +58,13 @@ export default function UpgradePage() {
       const companyRes = await fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      if (!companyRes.ok) {
+        const companyError = await companyRes.json().catch(() => ({}));
+        if (companyRes.status === 403 && companyError?.code === 'ROLE_TECHNICIAN') {
+          router.replace('/technician?accessDenied=upgrade');
+          return;
+        }
+      }
       if (companyRes.ok) {
         const companyData = await companyRes.json();
         setCompany(companyData);

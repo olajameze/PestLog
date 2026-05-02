@@ -18,6 +18,7 @@ export default function SignUp() {
   const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
   const { showToast } = useToast();
+  const isTechnicianSignup = router.query.role === 'technician';
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,18 +63,32 @@ export default function SignUp() {
   };
 
   return (
-    <AuthLayout title="Create your account" subtitle="No credit card required. Get started in 2 minutes.">
+    <AuthLayout
+      title={isTechnicianSignup ? 'Create technician account' : 'Create your account'}
+      subtitle={
+        isTechnicianSignup
+          ? 'Use the same email your admin added in the Technicians tab.'
+          : 'No credit card required. Get started in 2 minutes.'
+      }
+    >
+      {isTechnicianSignup ? (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Technician sign-up: your account email must match an existing technician record from your admin dashboard.
+        </div>
+      ) : null}
       <form className={`space-y-4 page-fade-in ${error ? 'field-shake' : ''}`} onSubmit={handleSignUp}>
+        {!isTechnicianSignup ? (
+          <FormInput
+            label="Business Name"
+            id="business-name"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="ABC Pest Control Ltd"
+            required
+          />
+        ) : null}
         <FormInput
-          label="Business Name"
-          id="business-name"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          placeholder="ABC Pest Control Ltd"
-          required
-        />
-        <FormInput
-          label="Your Full Name"
+          label={isTechnicianSignup ? 'Technician Full Name' : 'Your Full Name'}
           id="full-name"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
@@ -124,6 +139,21 @@ export default function SignUp() {
           Sign in
         </Link>
       </p>
+      {!isTechnicianSignup ? (
+        <p className="mt-2 text-center text-sm text-zinc-600">
+          Joining as field staff?{' '}
+          <Link href="/auth/signup?role=technician" className="font-semibold text-primary-600 hover:text-primary-700">
+            Sign up as Technician
+          </Link>
+        </p>
+      ) : (
+        <p className="mt-2 text-center text-sm text-zinc-600">
+          Creating an owner/admin account?{' '}
+          <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">
+            Switch to Business Sign-up
+          </Link>
+        </p>
+      )}
     </AuthLayout>
   );
 }

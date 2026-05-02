@@ -18,8 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'GET') {
-      // Get user's company or company via technician account
-      let company = await prisma.company.findUnique({
+      // Owner-only company details endpoint.
+      const company = await prisma.company.findUnique({
         where: { email: user.email },
         select: {
           id: true,
@@ -43,27 +43,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!company) {
         const technician = await prisma.technician.findFirst({
           where: { email: user.email },
-          include: { company: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-              address: true,
-              website: true,
-              vatNumber: true,
-              requireSignature: true,
-              requirePhotos: true,
-              defaultReportRangeDays: true,
-              notificationPreferences: true,
-              stripeCustomerId: true,
-              subscriptionStatus: true,
-              trialEndsAt: true,
-              plan: true,
-            }
-          } },
+          select: { id: true, companyId: true },
         });
-        company = technician?.company ?? null;
+        if (technician) {
+          return res.status(403).json({
+            error: 'Technician accounts cannot access owner company settings.',
+            code: 'ROLE_TECHNICIAN',
+          });
+        }
       }
 
       return res.status(200).json(company);
@@ -84,7 +71,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Company name is required' });
       }
 
-  const company = await prisma.company.upsert({
+      const technician = await prisma.technician.findFirst({
+        where: { email: user.email },
+        select: { id: true },
+      });
+      if (technician) {
+        return res.status(403).json({
+          error: 'Technician accounts cannot create or update billing company settings.',
+          code: 'ROLE_TECHNICIAN',
+        });
+      }
+
+      const company = await prisma.company.upsert({
     where: { email: user.email },
     create: {
       name: name.trim(),
@@ -127,19 +125,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         notificationPreferences,
       } = req.body;
 
-      let company = await prisma.company.findUnique({
+      const company = await prisma.company.findUnique({
         where: { email: user.email },
       });
 
       if (!company) {
         const technician = await prisma.technician.findFirst({
           where: { email: user.email },
-          include: { company: true },
+          select: { id: true },
         });
-        company = technician?.company ?? null;
-      }
-
-      if (!company) {
+        if (technician) {
+          return res.status(403).json({
+            error: 'Technician accounts cannot update owner company settings.',
+            code: 'ROLE_TECHNICIAN',
+          });
+        }
         return res.status(404).json({ error: 'Company not found' });
       }
 

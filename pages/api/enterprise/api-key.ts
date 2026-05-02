@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 
-async function resolveCompanyForUser(token: string) {
+async function resolveOwnerCompanyForUser(token: string) {
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user?.email) return null;
 
@@ -10,13 +10,7 @@ async function resolveCompanyForUser(token: string) {
     where: { email: user.email },
     select: { id: true, plan: true, notificationPreferences: true, subscriptionStatus: true },
   });
-  if (company) return company;
-
-  const technician = await prisma.technician.findFirst({
-    where: { email: user.email },
-    include: { company: { select: { id: true, plan: true, notificationPreferences: true, subscriptionStatus: true } } },
-  });
-  return technician?.company ?? null;
+  return company;
 }
 
 function generateApiKey() {
@@ -35,8 +29,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const company = await resolveCompanyForUser(token);
+  const company = await resolveOwnerCompanyForUser(token);
   if (!company) {
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (user?.email) {
+      const technician = await prisma.technician.findFirst({
+        where: { email: user.email },
+        select: { id: true },
+      });
+      if (technician) {
+        return res.status(403).json({
+          error: 'Technician accounts cannot manage API keys.',
+          code: 'ROLE_TECHNICIAN',
+        });
+      }
+    }
     return res.status(403).json({ error: 'Access denied' });
   }
 

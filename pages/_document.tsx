@@ -6,6 +6,9 @@ export default function Document() {
       <Head>
         {/* PWA & App Meta Tags */}
         <meta name="description" content="Digital compliance logbook for pest control businesses" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#2563EB" />
+        <meta name="mobile-web-app-capable" content="yes" />
 
         {/* Web App Manifest - MUST be in head for PWA */}
         <link rel="manifest" href="/manifest.json" />
@@ -21,22 +24,15 @@ export default function Document() {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
         {/* Standard Favicons */}
-        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
 
         {/* PWA Icons */}
         <link rel="icon" type="image/png" sizes="192x192 512x512" href="/pest-trace.png" />
 
         {/* Fonts - handled by next/font/google in _app.tsx */}
 
-        {/* Startup Image for iOS */}
-        <link rel="apple-touch-startup-image" href="/apple-splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" />
-        <link rel="apple-touch-startup-image" href="/apple-splash-1668x2224.png" media="(device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2)" />
-        <link rel="apple-touch-startup-image" href="/apple-splash-1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)" />
-        <link rel="apple-touch-startup-image" href="/apple-splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
-        <link rel="apple-touch-startup-image" href="/apple-splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" />
-        <link rel="apple-touch-startup-image" href="/apple-splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
+        {/* Keep startup assets minimal to avoid broken links in production */}
       </Head>
       <body>
         <Main />

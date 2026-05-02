@@ -7,17 +7,23 @@ interface SidebarProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
   onSignOut?: () => void;
+  role?: 'owner' | 'technician';
 }
 
-export default function Sidebar({ activeTab = 'technicians', onTabChange, onSignOut }: SidebarProps) {
+export default function Sidebar({ activeTab = 'technicians', onTabChange, onSignOut, role = 'owner' }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const tabs = [
+  const ownerTabs = [
     { id: 'technicians', label: 'Dashboard', href: '/dashboard?tab=technicians', icon: DashboardIcon },
     { id: 'logbook', label: 'Logbook', href: '/dashboard?tab=logbook', icon: LogbookIcon },
     { id: 'reports', label: 'Reports', href: '/reports', icon: ReportsIcon },
     { id: 'settings', label: 'Settings', href: '/dashboard?tab=settings', icon: SettingsIcon },
   ];
+  const technicianTabs = [
+    { id: 'logbook', label: 'Logbook', href: '/technician', icon: LogbookIcon },
+    { id: 'reports', label: 'Reports', href: '/reports', icon: ReportsIcon },
+  ];
+  const tabs = role === 'technician' ? technicianTabs : ownerTabs;
 
   const isActive = (id: string) => activeTab === id;
 
@@ -25,7 +31,7 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
     <>
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-20 z-40 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg lg:hidden"
+        className="fixed left-4 top-4 z-40 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg lg:hidden"
         aria-label="Open navigation menu"
       >
         ☰
@@ -33,12 +39,13 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-39 lg:hidden"
+          className="fixed inset-0 z-[39] bg-black/50 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       <aside
+        aria-label="Main navigation"
         className={`fixed inset-y-0 left-0 z-50 w-64 border-r border-zinc-200 bg-white transform transition-transform ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen`}

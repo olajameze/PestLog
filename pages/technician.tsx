@@ -27,6 +27,14 @@ type LogbookEntry = {
   price?: number;
 };
 
+type Certification = {
+  id: string;
+  fileUrl: string;
+  expiryDate?: string | null;
+  uploadedAt: string;
+  signedUrl?: string;
+};
+
 function isRenderableImageSrc(value: string): boolean {
   return (
     value.startsWith('http://') ||
@@ -73,6 +81,7 @@ export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
+  const accessDeniedTarget = typeof router.query.accessDenied === 'string' ? router.query.accessDenied : '';
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TechnicianProfile | null>(null);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
@@ -86,6 +95,9 @@ export default function TechnicianPage() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [certifications, setCertifications] = useState<Certification[]>([]);
+  const [certExpiryDate, setCertExpiryDate] = useState('');
+  const [certUploading, setCertUploading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawing = useRef(false);
 
@@ -177,6 +189,49 @@ export default function TechnicianPage() {
     if (profile) {
       loadEntries();
     }
+  }, [isPreviewMode, profile]);
+
+  useEffect(() => {
+    const loadCertifications = async () => {
+      if (!profile) return;
+
+      if (isPreviewMode) {
+        setCertifications([
+          {
+            id: 'preview-cert-1',
+            fileUrl: '/icon-192.png',
+            uploadedAt: new Date().toISOString(),
+            expiryDate: new Date(Date.now() + 31536000000).toISOString(),
+            signedUrl: '/icon-192.png',
+          },
+        ]);
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const res = await fetch(`/api/technicians/${profile.id}/certifications`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) return;
+
+      const data = (await res.json()) as Certification[];
+      const signed = await Promise.all(
+        data.map(async (cert) => {
+          const { data: signedData } = await supabase.storage
+            .from('logbook-photos')
+            .createSignedUrl(cert.fileUrl, 3600);
+          return {
+            ...cert,
+            signedUrl: signedData?.signedUrl || cert.fileUrl,
+          };
+        }),
+      );
+      setCertifications(signed);
+    };
+
+    void loadCertifications();
   }, [isPreviewMode, profile]);
 
   const clearSignature = () => {
@@ -378,6 +433,96 @@ export default function TechnicianPage() {
     setSubmitting(false);
   };
 
+  const handleCertificateUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !profile) return;
+
+    const file = files[0];
+    if (isPreviewMode) {
+      setCertifications((prev) => [
+        {
+          id: `preview-cert-${Date.now()}`,
+          fileUrl: '/icon-192.png',
+          signedUrl: '/icon-192.png',
+          expiryDate: certExpiryDate || null,
+          uploadedAt: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+      setCertExpiryDate('');
+      showToast('Preview mode', 'Certification stored locally in preview mode.', 'success');
+      return;
+    }
+
+    setCertUploading(true);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setCertUploading(false);
+      router.push('/auth/signin');
+      return;
+    }
+
+    const sanitizedFileName = file.name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-._]/g, '');
+    const filePath = `${profile.id}/cert-${Date.now()}-${sanitizedFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('logbook-photos')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      showToast('Upload failed', uploadError.message, 'error');
+      setCertUploading(false);
+      return;
+    }
+
+    const certRes = await fetch('/api/technicians/certifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        technicianId: profile.id,
+        fileUrl: filePath,
+        expiryDate: certExpiryDate || undefined,
+      }),
+    });
+
+    if (!certRes.ok) {
+      const err = await certRes.json().catch(() => ({ error: 'Unable to save certification' }));
+      showToast('Upload failed', err.error || 'Unable to save certification', 'error');
+      setCertUploading(false);
+      return;
+    }
+
+    const refreshRes = await fetch(`/api/technicians/${profile.id}/certifications`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (refreshRes.ok) {
+      const data = (await refreshRes.json()) as Certification[];
+      const signed = await Promise.all(
+        data.map(async (cert) => {
+          const { data: signedData } = await supabase.storage
+            .from('logbook-photos')
+            .createSignedUrl(cert.fileUrl, 3600);
+          return {
+            ...cert,
+            signedUrl: signedData?.signedUrl || cert.fileUrl,
+          };
+        }),
+      );
+      setCertifications(signed);
+    }
+
+    setCertExpiryDate('');
+    setCertUploading(false);
+    showToast('Uploaded', 'Certification uploaded successfully.', 'success');
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-offwhite">Loading technician dashboard...</div>;
   }
@@ -389,7 +534,7 @@ export default function TechnicianPage() {
   return (
     <div className="min-h-screen bg-offwhite">
       <div className="flex">
-        <Sidebar activeTab="logbook" onSignOut={async () => {
+        <Sidebar role="technician" activeTab="logbook" onSignOut={async () => {
           if (isPreviewMode) {
             router.push('/');
             return;
@@ -399,6 +544,11 @@ export default function TechnicianPage() {
         }} />
         <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-5xl space-y-6">
+        {accessDeniedTarget ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Access to owner-only {accessDeniedTarget === 'upgrade' ? 'billing/upgrade' : 'dashboard'} sections is restricted for technician accounts.
+          </div>
+        ) : null}
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-navy mb-3">Technician Logbook</h1>
@@ -560,6 +710,64 @@ export default function TechnicianPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-3">My Certifications</h2>
+            <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full"></div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="tech-cert-expiry" className="form-label">Expiry Date (optional)</label>
+              <input
+                id="tech-cert-expiry"
+                type="date"
+                value={certExpiryDate}
+                onChange={(e) => setCertExpiryDate(e.target.value)}
+                className="form-input"
+              />
+            </div>
+            <div>
+              <label htmlFor="tech-cert-file" className="form-label">Upload Certificate</label>
+              <input
+                id="tech-cert-file"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => void handleCertificateUpload(e.target.files)}
+                className="form-input"
+              />
+              {certUploading ? <p className="mt-2 text-sm text-blue-600">Uploading certification...</p> : null}
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3">
+            {certifications.map((cert) => (
+              <div key={cert.id} className="rounded-lg border border-gray-200 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    Uploaded {new Date(cert.uploadedAt).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {cert.expiryDate ? `Expires ${new Date(cert.expiryDate).toLocaleDateString()}` : 'No expiry date set'}
+                  </p>
+                </div>
+                <a
+                  href={cert.signedUrl || cert.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+                >
+                  View certificate
+                </a>
+              </div>
+            ))}
+            {certifications.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 px-4 py-5 text-sm text-gray-500 text-center">
+                No certifications uploaded yet.
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="space-y-4">

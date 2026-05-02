@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 
@@ -21,18 +22,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { email: user.email },
         include: { technicians: true },
       });
+      if (!company) {
+        const technician = await prisma.technician.findFirst({
+          where: { email: user.email },
+          select: { id: true },
+        });
+        if (technician) {
+          return res.status(403).json({
+            error: 'Technician accounts cannot manage company technicians.',
+            code: 'ROLE_TECHNICIAN',
+          });
+        }
+      }
       return res.status(200).json(company?.technicians || []);
     } else if (req.method === 'POST') {
       // Add technician
-      const { name, email } = req.body;
+      const rawName = typeof req.body?.name === 'string' ? req.body.name : '';
+      const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
+      const name = rawName.trim();
+      const email = rawEmail.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
       if (!name || !email) {
         return res.status(400).json({ error: 'Name and email required' });
       }
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Enter a valid technician email address.' });
+      }
+
       const company = await prisma.company.findUnique({
         where: { email: user.email },
         include: { technicians: true },
       });
       if (!company) {
+        const technician = await prisma.technician.findFirst({
+          where: { email: user.email },
+          select: { id: true },
+        });
+        if (technician) {
+          return res.status(403).json({
+            error: 'Technician accounts cannot add technicians.',
+            code: 'ROLE_TECHNICIAN',
+          });
+        }
         return res.status(400).json({ error: 'No company found' });
       }
 
@@ -43,11 +75,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
+      const existingForCompany = await prisma.technician.findFirst({
+        where: {
+          companyId: company.id,
+          email,
+        },
+        select: { id: true },
+      });
+      if (existingForCompany) {
+        return res.status(409).json({ error: 'A technician with this email already exists for your company.' });
+      }
+
       const technician = await prisma.technician.create({
         data: {
+          id: randomUUID(),
           name,
           email,
           companyId: company.id,
+          createdAt: new Date(),
         },
       });
       return res.status(201).json(technician);
@@ -61,6 +106,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { email: user.email },
       });
       if (!company) {
+        const technician = await prisma.technician.findFirst({
+          where: { email: user.email },
+          select: { id: true },
+        });
+        if (technician) {
+          return res.status(403).json({
+            error: 'Technician accounts cannot remove technicians.',
+            code: 'ROLE_TECHNICIAN',
+          });
+        }
         return res.status(400).json({ error: 'No company found' });
       }
       // Verify technician belongs to company
@@ -79,6 +134,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
   } catch (err) {
+    const errorText = String(err);
+    if (errorText.includes('Unique constraint')) {
+      return res.status(409).json({ error: 'A technician with this email already exists.' });
+    }
+    if (errorText.includes('Null constraint violation')) {
+      return res.status(400).json({
+        error: 'Invalid technician data. Please provide both name and email.',
+      });
+    }
     return res.status(500).json({ error: 'Technician request failed', details: String(err) });
   }
 }

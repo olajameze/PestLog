@@ -158,7 +158,7 @@ export default function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 transform transition-transform duration-300">
+    <div className="fixed bottom-0 left-0 right-0 z-[60] transform transition-transform duration-300">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white shadow-2xl">
         {updateAvailable ? (
           <div className="border-b border-white/20 bg-blue-800/40 px-4 py-2 text-center text-sm text-blue-50">
@@ -169,28 +169,28 @@ export default function PWAInstallPrompt() {
             to use the latest version.
           </div>
         ) : null}
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:flex-1 sm:gap-4">
             <div className="shrink-0">
               <Image src="/pest-trace.png" alt="Pest Trace logo" width={40} height={40} className="h-10 w-10 object-contain" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-bold text-lg leading-tight">Install Pest Trace</h3>
-              <p className="text-blue-100 text-sm">
+              <p className="text-blue-100 text-sm leading-snug">
                 {deviceInfo.isIOS ? 'Add to your home screen for quick access' : 'Get the app instantly'}
               </p>
             </div>
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
             <button
               onClick={handleDismiss}
-              className="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 transition text-white font-medium text-sm"
+              className="min-h-[44px] flex-1 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-400 sm:flex-none"
             >
               Later
             </button>
             <button
               onClick={handleInstallClick}
-              className="px-4 py-2 rounded-lg bg-white hover:bg-gray-100 transition text-blue-600 font-bold text-sm shadow-lg"
+              className="min-h-[44px] flex-1 rounded-lg bg-white px-4 py-2 text-sm font-bold text-blue-600 shadow-lg transition hover:bg-gray-100 sm:flex-none"
             >
               {deviceInfo.isIOS || isMobileViewport ? 'Instructions' : 'Install'}
             </button>

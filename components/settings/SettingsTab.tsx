@@ -294,12 +294,12 @@ export default function SettingsTab({
           Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={onSubscribe} disabled={checkoutLoading} className="bg-gradient-to-r from-blue-500 to-purple-600">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Button onClick={onSubscribe} disabled={checkoutLoading} className="w-full whitespace-normal bg-gradient-to-r from-blue-500 to-purple-600 sm:w-auto">
             {checkoutLoading ? 'Loading...' : 'Choose Plan & Upgrade'}
           </Button>
           {subscription?.status === 'active' && (
-            <Button onClick={onManageSubscription} disabled={portalLoading}>
+            <Button onClick={onManageSubscription} disabled={portalLoading} className="w-full whitespace-normal sm:w-auto">
               {portalLoading ? 'Opening Portal...' : 'Manage Subscription'}
             </Button>
           )}

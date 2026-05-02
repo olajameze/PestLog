@@ -27,8 +27,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     select: { id: true, plan: true, subscriptionStatus: true },
   });
 
-  if (!company) {
+  const technicianActor = await prisma.technician.findFirst({
+    where: { email: user.email },
+    select: { id: true, companyId: true },
+  });
+
+  const requestedTechnicianId = id as string;
+
+  if (!company && !technicianActor) {
     return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  if (!company) {
+    if (!technicianActor || technicianActor.id !== requestedTechnicianId) {
+      return res.status(403).json({ error: 'Technicians can only view their own certifications.' });
+    }
+    const certifications = await prisma.certification.findMany({
+      where: { technicianId: requestedTechnicianId },
+      orderBy: { uploadedAt: 'desc' },
+    });
+    return res.status(200).json(certifications);
   }
 
   const hasPremiumAccess = company.plan
@@ -40,8 +58,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: 'Pro plan required to view certifications' });
   }
 
+  const requestedTechnician = await prisma.technician.findUnique({
+    where: { id: requestedTechnicianId },
+    select: { companyId: true },
+  });
+  if (!requestedTechnician || requestedTechnician.companyId !== company.id) {
+    return res.status(404).json({ error: 'Technician not found' });
+  }
+
   const certifications = await prisma.certification.findMany({
-    where: { technicianId: id as string },
+    where: { technicianId: requestedTechnicianId },
     orderBy: { uploadedAt: 'desc' },
   });
 

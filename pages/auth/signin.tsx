@@ -46,9 +46,18 @@ export default function SignIn() {
         setLoading(false);
         return;
       }
-      setSuccessMessage('Signed in successfully. Redirecting to dashboard...');
-      showToast('Signed in', 'Redirecting to dashboard', 'success');
-      router.push('/dashboard');
+      const technicianRes = await fetch('/api/technician-profile', {
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      });
+      if (technicianRes.ok) {
+        setSuccessMessage('Signed in successfully. Redirecting to technician workspace...');
+        showToast('Signed in', 'Redirecting to technician workspace', 'success');
+        router.push('/technician');
+      } else {
+        setSuccessMessage('Signed in successfully. Redirecting to dashboard...');
+        showToast('Signed in', 'Redirecting to dashboard', 'success');
+        router.push('/dashboard');
+      }
     }
     setLoading(false);
   };
@@ -97,6 +106,12 @@ export default function SignIn() {
           Don&apos;t have an account?{' '}
           <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">
             Create account
+          </Link>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-sm text-amber-900">
+          Technician access: use the exact email your admin added in the Technicians tab.{' '}
+          <Link href="/auth/signup?role=technician" className="font-semibold text-primary-700 hover:text-primary-800">
+            Sign up as Technician
           </Link>
         </div>
       </form>

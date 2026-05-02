@@ -151,11 +151,11 @@ const PlanModal = ({
   onClose: () => void;
   onSubscribe: (plan: 'pro' | 'business' | 'enterprise') => void;
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="flex-1 text-center text-2xl font-bold text-navy">Choose Your Plan</h2>
-        <Button size="sm" variant="secondary" onClick={onClose}>✕</Button>
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
+    <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+      <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
+        <h2 className="text-xl font-bold text-navy sm:text-2xl">Choose Your Plan</h2>
+        <Button size="sm" variant="secondary" onClick={onClose} className="px-3 py-2">✕</Button>
       </div>
       <div className="mb-8 grid gap-6 md:grid-cols-3">
         {/* Pro */}
@@ -177,7 +177,7 @@ const PlanModal = ({
               onClose();
               onSubscribe('pro');
             }}
-            className="mt-auto w-full text-center"
+            className="mt-auto w-full whitespace-normal text-center leading-tight"
           >
             Choose Pro (£25/mo)
           </Button>
@@ -199,7 +199,7 @@ const PlanModal = ({
               onClose();
               onSubscribe('business');
             }}
-            className="mt-auto w-full text-center"
+            className="mt-auto w-full whitespace-normal text-center leading-tight"
           >
             Choose Business (£40/mo)
           </Button>
@@ -219,7 +219,7 @@ const PlanModal = ({
               onClose();
               onSubscribe('enterprise');
             }}
-            className="mt-auto w-full text-center"
+            className="mt-auto w-full whitespace-normal text-center leading-tight"
           >
             Choose Enterprise (£340/mo)
           </Button>
@@ -448,6 +448,10 @@ export default function Dashboard() {
       });
       const companyData = await res.json();
       if (!res.ok) {
+        if (res.status === 403 && companyData?.code === 'ROLE_TECHNICIAN') {
+          router.replace('/technician?accessDenied=dashboard');
+          return;
+        }
         setAppError(companyData?.error || 'Unable to load company details.');
         showToast('Load failed', companyData?.error || 'Unable to load company details.', 'error');
       } else {
@@ -682,13 +686,13 @@ export default function Dashboard() {
     if (isPreviewMode) {
       setTechnicians((prev) => [...prev, { id: `preview-${Date.now()}`, name, email }]);
       showToast('Preview mode', 'Technician added locally in preview mode.', 'success');
-      return;
+      return true;
     }
     setAppError(null);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       router.push('/auth/signin');
-      return;
+      return false;
     }
     const token = session.access_token;
 
@@ -704,10 +708,12 @@ export default function Dashboard() {
       const newTech = await res.json();
       setTechnicians([...technicians, newTech]);
       showToast('Technician added', `${newTech.name} was added.`, 'success');
+      return true;
     } else {
       const err = await res.json();
       setAppError(err.error || 'Unable to add technician');
       showToast('Add failed', err.error || 'Unable to add technician', 'error');
+      return false;
     }
   };
 
@@ -1039,7 +1045,7 @@ interface Certification {
 
 function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
   technicians: Technician[];
-  onAddTechnician: (name: string, email: string) => Promise<void>;
+  onAddTechnician: (name: string, email: string) => Promise<boolean>;
   onRemoveTechnician: (id: string) => void;
   isPro: boolean;
   setSelectedTechId: (id: string) => void;
@@ -1053,9 +1059,11 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, isPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await onAddTechnician(name, email);
-    setName('');
-    setEmail('');
+    const added = await onAddTechnician(name, email);
+    if (added) {
+      setName('');
+      setEmail('');
+    }
     setLoading(false);
   };
 

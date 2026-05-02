@@ -70,17 +70,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // Resolve company for owner or technician account.
-  let company = await prisma.company.findUnique({
+  // Owner-only billing endpoint.
+  const company = await prisma.company.findUnique({
     where: { email: user.email },
   });
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
       where: { email: user.email },
-      include: { company: true },
+      select: { id: true },
     });
-    company = technician?.company ?? null;
+    if (technician) {
+      return res.status(403).json({
+        error: 'Technician accounts cannot manage subscription plans.',
+        code: 'ROLE_TECHNICIAN',
+      });
+    }
   }
 
   if (!company) {

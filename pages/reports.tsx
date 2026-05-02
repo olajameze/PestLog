@@ -29,6 +29,7 @@ type ReportEntry = {
   address: string;
   treatment: string;
   status?: string;
+  followUpDate?: string;
   notes?: string;
   rooms?: Array<string | { name: string; note?: string }>;
   baitBoxesPlaced?: string;
@@ -54,6 +55,18 @@ type RoomForm = {
   name: string;
   note: string;
 };
+
+function entryNeedsFollowUp(entry: ReportEntry): boolean {
+  if (entry.followUpDate) return true;
+  const notes = (entry.notes || '').toLowerCase();
+  return (
+    notes.includes('follow-up') ||
+    notes.includes('follow up') ||
+    notes.includes('return visit') ||
+    notes.includes('revisit') ||
+    notes.includes('reschedule')
+  );
+}
 
 function parseRoomForms(rooms?: Array<string | { name: string; note?: string }>): RoomForm[] {
   if (!rooms) return [];
@@ -153,6 +166,41 @@ type AnalyticsPayload = {
   clvScore?: number;
   cacRatio?: number;
 };
+
+function normalizeAnalyticsPayload(payload: unknown): AnalyticsPayload {
+  const data = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
+  const audit = (data.auditSummary && typeof data.auditSummary === 'object'
+    ? data.auditSummary
+    : {}) as Record<string, unknown>;
+
+  return {
+    totalJobs: typeof data.totalJobs === 'number' ? data.totalJobs : 0,
+    completedJobs: typeof data.completedJobs === 'number' ? data.completedJobs : 0,
+    openJobs: typeof data.openJobs === 'number' ? data.openJobs : 0,
+    averageDurationMinutes: typeof data.averageDurationMinutes === 'number' ? data.averageDurationMinutes : null,
+    averagePhotosPerJob: typeof data.averagePhotosPerJob === 'number' ? data.averagePhotosPerJob : 0,
+    topTreatments: Array.isArray(data.topTreatments)
+      ? (data.topTreatments as Array<{ treatment: string; count: number }>)
+      : [],
+    technicianPerformance: Array.isArray(data.technicianPerformance)
+      ? (data.technicianPerformance as Array<{ technicianName: string; jobs: number; averageDurationMinutes: number | null }>)
+      : [],
+    routePlan: Array.isArray(data.routePlan)
+      ? (data.routePlan as Array<{ address: string; clientName: string; scheduledAt: string; treatment: string }>)
+      : [],
+    auditSummary: {
+      missingPhotos: typeof audit.missingPhotos === 'number' ? audit.missingPhotos : 0,
+      missingSignatures: typeof audit.missingSignatures === 'number' ? audit.missingSignatures : 0,
+      missingStatus: typeof audit.missingStatus === 'number' ? audit.missingStatus : 0,
+    },
+    retentionRate: typeof data.retentionRate === 'number' ? data.retentionRate : undefined,
+    churnRate: typeof data.churnRate === 'number' ? data.churnRate : undefined,
+    csatScore: typeof data.csatScore === 'number' ? data.csatScore : undefined,
+    npsScore: typeof data.npsScore === 'number' ? data.npsScore : undefined,
+    clvScore: typeof data.clvScore === 'number' ? data.clvScore : undefined,
+    cacRatio: typeof data.cacRatio === 'number' ? data.cacRatio : undefined,
+  };
+}
 
 function EnterprisePerformanceMetrics({ analytics }: { analytics: AnalyticsPayload }) {
   return (
@@ -408,11 +456,16 @@ export default function ReportsPage() {
     }
 
     const result = await res.json();
-    setAnalytics(result);
+    setAnalytics(normalizeAnalyticsPayload(result));
     setAnalyticsLoading(false);
   };
 
   const [search, setSearch] = useState('');
+  const [jobFilter, setJobFilter] = useState<'all' | 'follow-up'>('all');
+
+  const visibleEntries = report
+    ? report.entries.filter((entry) => (jobFilter === 'follow-up' ? entryNeedsFollowUp(entry) : true))
+    : [];
 
   const fetchReport = async () => {
     if (!selectedTechnician || !startDate || !endDate) {
@@ -425,6 +478,9 @@ export default function ReportsPage() {
     let apiUrl = `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`;
     if (search.trim()) {
       apiUrl += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    if (jobFilter === 'follow-up') {
+      apiUrl += '&followUpOnly=1';
     }
 
     if (isPreviewMode) {
@@ -863,7 +919,7 @@ export default function ReportsPage() {
   return (
     <div className="min-h-screen bg-offwhite">
       <div className="flex">
-        <Sidebar activeTab="reports" onSignOut={async () => {
+        <Sidebar role={isOwner ? 'owner' : 'technician'} activeTab="reports" onSignOut={async () => {
           if (isPreviewMode) {
             router.push('/');
             return;
@@ -877,7 +933,7 @@ export default function ReportsPage() {
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-navy mb-3">Compliance Reports</h1>
             <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full mb-4"></div>
-            <p className="text-sm text-gray-600">Generate owner-only reports for technician work and certifications.</p>
+            <p className="text-sm text-gray-600">Generate and review compliance reports for technician work and certifications.</p>
           </div>
         </div>
 
@@ -1012,11 +1068,11 @@ export default function ReportsPage() {
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Jobs</p>
-                  <p className="mt-2 text-xl font-semibold text-slate-900">{report.entries.length}</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-900">{visibleEntries.length}</p>
                 </div>
                 <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Photos</p>
-                  <p className="mt-2 text-xl font-semibold text-slate-900">{report.entries.reduce((count, entry) => count + parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length, 0)}</p>
+                  <p className="mt-2 text-xl font-semibold text-slate-900">{visibleEntries.reduce((count, entry) => count + parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length, 0)}</p>
                 </div>
                 <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Certifications</p>
@@ -1149,14 +1205,38 @@ export default function ReportsPage() {
 
             {/* Jobs Section */}
             <div className="space-y-4">
-              <h3 className="text-xl sm:text-2xl font-bold text-navy">📋 Jobs ({report.entries.length})</h3>
-              {report.entries.length === 0 ? (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-xl sm:text-2xl font-bold text-navy">📋 Jobs ({visibleEntries.length})</h3>
+                <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+                  <button
+                    type="button"
+                    onClick={() => setJobFilter('all')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                      jobFilter === 'all' ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    All Jobs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setJobFilter('follow-up')}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                      jobFilter === 'follow-up' ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    Needs Follow-up
+                  </button>
+                </div>
+              </div>
+              {visibleEntries.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
-                  No jobs found for this range.
+                  {jobFilter === 'follow-up'
+                    ? 'No follow-up jobs found for this range.'
+                    : 'No jobs found for this range.'}
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {report.entries.map((entry) => (
+                  {visibleEntries.map((entry) => (
                     <div key={entry.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex-1">
@@ -1187,6 +1267,12 @@ export default function ReportsPage() {
                         </div>
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm text-gray-600">
+                        {entry.followUpDate && (
+                          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
+                            <p className="text-xs uppercase tracking-[0.24em] text-amber-700">Follow-up Date</p>
+                            <p className="mt-1 font-semibold text-amber-900">{new Date(entry.followUpDate).toLocaleDateString()}</p>
+                          </div>
+                        )}
                         {entry.rooms && (
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Rooms</p>

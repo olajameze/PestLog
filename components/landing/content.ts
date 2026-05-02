@@ -46,11 +46,11 @@ export const pricingPlans = [
   {
     name: 'Enterprise',
     bestFor: 'Large operations with multi-site management',
-    price: 'Contact us',
-    cadence: '',
+    price: '340',
+    cadence: '/month',
     features: ['All Pro & Business features', 'Custom API access', 'Dedicated account manager', 'Advanced security & compliance', 'Retention & Churn analytics', 'NPS with trend analysis'],
-    cta: 'Contact Sales',
-    href: '/contact',
+    cta: 'Start Free Trial',
+    href: '/auth/signup',
     isPopular: false,
   },
 ];
