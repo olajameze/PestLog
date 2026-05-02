@@ -306,6 +306,9 @@ export default function Home() {
             <Link href="/privacy" className="hover:text-emerald-600 transition-colors">Privacy</Link>
             <Link href="/terms" className="hover:text-emerald-600 transition-colors">Terms</Link>
             <Link href="/contact" className="hover:text-emerald-600 transition-colors">Contact</Link>
+            {process.env.NODE_ENV !== 'production' ? (
+              <Link href="/auth/super-admin" className="hover:text-emerald-600 transition-colors">Super Admin</Link>
+            ) : null}
           </div>
         </div>
       </footer>

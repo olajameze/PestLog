@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import AuthLayout from '../../components/layouts/AuthLayout';
 import FormInput from '../../components/ui/FormInput';
@@ -12,6 +12,7 @@ export default function SuperAdminSignInPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [configStatus, setConfigStatus] = useState<'loading' | 'configured' | 'missing'>('loading');
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -36,12 +37,40 @@ export default function SuperAdminSignInPage() {
     router.push('/super-admin');
   };
 
+  useEffect(() => {
+    const checkConfig = async () => {
+      const response = await fetch('/api/super-admin/config');
+      if (!response.ok) {
+        setConfigStatus('missing');
+        return;
+      }
+      const body = await response.json();
+      setConfigStatus(body.configured ? 'configured' : 'missing');
+    };
+    checkConfig().catch(() => setConfigStatus('missing'));
+  }, []);
+
   return (
     <AuthLayout
       title="Super admin sign in"
       subtitle="Restricted access for platform management only."
     >
       <form onSubmit={handleSubmit} className={`space-y-5 ${error ? 'field-shake' : ''}`}>
+        <div
+          className={`rounded-xl border px-3 py-2 text-xs ${
+            configStatus === 'configured'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+              : configStatus === 'missing'
+                ? 'border-amber-200 bg-amber-50 text-amber-900'
+                : 'border-zinc-200 bg-zinc-50 text-zinc-600'
+          }`}
+        >
+          {configStatus === 'loading'
+            ? 'Checking super admin configuration...'
+            : configStatus === 'configured'
+              ? 'Super admin credentials are configured for this environment.'
+              : 'Super admin is not configured. Add SUPER_ADMIN_EMAIL, SUPER_ADMIN_PASSWORD, and SUPER_ADMIN_SESSION_SECRET.'}
+        </div>
         <FormInput
           label="Super Admin Email"
           id="super-admin-email"
