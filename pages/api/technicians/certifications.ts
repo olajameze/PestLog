@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { randomUUID } from 'crypto';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 
@@ -33,7 +34,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { technicianId, expiryDate, fileUrl } = req.body;
+    const technicianId = typeof req.body?.technicianId === 'string' ? req.body.technicianId.trim() : '';
+    const fileUrl = typeof req.body?.fileUrl === 'string' ? req.body.fileUrl.trim() : '';
+    const expiryDate = typeof req.body?.expiryDate === 'string' ? req.body.expiryDate : undefined;
 
     if (!technicianId || !fileUrl) {
       return res.status(400).json({ error: 'Missing technicianId or fileUrl' });
@@ -68,11 +71,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid file path' });
     }
 
+    const parsedExpiryDate = expiryDate ? new Date(expiryDate) : null;
+    if (parsedExpiryDate && Number.isNaN(parsedExpiryDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid expiryDate format' });
+    }
+
     const certification = await prisma.certification.create({
       data: {
+        id: randomUUID(),
         technicianId,
         fileUrl,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        expiryDate: parsedExpiryDate,
+        uploadedAt: new Date(),
       },
     });
 

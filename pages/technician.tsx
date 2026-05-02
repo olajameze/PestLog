@@ -20,6 +20,10 @@ type LogbookEntry = {
   address: string;
   treatment: string;
   notes?: string;
+  rooms?: Array<string | { name: string; note?: string }>;
+  baitBoxesPlaced?: string;
+  poisonUsed?: string;
+  followUpDate?: string;
   photoUrl?: string;
   photoUrls?: string[];
   photos?: { url: string }[];
@@ -90,6 +94,10 @@ export default function TechnicianPage() {
   const [address, setAddress] = useState('');
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
+  const [rooms, setRooms] = useState('');
+  const [baitBoxesPlaced, setBaitBoxesPlaced] = useState('');
+  const [poisonUsed, setPoisonUsed] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -162,6 +170,10 @@ export default function TechnicianPage() {
             address: '45 High Street, Manchester',
             treatment: 'Rodenticide Bait Stations',
             notes: 'Installed 6 bait stations in kitchen and storage areas.',
+          rooms: ['Kitchen', 'Storage'],
+          baitBoxesPlaced: '6',
+          poisonUsed: 'Rodenticide bait blocks',
+          followUpDate: new Date(Date.now() + 7 * 86400000).toISOString(),
           },
           {
             id: 'preview-2',
@@ -170,6 +182,7 @@ export default function TechnicianPage() {
             address: '12 Industrial Estate, Leeds',
             treatment: 'Rodent Monitoring',
             notes: 'Quarterly inspection completed. No activity detected.',
+          rooms: ['Warehouse floor'],
           },
         ]);
         return;
@@ -369,6 +382,10 @@ export default function TechnicianPage() {
           address,
           treatment,
           notes,
+          rooms: rooms.split(',').map((room) => room.trim()).filter((room) => room.length > 0),
+          baitBoxesPlaced,
+          poisonUsed,
+          followUpDate: followUpDate || undefined,
           photoUrl: photoUrls[0],
           photoUrls,
           signature: signatureDataUrl,
@@ -380,6 +397,10 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
+      setRooms('');
+      setBaitBoxesPlaced('');
+      setPoisonUsed('');
+      setFollowUpDate('');
       setPhotoUrls([]);
       setPhotoPreviewUrls([]);
       clearSignature();
@@ -406,6 +427,10 @@ export default function TechnicianPage() {
         address,
         treatment,
         notes,
+        rooms: rooms.split(',').map((room) => room.trim()).filter((room) => room.length > 0),
+        baitBoxesPlaced,
+        poisonUsed,
+        followUpDate: followUpDate || undefined,
         photoUrl: photoUrls[0],
         photoUrls,
         signature: signatureDataUrl,
@@ -420,11 +445,15 @@ export default function TechnicianPage() {
       setAddress('');
       setTreatment(treatments[0]);
       setNotes('');
+      setRooms('');
+      setBaitBoxesPlaced('');
+      setPoisonUsed('');
+      setFollowUpDate('');
       setPhotoUrls([]);
       setPhotoPreviewUrls([]);
       clearSignature();
     } else {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({ error: 'Could not save entry' }));
       const message = err.details ? `${err.error || 'Could not save entry'}: ${err.details}` : (err.error || 'Could not save entry');
       console.error('Technician logbook save failed', err);
       showToast('Save failed', message, 'error');
@@ -650,6 +679,55 @@ export default function TechnicianPage() {
             </div>
 
             {/* Notes */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="form-group">
+                <label htmlFor="technician-entry-rooms" className="form-label">Rooms (comma separated)</label>
+                <input
+                  id="technician-entry-rooms"
+                  type="text"
+                  value={rooms}
+                  onChange={(e) => setRooms(e.target.value)}
+                  placeholder="Kitchen, Loft, Utility room"
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="technician-entry-followup" className="form-label">Follow-up Date (optional)</label>
+                <input
+                  id="technician-entry-followup"
+                  type="date"
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="form-group">
+                <label htmlFor="technician-entry-bait" className="form-label">Bait Boxes Placed</label>
+                <input
+                  id="technician-entry-bait"
+                  type="text"
+                  value={baitBoxesPlaced}
+                  onChange={(e) => setBaitBoxesPlaced(e.target.value)}
+                  placeholder="e.g. 6"
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="technician-entry-poison" className="form-label">Poison Used</label>
+                <input
+                  id="technician-entry-poison"
+                  type="text"
+                  value={poisonUsed}
+                  onChange={(e) => setPoisonUsed(e.target.value)}
+                  placeholder="e.g. Bromadiolone blocks"
+                  className="form-input"
+                />
+              </div>
+            </div>
+
             <div className="form-group">
               <label htmlFor="technician-entry-notes" className="form-label">Additional Notes</label>
               <textarea
@@ -781,6 +859,18 @@ export default function TechnicianPage() {
                 <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">{entry.treatment}</span>
               </div>
               <p className="mt-4 text-gray-700">{entry.address}</p>
+              {entry.rooms && entry.rooms.length > 0 ? (
+                <p className="mt-2 text-sm text-gray-600">
+                  Rooms: {entry.rooms.map((room) => (typeof room === 'string' ? room : room.name)).join(', ')}
+                </p>
+              ) : null}
+              {entry.followUpDate ? (
+                <p className="mt-1 text-sm text-amber-700 font-medium">
+                  Follow-up: {new Date(entry.followUpDate).toLocaleDateString()}
+                </p>
+              ) : null}
+              {entry.baitBoxesPlaced ? <p className="mt-1 text-sm text-gray-600">Bait boxes: {entry.baitBoxesPlaced}</p> : null}
+              {entry.poisonUsed ? <p className="mt-1 text-sm text-gray-600">Poison used: {entry.poisonUsed}</p> : null}
               {entry.notes && <p className="mt-2 text-gray-600 whitespace-pre-line">{entry.notes}</p>}
               {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
                 <div className="mt-4 grid grid-cols-2 gap-3">

@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
@@ -186,7 +187,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Add photos relation if any
       if (normalizedPhotoUrls.length > 0) {
         entryData.photos = {
-          create: normalizedPhotoUrls.map((url) => ({ url })),
+          create: normalizedPhotoUrls.map((url) => ({
+            id: randomUUID(),
+            url,
+            createdAt: new Date(),
+          })),
         };
       }
 
