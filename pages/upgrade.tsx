@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/ToastProvider';
-import { getClientSupportEmail } from '../lib/supportEmail';
 
 type Company = {
   id: string;
@@ -18,7 +17,6 @@ type Subscription = {
 
 export default function UpgradePage() {
   const router = useRouter();
-  const supportAddr = getClientSupportEmail();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const [company, setCompany] = useState<Company | null>(null);
@@ -237,13 +235,13 @@ export default function UpgradePage() {
 
           <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm ring-1 ring-amber-100">
             <h2 className="text-xl font-bold text-navy">Enterprise</h2>
-            <p className="mt-2 text-2xl font-bold text-primary-600">£60<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£340.00 GBP</p>
             <p className="mt-1 text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Everything in Business</li>
+              <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
               <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
               <li>• CSAT &amp; NPS with trend analysis</li>
-              <li>• Enterprise API key access</li>
+              <li>• All Business capabilities plus bespoke integrations</li>
             </ul>
             <button
               type="button"
@@ -253,12 +251,6 @@ export default function UpgradePage() {
             >
               {actionLoading && selectedPlan === 'enterprise' ? 'Redirecting...' : 'Choose Enterprise'}
             </button>
-            <a
-              href={`mailto:${supportAddr}?subject=${encodeURIComponent('Pest Trace Enterprise Enquiry')}`}
-              className="mt-3 block text-center text-sm font-medium text-primary-600 underline-offset-2 hover:underline"
-            >
-              Contact sales for volume or SLA
-            </a>
           </div>
         </div>
 

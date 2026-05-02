@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
 import Sidebar from '../components/sidebar';
@@ -145,35 +144,49 @@ function renderRoomDetails(rooms?: Array<string | { name: string; note?: string 
 type Tab = 'technicians' | 'logbook' | 'settings';
 
 // ========== PlanModal Component ==========
-const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe: (plan: 'pro' | 'business') => void }) => (
+const PlanModal = ({
+  onClose,
+  onSubscribe,
+}: {
+  onClose: () => void;
+  onSubscribe: (plan: 'pro' | 'business' | 'enterprise') => void;
+}) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
       <div className="flex justify-between items-center mb-8">
         <h2 className="flex-1 text-center text-2xl font-bold text-navy">Choose Your Plan</h2>
         <Button size="sm" variant="secondary" onClick={onClose}>✕</Button>
       </div>
-      <div className="grid gap-6 mb-8 md:grid-cols-3">
+      <div className="mb-8 grid gap-6 md:grid-cols-3">
         {/* Pro */}
-        <div className="border-2 border-blue-200 rounded-xl p-6 hover:border-blue-300 hover:shadow-lg transition-all">
+        <div className="flex h-full flex-col rounded-xl border-2 border-blue-200 p-6 transition-all hover:border-blue-300 hover:shadow-lg">
           <div className="inline-flex items-center gap-2 mb-4">
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
             <span className="text-sm font-semibold text-blue-700">Recommended</span>
           </div>
           <h3 className="text-xl font-bold text-navy mb-2">Pro</h3>
           <div className="text-3xl font-bold text-primary-600 mb-4">£25<span className="text-xl">/month</span></div>
-          <ul className="space-y-2 mb-6 text-sm text-zinc-600">
+          <ul className="mb-6 space-y-2 text-sm text-zinc-600">
             <li>• Unlimited logbook entries</li>
             <li>• PDF compliance reports</li>
             <li>• Technician certifications</li>
             <li>• PWA offline mode</li>
           </ul>
-          <Button onClick={() => { onClose(); onSubscribe('pro'); }} className="w-full">Choose Pro (£25/mo)</Button>
+          <Button
+            onClick={() => {
+              onClose();
+              onSubscribe('pro');
+            }}
+            className="mt-auto w-full text-center"
+          >
+            Choose Pro (£25/mo)
+          </Button>
         </div>
         {/* Business */}
-        <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-gray-300 hover:shadow-lg transition-all">
+        <div className="flex h-full flex-col rounded-xl border-2 border-gray-200 p-6 transition-all hover:border-gray-300 hover:shadow-lg">
           <h3 className="text-xl font-bold text-navy mb-2">Business</h3>
           <div className="text-3xl font-bold text-primary-600 mb-4">£40<span className="text-xl">/month</span></div>
-          <ul className="space-y-2 mb-6 text-sm text-zinc-600">
+          <ul className="mb-6 space-y-2 text-sm text-zinc-600">
             <li>• Everything in Pro</li>
             <li>• Multi-company support</li>
             <li>• Advanced reporting</li>
@@ -181,25 +194,35 @@ const PlanModal = ({ onClose, onSubscribe }: { onClose: () => void; onSubscribe:
             <li>• Priority support</li>
             <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
           </ul>
-          <Button variant="secondary" onClick={() => { onClose(); onSubscribe('business'); }} className="w-full">Choose Business (£40/mo)</Button>
+          <Button
+            onClick={() => {
+              onClose();
+              onSubscribe('business');
+            }}
+            className="mt-auto w-full text-center"
+          >
+            Choose Business (£40/mo)
+          </Button>
         </div>
         {/* Enterprise */}
-        <div className="border-2 border-gray-200 rounded-xl p-6 hover:border-gray-300 hover:shadow-lg transition-all">
+        <div className="flex h-full flex-col rounded-xl border-2 border-amber-200 p-6 transition-all hover:border-amber-300 hover:shadow-lg">
           <h3 className="text-xl font-bold text-navy mb-2">Enterprise</h3>
-          <div className="text-3xl font-bold text-primary-600 mb-4">Custom</div>
-          <ul className="space-y-2 mb-6 text-sm text-zinc-600">
+          <div className="mb-4 text-3xl font-bold text-primary-600">£340.00 GBP</div>
+          <ul className="mb-6 space-y-2 text-sm text-zinc-600">
             <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
             <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
             <li>• Customer Satisfaction (CSAT) &amp; Net Promoter Score (NPS) with trend analysis</li>
             <li>• All Business capabilities plus bespoke integrations</li>
           </ul>
-          <Link
-            href="/contact"
-            onClick={onClose}
-            className="btn btn-secondary inline-flex w-full items-center justify-center rounded-lg border border-zinc-300 px-6 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+          <Button
+            onClick={() => {
+              onClose();
+              onSubscribe('enterprise');
+            }}
+            className="mt-auto w-full text-center"
           >
-            Contact Sales
-          </Link>
+            Choose Enterprise (£340/mo)
+          </Button>
         </div>
       </div>
       <div className="text-center text-sm text-zinc-500 mb-4">Your subscription starts immediately.</div>
@@ -513,7 +536,7 @@ export default function Dashboard() {
     router.push('/');
   };
 
-  const handleSubscribe = async (plan: 'pro' | 'business') => {
+  const handleSubscribe = async (plan: 'pro' | 'business' | 'enterprise') => {
     if (isPreviewMode) {
       showToast('Preview mode', 'Checkout is disabled in preview mode.', 'info');
       return;

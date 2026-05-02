@@ -330,6 +330,7 @@ export default function ReportsPage() {
   useEffect(() => {
     if (!router.isReady) return;
     const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+    const querySessionId = typeof router.query.session_id === 'string' ? router.query.session_id : undefined;
     if (!queryPlan) return;
 
     setUpgradeConfirmedPlan(queryPlan);
@@ -349,6 +350,18 @@ export default function ReportsPage() {
     const refreshSubscriptionPlan = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
+
+      if (querySessionId) {
+        await fetch('/api/checkout/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ sessionId: querySessionId }),
+        }).catch(() => undefined);
+      }
+
       const res = await fetch('/api/subscription', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
