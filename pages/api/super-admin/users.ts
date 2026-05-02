@@ -10,6 +10,7 @@ type SafeUser = {
   emailConfirmedAt: string | null;
   role: string;
   bannedUntil: string | null;
+  isProtected: boolean;
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -28,14 +29,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Supabase admin client not configured' });
   }
 
+  const requestedPage = Number(req.query.page ?? 1);
+  const requestedPerPage = Number(req.query.perPage ?? 50);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
+  const perPage =
+    Number.isFinite(requestedPerPage) && requestedPerPage > 0
+      ? Math.min(200, Math.floor(requestedPerPage))
+      : 50;
+
   const { data, error } = await admin.auth.admin.listUsers({
-    page: 1,
-    perPage: 200,
+    page,
+    perPage,
   });
   if (error) {
     return res.status(500).json({ error: error.message });
   }
 
+  const protectedEmail = (process.env.SUPER_ADMIN_EMAIL ?? '').trim().toLowerCase();
   const users: SafeUser[] = (data?.users ?? []).map((u) => ({
     id: u.id,
     email: u.email ?? '',
@@ -44,8 +54,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     emailConfirmedAt: u.email_confirmed_at ?? null,
     role: typeof u.user_metadata?.role === 'string' ? u.user_metadata.role : 'unknown',
     bannedUntil: u.banned_until ?? null,
+    isProtected: protectedEmail.length > 0 && (u.email ?? '').trim().toLowerCase() === protectedEmail,
   }));
 
-  return res.status(200).json({ users });
+  return res.status(200).json({
+    users,
+    page: data?.page ?? page,
+    perPage: data?.per_page ?? perPage,
+    total: data?.total ?? users.length,
+  });
 }
 

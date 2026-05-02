@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSupabaseAdmin } from '../../../../lib/supabase-admin';
 import { getSuperAdminCookieName, verifySuperAdminToken } from '../../../../lib/superAdminAuth';
+import { writeAuditLog } from '../../../../lib/audit/log';
 
 type ActionBody =
   | { action: 'disable' }
@@ -39,9 +40,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Supabase admin client not configured' });
   }
 
+  const currentUser = await admin.auth.admin.getUserById(userId);
+  if (currentUser.error || !currentUser.data?.user) {
+    return res.status(404).json({ error: currentUser.error?.message || 'User not found' });
+  }
+
+  const protectedEmail = (process.env.SUPER_ADMIN_EMAIL ?? '').trim().toLowerCase();
+  const isProtectedUser =
+    protectedEmail.length > 0 &&
+    (currentUser.data.user.email ?? '').trim().toLowerCase() === protectedEmail;
+  const requesterId = `super_admin:${protectedEmail || 'operator'}`;
+  const ipAddress = (req.headers['x-forwarded-for'] as string | undefined) ?? req.socket.remoteAddress ?? null;
+
   if (req.method === 'DELETE') {
+    if (isProtectedUser) {
+      return res.status(403).json({ error: 'Protected super admin account cannot be deleted.' });
+    }
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (error) return res.status(500).json({ error: error.message });
+    await writeAuditLog({
+      userId: requesterId,
+      action: 'DELETE',
+      tableName: 'auth.users',
+      recordId: userId,
+      oldValues: {
+        email: currentUser.data.user.email ?? '',
+        role: currentUser.data.user.user_metadata?.role ?? 'unknown',
+      },
+      ipAddress,
+    });
     return res.status(200).json({ ok: true });
   }
 
@@ -56,32 +83,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (payload.action === 'disable') {
+    if (isProtectedUser) {
+      return res.status(403).json({ error: 'Protected super admin account cannot be disabled.' });
+    }
     const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: '876000h' });
     if (error) return res.status(500).json({ error: error.message });
+    await writeAuditLog({
+      userId: requesterId,
+      action: 'UPDATE',
+      tableName: 'auth.users',
+      recordId: userId,
+      oldValues: { bannedUntil: currentUser.data.user.banned_until ?? null },
+      newValues: { bannedUntil: '876000h', action: 'disable' },
+      ipAddress,
+    });
     return res.status(200).json({ ok: true });
   }
 
   if (payload.action === 'enable') {
     const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: 'none' });
     if (error) return res.status(500).json({ error: error.message });
+    await writeAuditLog({
+      userId: requesterId,
+      action: 'UPDATE',
+      tableName: 'auth.users',
+      recordId: userId,
+      oldValues: { bannedUntil: currentUser.data.user.banned_until ?? null },
+      newValues: { bannedUntil: null, action: 'enable' },
+      ipAddress,
+    });
     return res.status(200).json({ ok: true });
   }
 
   if (payload.action === 'force_signout') {
+    if (isProtectedUser) {
+      return res.status(403).json({ error: 'Protected super admin account cannot be force-signed out.' });
+    }
     // Supabase admin SDK does not expose "logout by user id".
     // We use a short temporary ban to invalidate active sessions and force re-authentication.
     const { error } = await admin.auth.admin.updateUserById(userId, { ban_duration: '1h' });
     if (error) return res.status(500).json({ error: error.message });
+    await writeAuditLog({
+      userId: requesterId,
+      action: 'UPDATE',
+      tableName: 'auth.users',
+      recordId: userId,
+      oldValues: { bannedUntil: currentUser.data.user.banned_until ?? null },
+      newValues: { bannedUntil: '1h', action: 'force_signout' },
+      ipAddress,
+    });
     return res.status(200).json({ ok: true });
   }
 
   const roleUpdate = payload;
-  const current = await admin.auth.admin.getUserById(userId);
-  if (current.error || !current.data?.user) {
-    return res.status(500).json({ error: current.error?.message || 'Unable to load user' });
+  if (isProtectedUser && roleUpdate.role !== 'admin') {
+    return res.status(403).json({ error: 'Protected super admin account role cannot be changed.' });
   }
   const nextMetadata = {
-    ...(current.data.user.user_metadata ?? {}),
+    ...(currentUser.data.user.user_metadata ?? {}),
     role: roleUpdate.role,
   };
 
@@ -89,6 +148,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     user_metadata: nextMetadata,
   });
   if (error) return res.status(500).json({ error: error.message });
+  await writeAuditLog({
+    userId: requesterId,
+    action: 'UPDATE',
+    tableName: 'auth.users',
+    recordId: userId,
+    oldValues: { role: currentUser.data.user.user_metadata?.role ?? 'unknown' },
+    newValues: { role: roleUpdate.role, action: 'set_role' },
+    ipAddress,
+  });
   return res.status(200).json({ ok: true });
 }
 
