@@ -4,6 +4,11 @@ import { prisma } from '../../lib/prisma';
 import { buildDashboardInsights } from '../../lib/dashboardInsights';
 import type { DashboardDateRangeOption } from '../../lib/api/mockDashboardData';
 import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
+import {
+  getRequestIp,
+  isIpAllowed,
+  parseEnterpriseSettings,
+} from '../../lib/enterpriseFeatures';
 
 async function resolveOwnerCompanyForUser(token: string) {
   const {
@@ -21,6 +26,7 @@ async function resolveOwnerCompanyForUser(token: string) {
       plan: true, // Ensure plan is selected for direct company access
       subscriptionStatus: true,
       trialEndsAt: true,
+      notificationPreferences: true,
     },
   });
   return direct;
@@ -38,9 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const token = authHeader.replace('Bearer ', '');
+  const {
+    data: { user },
+  } = await supabase.auth.getUser(token);
   const company = await resolveOwnerCompanyForUser(token);
   if (!company) {
-    const { data: { user } } = await supabase.auth.getUser(token);
     if (user?.email) {
       const technician = await prisma.technician.findFirst({
         where: { email: user.email },
@@ -59,6 +67,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!hasSubscriptionAccess(company)) {
     return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
   }
+  const enterpriseSettings = parseEnterpriseSettings(company.notificationPreferences);
+  if (company.plan === 'enterprise') {
+    if (enterpriseSettings.security.requireVerifiedEmail) {
+      const userVerified = Boolean(
+        (user as { email_confirmed_at?: string | null } | null)?.email_confirmed_at,
+      );
+      if (!userVerified) {
+        return res.status(403).json({
+          error: 'Email verification is required by enterprise security policy.',
+        });
+      }
+    }
+    if (enterpriseSettings.security.ipAllowlistEnabled) {
+      const ip = getRequestIp(req);
+      if (!isIpAllowed(ip, enterpriseSettings.security.allowedIps)) {
+        return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
+      }
+    }
+  }
 
   const raw = req.query.range;
   const range: DashboardDateRangeOption =
@@ -74,7 +101,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       requireSignature: company.requireSignature ?? false,
       plan: policyPlan,
     };
-    const data = await buildDashboardInsights(prisma, company.id, policy, range);
+    const data = await buildDashboardInsights(prisma, company.id, policy, range, {
+      npsResponses: enterpriseSettings.npsResponses,
+    });
     return res.status(200).json(data);
   } catch (error) {
     console.error('dashboard-insights', error);

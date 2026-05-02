@@ -10,6 +10,14 @@ type CompanyPolicy = {
   plan?: 'free' | 'pro' | 'business' | 'enterprise';
 };
 
+type DashboardEnterpriseOptions = {
+  npsResponses?: Array<{
+    score: number;
+    submittedAt: string;
+    comment?: string;
+  }>;
+};
+
 const ESTIMATED_GBP_PER_VISIT = 135;
 
 function startOfLocalDay(d: Date): Date {
@@ -75,6 +83,7 @@ export async function buildDashboardInsights(
   companyId: string,
   policy: CompanyPolicy,
   range: DashboardDateRangeOption,
+  enterpriseOptions?: DashboardEnterpriseOptions,
 ): Promise<DashboardData> {
   const days = rangeToDays(range);
   const now = new Date();
@@ -289,17 +298,18 @@ const repeatClients = [...clientCounts.values()].filter((n) => n >= 2).length;
 const retentionRate =
   uniqueClients === 0 ? 0 : Math.round((repeatClients / uniqueClients) * 100);
 
-const openByTreatment = new Map<string, number>();
+const churnByReason = new Map<string, number>();
 for (const e of entriesInRange) {
-  if (getStatus(e) === 'open') {
-    const t = e.treatment.trim() || 'General';
-    openByTreatment.set(t, (openByTreatment.get(t) ?? 0) + 1);
+  const status = getStatus(e);
+  if (status === 'cancelled' || status === 'canceled') {
+    const reason = (e.recommendation || '').trim() || 'No reason logged';
+    churnByReason.set(reason, (churnByReason.get(reason) ?? 0) + 1);
   }
 }
-  const reasons = [...openByTreatment.entries()]
+  const reasons = [...churnByReason.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([reason, count]) => ({ reason: `Open jobs: ${reason}`, count }));
+    .map(([reason, count]) => ({ reason, count }));
 
   const avgJobsPerClient = uniqueClients === 0 ? 0 : totalJobs / uniqueClients;
   // Calculate average price per job from actual data, fallback to estimated value
@@ -344,7 +354,37 @@ for (const e of entriesInRange) {
   }
   const averageCsat =
     csatTrend.length === 0 ? 0 : Math.round((csatTrend.reduce((a, b) => a + b, 0) / csatTrend.length) * 10) / 10;
-  const nps = Math.max(-100, Math.min(100, Math.round((retentionRate - 55) * 1.8)));
+
+  const rawNpsResponses =
+    enterpriseOptions?.npsResponses?.filter((item) => {
+      if (!Number.isFinite(item.score) || item.score < 0 || item.score > 10) return false;
+      const at = new Date(item.submittedAt);
+      return !Number.isNaN(at.getTime()) && at >= rangeStart && at <= rangeEnd;
+    }) ?? [];
+  const weekBucketsForNps = Math.min(8, Math.max(3, Math.ceil(days / 14)));
+  const npsTrend: number[] = [];
+  for (let w = 0; w < weekBucketsForNps; w += 1) {
+    const from = new Date(rangeStart.getTime() + (w * (rangeEnd.getTime() - rangeStart.getTime())) / weekBucketsForNps);
+    const to = new Date(
+      rangeStart.getTime() + ((w + 1) * (rangeEnd.getTime() - rangeStart.getTime())) / weekBucketsForNps,
+    );
+    const slice = rawNpsResponses.filter((response) => {
+      const at = new Date(response.submittedAt);
+      return at >= from && at < to;
+    });
+    if (slice.length === 0) {
+      npsTrend.push(0);
+      continue;
+    }
+    const promoters = slice.filter((response) => response.score >= 9).length;
+    const detractors = slice.filter((response) => response.score <= 6).length;
+    const npsValue = Math.round(((promoters - detractors) / slice.length) * 100);
+    npsTrend.push(npsValue);
+  }
+  const nps =
+    rawNpsResponses.length === 0
+      ? Math.max(-100, Math.min(100, Math.round((retentionRate - 55) * 1.8)))
+      : Math.round(npsTrend.reduce((sum, value) => sum + value, 0) / Math.max(1, npsTrend.length));
 
   return {
     todaySchedule: {
@@ -373,7 +413,7 @@ for (const e of entriesInRange) {
     csat: {
       average: averageCsat,
       nps,
-      trend: csatTrend,
+      trend: rawNpsResponses.length > 0 ? npsTrend : csatTrend,
     },
   };
 }

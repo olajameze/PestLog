@@ -39,6 +39,7 @@ type ReportEntry = {
   photos?: { url: string }[];
   signature?: string;
   price?: number;
+  recommendation?: string;
 };
 
 type SearchHit = {
@@ -184,8 +185,10 @@ type AnalyticsPayload = {
   churnRate?: number;
   csatScore?: number;
   npsScore?: number;
+  npsTrend?: number[];
   clvScore?: number;
   cacRatio?: number;
+  cancellationReasons?: Array<{ reason: string; count: number }>;
 };
 
 function normalizeAnalyticsPayload(payload: unknown): AnalyticsPayload {
@@ -218,12 +221,36 @@ function normalizeAnalyticsPayload(payload: unknown): AnalyticsPayload {
     churnRate: typeof data.churnRate === 'number' ? data.churnRate : undefined,
     csatScore: typeof data.csatScore === 'number' ? data.csatScore : undefined,
     npsScore: typeof data.npsScore === 'number' ? data.npsScore : undefined,
+    npsTrend: Array.isArray(data.npsTrend)
+      ? (data.npsTrend as number[])
+      : [],
     clvScore: typeof data.clvScore === 'number' ? data.clvScore : undefined,
     cacRatio: typeof data.cacRatio === 'number' ? data.cacRatio : undefined,
+    cancellationReasons: Array.isArray(data.cancellationReasons)
+      ? (data.cancellationReasons as Array<{ reason: string; count: number }>)
+      : [],
   };
 }
 
-function EnterprisePerformanceMetrics({ analytics }: { analytics: AnalyticsPayload }) {
+function EnterprisePerformanceMetrics({
+  analytics,
+  onSubmitNps,
+  npsSubmitting,
+}: {
+  analytics: AnalyticsPayload;
+  onSubmitNps: (score: number, comment: string) => Promise<void>;
+  npsSubmitting: boolean;
+}) {
+  const [npsScoreInput, setNpsScoreInput] = useState('10');
+  const [npsCommentInput, setNpsCommentInput] = useState('');
+
+  const submitNps = async () => {
+    const parsed = Number(npsScoreInput);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10) return;
+    await onSubmitNps(parsed, npsCommentInput);
+    setNpsCommentInput('');
+  };
+
   return (
     <div className="rounded-2xl border border-purple-200 bg-purple-50 p-6 shadow-sm">
       <h4 className="text-lg font-semibold text-purple-900 mb-4">Enterprise Performance Metrics</h4>
@@ -251,6 +278,66 @@ function EnterprisePerformanceMetrics({ analytics }: { analytics: AnalyticsPaylo
           </div>
         </div>
       </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-purple-100 bg-white p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">NPS trend</p>
+          <div className="mt-3 flex h-24 items-end gap-2 rounded-xl bg-slate-100 p-3">
+            {(analytics.npsTrend && analytics.npsTrend.length > 0 ? analytics.npsTrend : [0]).map((value, index) => (
+              <div
+                key={index}
+                className="flex-1 rounded-t bg-purple-500/70"
+                style={{ height: `${Math.max(16, Math.min(96, Math.abs(value)))}%` }}
+                title={`Point ${index + 1}: ${value}`}
+              />
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-slate-500">
+            Trend points are based on recorded customer NPS responses in the selected period.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-purple-100 bg-white p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Log NPS response</p>
+          <div className="mt-3 space-y-3">
+            <FormInput
+              label="NPS score (0-10)"
+              id="enterprise-nps-score"
+              type="number"
+              value={npsScoreInput}
+              onChange={(e) => setNpsScoreInput(e.target.value)}
+            />
+            <FormInput
+              label="Comment (optional)"
+              id="enterprise-nps-comment"
+              value={npsCommentInput}
+              onChange={(e) => setNpsCommentInput(e.target.value)}
+              placeholder="What drove this score?"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                void submitNps();
+              }}
+              className="btn btn-primary"
+              disabled={npsSubmitting}
+            >
+              {npsSubmitting ? 'Saving...' : 'Save NPS response'}
+            </button>
+          </div>
+        </div>
+      </div>
+      {analytics.cancellationReasons && analytics.cancellationReasons.length > 0 ? (
+        <div className="mt-4 rounded-2xl border border-purple-100 bg-white p-4">
+          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Top churn reasons</p>
+          <div className="mt-3 grid gap-2">
+            {analytics.cancellationReasons.map((item) => (
+              <div key={item.reason} className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                <span className="text-sm text-slate-700">{item.reason}</span>
+                <span className="text-sm font-semibold text-purple-700">{item.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -269,6 +356,7 @@ export default function ReportsPage() {
   const [upgradeConfirmedPlan, setUpgradeConfirmedPlan] = useState<string | null>(null);
   const [reportGeneratedMessage, setReportGeneratedMessage] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
+  const [npsSubmitting, setNpsSubmitting] = useState(false);
   const [plan, setPlan] = useState<'trial' | 'pro' | 'business' | 'enterprise'>('trial');
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -482,6 +570,36 @@ export default function ReportsPage() {
     const result = await res.json();
     setAnalytics(normalizeAnalyticsPayload(result));
     setAnalyticsLoading(false);
+  };
+
+  const submitEnterpriseNps = async (score: number, comment: string) => {
+    setNpsSubmitting(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      setNpsSubmitting(false);
+      return;
+    }
+
+    const res = await fetch('/api/enterprise/nps', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ score, comment }),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Unable to save NPS response.' }));
+      showToast('NPS save failed', error.error || 'Unable to save NPS response.', 'error');
+      setNpsSubmitting(false);
+      return;
+    }
+    showToast('NPS saved', 'Customer NPS response has been recorded.', 'success');
+    if (selectedTechnician) {
+      await fetchAnalytics(selectedTechnician);
+    }
+    setNpsSubmitting(false);
   };
 
   const [search, setSearch] = useState('');
@@ -1295,7 +1413,13 @@ export default function ReportsPage() {
                       </div>
                     </div>
 
-                    {plan === 'enterprise' ? <EnterprisePerformanceMetrics analytics={analytics} /> : null}
+                    {plan === 'enterprise' ? (
+                      <EnterprisePerformanceMetrics
+                        analytics={analytics}
+                        onSubmitNps={submitEnterpriseNps}
+                        npsSubmitting={npsSubmitting}
+                      />
+                    ) : null}
                   </div>
 
                 ) : (
@@ -1423,6 +1547,12 @@ export default function ReportsPage() {
                       </div>
                       {entry.notes ? (
                         <p className="mt-4 text-gray-600 text-sm leading-6">{entry.notes}</p>
+                      ) : null}
+                      {(entry.status?.toLowerCase() === 'cancelled' || entry.status?.toLowerCase() === 'canceled') && entry.recommendation ? (
+                        <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3">
+                          <p className="text-xs uppercase tracking-[0.24em] text-rose-700">Cancellation reason</p>
+                          <p className="mt-1 text-sm font-medium text-rose-900">{entry.recommendation}</p>
+                        </div>
                       ) : null}
                       {editingEntryId === entry.id && editingEntryState ? (
                         <div className="mt-6 rounded-2xl border border-primary-200 bg-primary-50 p-4">

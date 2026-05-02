@@ -9,6 +9,18 @@ type NotificationPreferences = {
   renewal: boolean;
   certificationExpiry: boolean;
   apiKey?: string;
+  enterprise?: {
+    accountManager?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
+    security?: {
+      ipAllowlistEnabled?: boolean;
+      allowedIps?: string[];
+      requireVerifiedEmail?: boolean;
+    };
+  };
 };
 
 type Company = {
@@ -84,8 +96,31 @@ export default function SettingsTab({
     apiKey: company.notificationPreferences?.apiKey,
   });
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [accountManagerName, setAccountManagerName] = useState(
+    company.notificationPreferences?.enterprise?.accountManager?.name || '',
+  );
+  const [accountManagerEmail, setAccountManagerEmail] = useState(
+    company.notificationPreferences?.enterprise?.accountManager?.email || supportAddr,
+  );
+  const [accountManagerPhone, setAccountManagerPhone] = useState(
+    company.notificationPreferences?.enterprise?.accountManager?.phone || '',
+  );
+  const [ipAllowlistEnabled, setIpAllowlistEnabled] = useState(
+    company.notificationPreferences?.enterprise?.security?.ipAllowlistEnabled ?? false,
+  );
+  const [allowedIpsText, setAllowedIpsText] = useState(
+    (company.notificationPreferences?.enterprise?.security?.allowedIps || []).join('\n'),
+  );
+  const [requireVerifiedEmail, setRequireVerifiedEmail] = useState(
+    company.notificationPreferences?.enterprise?.security?.requireVerifiedEmail ?? true,
+  );
 
   const handleSaveSettings = () => {
+    const allowedIps = allowedIpsText
+      .split('\n')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+
     onUpdateCompanySettings({
       name: companyName.trim(),
       phone: phone.trim() || undefined,
@@ -95,7 +130,21 @@ export default function SettingsTab({
       requireSignature,
       requirePhotos,
       defaultReportRangeDays,
-      notificationPreferences,
+      notificationPreferences: {
+        ...notificationPreferences,
+        enterprise: {
+          accountManager: {
+            name: accountManagerName.trim(),
+            email: accountManagerEmail.trim() || supportAddr,
+            phone: accountManagerPhone.trim(),
+          },
+          security: {
+            ipAllowlistEnabled,
+            allowedIps,
+            requireVerifiedEmail,
+          },
+        },
+      },
     });
   };
 
@@ -225,6 +274,74 @@ export default function SettingsTab({
           </div>
         </div>
 
+        {subscription?.plan === 'enterprise' ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+            <h4 className="text-lg font-semibold text-navy">Enterprise success & security</h4>
+            <p className="mt-2 text-sm text-slate-600">
+              Configure your dedicated account manager contact and security/compliance controls.
+            </p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <FormInput
+                label="Account Manager Name"
+                id="settings-account-manager-name"
+                value={accountManagerName}
+                onChange={(e) => setAccountManagerName(e.target.value)}
+                placeholder="Jane Smith"
+              />
+              <FormInput
+                label="Account Manager Email"
+                id="settings-account-manager-email"
+                type="email"
+                value={accountManagerEmail}
+                onChange={(e) => setAccountManagerEmail(e.target.value)}
+                placeholder={supportAddr}
+              />
+              <FormInput
+                label="Account Manager Phone"
+                id="settings-account-manager-phone"
+                type="tel"
+                value={accountManagerPhone}
+                onChange={(e) => setAccountManagerPhone(e.target.value)}
+                placeholder="+44 0000 000000"
+              />
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Advanced security</p>
+                <div className="mt-3 space-y-2">
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={requireVerifiedEmail}
+                      onChange={(e) => setRequireVerifiedEmail(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">Require verified owner email on sensitive APIs</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={ipAllowlistEnabled}
+                      onChange={(e) => setIpAllowlistEnabled(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">Enable IP allowlist</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <label htmlFor="settings-allowed-ips" className="mt-4 block text-sm font-medium text-slate-700">
+              Allowed IP addresses (one per line)
+            </label>
+            <textarea
+              id="settings-allowed-ips"
+              value={allowedIpsText}
+              onChange={(e) => setAllowedIpsText(e.target.value)}
+              placeholder={'203.0.113.10\n198.51.100.42'}
+              className="mt-2 w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm text-slate-800"
+              rows={4}
+            />
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-3 items-center">
           <Button onClick={handleSaveSettings} disabled={savingSettings}>
             {savingSettings ? 'Saving settings...' : 'Save settings'}
@@ -279,13 +396,21 @@ export default function SettingsTab({
             </div>
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-sm text-slate-600">
               <p className="font-semibold text-slate-900">Dedicated account manager</p>
-              <p className="mt-2">Enterprise customers have a dedicated account representative.</p>
+              <p className="mt-2">
+                {accountManagerName
+                  ? `${accountManagerName} is assigned as your dedicated account representative.`
+                  : 'Enterprise customers have a dedicated account representative.'}
+              </p>
               <p className="mt-1">
                 Contact:{' '}
-                <a href={`mailto:${supportAddr}`} className="text-blue-600 hover:text-blue-800">
-                  {supportAddr}
+                <a
+                  href={`mailto:${accountManagerEmail || supportAddr}`}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  {accountManagerEmail || supportAddr}
                 </a>
               </p>
+              {accountManagerPhone ? <p className="mt-1">Phone: {accountManagerPhone}</p> : null}
             </div>
           </div>
         )}

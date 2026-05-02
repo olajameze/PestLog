@@ -135,6 +135,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         photoUrls,
         signature,
         price,
+        cancellationReason,
       } = req.body;
 
       if (
@@ -197,6 +198,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
         status: status || 'open',
+        recommendation:
+          (status || 'open').toLowerCase() === 'cancelled' ||
+          (status || 'open').toLowerCase() === 'canceled'
+            ? (typeof cancellationReason === 'string' ? cancellationReason.trim() : '') || null
+            : null,
         price: price ? new Prisma.Decimal(price) : null,
       };
 

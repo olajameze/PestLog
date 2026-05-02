@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -50,6 +51,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             error: 'Technician accounts cannot access owner company settings.',
             code: 'ROLE_TECHNICIAN',
           });
+        }
+      }
+
+      if (company?.plan === 'enterprise') {
+        const enterpriseSettings = parseEnterpriseSettings(company.notificationPreferences);
+        if (enterpriseSettings.security.requireVerifiedEmail && !user.email_confirmed_at) {
+          return res.status(403).json({
+            error: 'Email verification is required by enterprise security policy.',
+          });
+        }
+        if (enterpriseSettings.security.ipAllowlistEnabled) {
+          const ip = getRequestIp(req);
+          if (!isIpAllowed(ip, enterpriseSettings.security.allowedIps)) {
+            return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
+          }
         }
       }
 
@@ -141,6 +157,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         }
         return res.status(404).json({ error: 'Company not found' });
+      }
+
+      if (company.plan === 'enterprise') {
+        const enterpriseSettings = parseEnterpriseSettings(company.notificationPreferences);
+        if (enterpriseSettings.security.requireVerifiedEmail && !user.email_confirmed_at) {
+          return res.status(403).json({
+            error: 'Email verification is required by enterprise security policy.',
+          });
+        }
+        if (enterpriseSettings.security.ipAllowlistEnabled) {
+          const ip = getRequestIp(req);
+          if (!isIpAllowed(ip, enterpriseSettings.security.allowedIps)) {
+            return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
+          }
+        }
       }
 
       const updateData: Prisma.CompanyUpdateInput = {};

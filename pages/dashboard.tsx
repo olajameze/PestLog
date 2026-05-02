@@ -38,6 +38,18 @@ interface Company {
     renewal?: boolean;
     certificationExpiry?: boolean;
     apiKey?: string;
+    enterprise?: {
+      accountManager?: {
+        name?: string;
+        email?: string;
+        phone?: string;
+      };
+      security?: {
+        ipAllowlistEnabled?: boolean;
+        allowedIps?: string[];
+        requireVerifiedEmail?: boolean;
+      };
+    };
   } | null;
   subscriptionStatus: string;
   trialEndsAt?: string | null;
@@ -644,6 +656,18 @@ export default function Dashboard() {
       renewal: boolean;
       certificationExpiry: boolean;
       apiKey?: string;
+      enterprise?: {
+        accountManager?: {
+          name?: string;
+          email?: string;
+          phone?: string;
+        };
+        security?: {
+          ipAllowlistEnabled?: boolean;
+          allowedIps?: string[];
+          requireVerifiedEmail?: boolean;
+        };
+      };
     };
   }) => {
     if (!company) return;

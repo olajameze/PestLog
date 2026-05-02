@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls, getPublicPhotoUrl } from '../../lib/supabase-admin';
 import { checkPlan } from '../../lib/planGuard';
+import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
 
 type LogbookEntryWhereInput = Prisma.LogbookEntryWhereInput;
 
@@ -20,6 +21,7 @@ type ReportEntryRecord = {
   rooms?: Prisma.JsonValue | null;
   baitBoxesPlaced?: string | null;
   poisonUsed?: string | null;
+  recommendation?: string | null;
   photos?: ReportPhotoRecord[];
 };
 
@@ -76,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true },
+    select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true, notificationPreferences: true },
   });
 
   let technician = null;
@@ -87,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { email: user.email },
       include: {
         company: {
-          select: { name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true }
+          select: { name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true, notificationPreferences: true }
         }
       }
     });
@@ -105,6 +107,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const hasPremiumAccess = companyForPlan.plan
     ? checkPlan(companyForPlan.plan, ['pro', 'business', 'enterprise'])
     : companyForPlan.subscriptionStatus === 'active';
+  const enterpriseSettings = parseEnterpriseSettings((companyForPlan as { notificationPreferences?: unknown }).notificationPreferences);
+
+  if (companyForPlan.plan === 'enterprise') {
+    if (enterpriseSettings.security.requireVerifiedEmail && !user.email_confirmed_at) {
+      return res.status(403).json({
+        error: 'Email verification is required by enterprise security policy.',
+      });
+    }
+    if (enterpriseSettings.security.ipAllowlistEnabled) {
+      const ip = getRequestIp(req);
+      if (!isIpAllowed(ip, enterpriseSettings.security.allowedIps)) {
+        return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
+      }
+    }
+  }
 
   // If they have premium access via a plan string or 'active' status, bypass trial checks entirely
   if (hasPremiumAccess) {
@@ -169,6 +186,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         { treatment: { contains: search, mode: 'insensitive' } },
         { notes: { contains: search, mode: 'insensitive' } },
         { poisonUsed: { contains: search, mode: 'insensitive' } },
+        { recommendation: { contains: search, mode: 'insensitive' } },
       ],
     };
     whereClause = {
@@ -207,6 +225,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       rooms: true,
       baitBoxesPlaced: true,
       poisonUsed: true,
+      recommendation: true,
       photoUrl: true,
       photos: {
         select: { url: true },
