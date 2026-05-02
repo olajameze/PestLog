@@ -27,9 +27,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     select: { id: true },
   });
 
-  if (!company) return res.status(404).json({ error: 'Company not found' });
+  if (company) {
+    const hits = await searchAll(prisma, company.id, q);
+    return res.status(200).json(hits);
+  }
 
-  const hits = await searchAll(prisma, company.id, q);
+  const technician = await prisma.technician.findFirst({
+    where: { email: user.email },
+    select: { id: true, companyId: true },
+  });
+  if (!technician) return res.status(404).json({ error: 'Company or technician not found' });
+
+  const hits = await searchAll(prisma, technician.companyId, q, technician.id);
   return res.status(200).json(hits);
 }
 

@@ -41,6 +41,14 @@ type ReportEntry = {
   price?: number;
 };
 
+type SearchHit = {
+  type: 'logbook_entry';
+  id: string;
+  title: string;
+  subtitle: string;
+  date?: string;
+};
+
 function isRenderableImageSrc(value: string): boolean {
   return (
     value.startsWith('http://') ||
@@ -66,6 +74,19 @@ function entryNeedsFollowUp(entry: ReportEntry): boolean {
     notes.includes('revisit') ||
     notes.includes('reschedule')
   );
+}
+
+function formatPeriodLabel(startDate?: string, endDate?: string): string {
+  if (startDate && endDate) {
+    return `${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`;
+  }
+  if (startDate) {
+    return `From ${new Date(startDate).toLocaleDateString()}`;
+  }
+  if (endDate) {
+    return `Up to ${new Date(endDate).toLocaleDateString()}`;
+  }
+  return 'All dates';
 }
 
 function parseRoomForms(rooms?: Array<string | { name: string; note?: string }>): RoomForm[] {
@@ -445,7 +466,10 @@ export default function ReportsPage() {
       return;
     }
 
-    const analyticsUrl = `/api/analytics?technicianId=${technicianId}&startDate=${startDate}&endDate=${endDate}`;
+    const analyticsParams = new URLSearchParams({ technicianId });
+    if (startDate) analyticsParams.set('startDate', startDate);
+    if (endDate) analyticsParams.set('endDate', endDate);
+    const analyticsUrl = `/api/analytics?${analyticsParams.toString()}`;
     const res = await fetch(analyticsUrl, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
@@ -461,6 +485,9 @@ export default function ReportsPage() {
   };
 
   const [search, setSearch] = useState('');
+  const [quickSearchMode, setQuickSearchMode] = useState(false);
+  const [quickSearchLoading, setQuickSearchLoading] = useState(false);
+  const [quickSearchResults, setQuickSearchResults] = useState<SearchHit[]>([]);
   const [jobFilter, setJobFilter] = useState<'all' | 'follow-up'>('all');
 
   const visibleEntries = report
@@ -468,14 +495,17 @@ export default function ReportsPage() {
     : [];
 
   const fetchReport = async () => {
-    if (!selectedTechnician || !startDate || !endDate) {
-      showToast('Missing filters', 'Select a technician and date range first.', 'error');
+    if (!selectedTechnician) {
+      showToast('Missing filters', 'Select a technician first.', 'error');
       return;
     }
 
     setFetching(true);
     setReportGeneratedMessage(null);
-    let apiUrl = `/api/reports?technicianId=${selectedTechnician}&startDate=${startDate}&endDate=${endDate}`;
+    const reportParams = new URLSearchParams({ technicianId: selectedTechnician });
+    if (startDate) reportParams.set('startDate', startDate);
+    if (endDate) reportParams.set('endDate', endDate);
+    let apiUrl = `/api/reports?${reportParams.toString()}`;
     if (search.trim()) {
       apiUrl += `&search=${encodeURIComponent(search.trim())}`;
     }
@@ -549,6 +579,35 @@ export default function ReportsPage() {
       setAnalytics(null);
     }
     setFetching(false);
+  };
+
+  const runQuickSearch = async () => {
+    const term = search.trim();
+    if (!term) {
+      showToast('Search required', 'Enter a client name or address.', 'error');
+      return;
+    }
+    setQuickSearchLoading(true);
+    setQuickSearchResults([]);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Search failed' }));
+      showToast('Search failed', err.error || 'Unable to run quick search.', 'error');
+      setQuickSearchLoading(false);
+      return;
+    }
+    const hits = (await res.json()) as SearchHit[];
+    setQuickSearchResults(Array.isArray(hits) ? hits : []);
+    setQuickSearchLoading(false);
   };
 
   const deleteReportEntry = async (entryId: string) => {
@@ -750,7 +809,7 @@ export default function ReportsPage() {
       doc.setFontSize(10);
       doc.text('Compliance Report • Pest Trace', margin, 24);
       doc.setFontSize(10);
-      doc.text(`Period: ${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`, pageWidth - margin, 14, { align: 'right' });
+      doc.text(`Period: ${formatPeriodLabel(startDate, endDate)}`, pageWidth - margin, 14, { align: 'right' });
       const technicianName = technicians.find((t) => t.id === selectedTechnician)?.name || 'All technicians';
       doc.text(`Technician: ${technicianName}`, pageWidth - margin, 24, { align: 'right' });
       y = 36;
@@ -993,8 +1052,21 @@ export default function ReportsPage() {
                 className="form-input"
               />
             </div>
+            <div className="form-group flex items-end">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700 pb-3">
+                <input
+                  type="checkbox"
+                  checked={quickSearchMode}
+                  onChange={(e) => {
+                    setQuickSearchMode(e.target.checked);
+                    setQuickSearchResults([]);
+                  }}
+                />
+                Quick search (logbook + report records)
+              </label>
+            </div>
             <div className="form-group">
-              <label htmlFor="start-date" className="form-label">Start Date</label>
+                <label htmlFor="start-date" className="form-label">Start Date (optional)</label>
               <input
                 id="start-date"
                 type="date"
@@ -1004,7 +1076,7 @@ export default function ReportsPage() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="end-date" className="form-label">End Date</label>
+                <label htmlFor="end-date" className="form-label">End Date (optional)</label>
               <input
                 id="end-date"
                 type="date"
@@ -1029,8 +1101,35 @@ export default function ReportsPage() {
                   '📊 Fetch Report'
                 )}
               </button>
+              {quickSearchMode ? (
+                <button
+                  type="button"
+                  onClick={runQuickSearch}
+                  className="btn btn-secondary mt-2"
+                  disabled={quickSearchLoading}
+                >
+                  {quickSearchLoading ? 'Searching...' : 'Quick Search'}
+                </button>
+              ) : null}
             </div>
           </div>
+          {quickSearchMode ? (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-800">Quick results ({quickSearchResults.length})</p>
+              {quickSearchResults.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">Run quick search to find matching client names, addresses, and treatments.</p>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {quickSearchResults.map((hit) => (
+                    <div key={hit.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                      <p className="text-sm font-medium text-slate-900">{hit.title}</p>
+                      <p className="text-xs text-slate-500">{hit.subtitle}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {report && (
@@ -1062,7 +1161,7 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <p className="text-gray-600">Period</p>
-                  <p className="font-semibold text-navy">{new Date(startDate).toLocaleDateString()} — {new Date(endDate).toLocaleDateString()}</p>
+                  <p className="font-semibold text-navy">{formatPeriodLabel(startDate, endDate)}</p>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
