@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
 import type { Prisma } from '@prisma/client';
+import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -27,11 +28,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 1. Get the company associated with the user
     const company = await prisma.company.findUnique({
       where: { email: user.email },
-      select: { id: true, plan: true, trialEndsAt: true }
+      select: { id: true, plan: true, subscriptionStatus: true, trialEndsAt: true }
     });
 
     if (!company) {
       return res.status(404).json({ error: 'Company not found' });
+    }
+    if (!hasSubscriptionAccess(company)) {
+      return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
     }
 
     // 2. Fetch logbook entries with price data

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { searchAll } from '../../lib/search/fullText';
+import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -24,19 +25,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true },
+    select: { id: true, plan: true, subscriptionStatus: true, trialEndsAt: true },
   });
 
   if (company) {
+    if (!hasSubscriptionAccess(company)) {
+      return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
+    }
     const hits = await searchAll(prisma, company.id, q);
     return res.status(200).json(hits);
   }
 
   const technician = await prisma.technician.findFirst({
     where: { email: user.email },
-    select: { id: true, companyId: true },
+    select: {
+      id: true,
+      companyId: true,
+      company: {
+        select: { plan: true, subscriptionStatus: true, trialEndsAt: true },
+      },
+    },
   });
   if (!technician) return res.status(404).json({ error: 'Company or technician not found' });
+  if (!hasSubscriptionAccess(technician.company)) {
+    return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
+  }
 
   const hits = await searchAll(prisma, technician.companyId, q, technician.id);
   return res.status(200).json(hits);

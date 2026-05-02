@@ -758,14 +758,14 @@ if (!user) return (
   return (
     <div className="min-h-screen bg-offwhite page-fade-in">
       <OnboardingTour />
-      <div className="flex lg:pl-0">
+      <div className="flex min-w-0 lg:pl-0">
         <Sidebar 
           activeTab={currentTab as string} 
           onTabChange={(tab: string) => setActiveTab(tab as Tab)} 
           onSignOut={handleSignOut}
         />
         <OfflineBanner />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-24">
+        <main className="min-w-0 flex-1 p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
           <ErrorBoundary>
             {company ? (
               <>

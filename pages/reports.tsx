@@ -993,7 +993,7 @@ export default function ReportsPage() {
 
   return (
     <div className="min-h-screen bg-offwhite">
-      <div className="flex">
+      <div className="flex min-w-0">
         <Sidebar role={isOwner ? 'owner' : 'technician'} activeTab="reports" onSignOut={async () => {
           if (isPreviewMode) {
             router.push('/');
@@ -1002,8 +1002,8 @@ export default function ReportsPage() {
           await supabase.auth.signOut();
           router.push('/auth/signin');
         }} />
-        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="max-w-6xl space-y-6">
+        <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="min-w-0 max-w-6xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold text-navy mb-3">Compliance Reports</h1>
@@ -1322,7 +1322,7 @@ export default function ReportsPage() {
             <div className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-xl sm:text-2xl font-bold text-navy">📋 Jobs ({visibleEntries.length})</h3>
-                <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+                <div className="flex flex-wrap rounded-xl border border-slate-200 bg-white p-1">
                   <button
                     type="button"
                     onClick={() => setJobFilter('all')}
@@ -1360,8 +1360,8 @@ export default function ReportsPage() {
                           <p className="text-xs sm:text-sm text-gray-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                          <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 whitespace-nowrap">{entry.treatment}</span>
-                          <span className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium whitespace-nowrap ${entry.status?.trim().toLowerCase() === 'open' || !entry.status ? 'border-amber-200 bg-amber-100 text-amber-800' : 'border-emerald-200 bg-emerald-100 text-emerald-800'}`}>
+                          <span className="inline-flex max-w-full rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 break-words">{entry.treatment}</span>
+                          <span className={`inline-flex max-w-full rounded-full border px-3 py-1 text-sm font-medium break-words ${entry.status?.trim().toLowerCase() === 'open' || !entry.status ? 'border-amber-200 bg-amber-100 text-amber-800' : 'border-emerald-200 bg-emerald-100 text-emerald-800'}`}>
                             {entry.status?.trim() ? entry.status : 'Open'}
                           </span>
                           <button

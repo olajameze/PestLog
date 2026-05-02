@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
 import { writeAuditLog } from '../../lib/audit/log';
 import { logger } from '../../lib/logger';
+import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 function tryParseJson(value: unknown) {
   if (typeof value !== 'string') return value;
   try {
@@ -91,8 +92,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const company = await prisma.company.findFirst({
         where: { id: companyId as string, email: user.email },
+        select: {
+          id: true,
+          plan: true,
+          subscriptionStatus: true,
+          trialEndsAt: true,
+        },
       });
       if (!company) return res.status(403).json({ error: 'Forbidden' });
+      if (!hasSubscriptionAccess(company)) {
+        return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
+      }
       const entries = await prisma.logbookEntry.findMany({
         where,
         orderBy: { date: 'desc' },
@@ -142,8 +152,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const parsedDate = new Date(date);
       if (isNaN(parsedDate.getTime())) return res.status(400).json({ error: 'Invalid date' });
 
-      const company = await prisma.company.findFirst({ where: { id: companyId, email: user.email } });
+      const company = await prisma.company.findFirst({
+        where: { id: companyId, email: user.email },
+        select: {
+          id: true,
+          plan: true,
+          subscriptionStatus: true,
+          trialEndsAt: true,
+        },
+      });
       if (!company) return res.status(403).json({ error: 'Forbidden' });
+      if (!hasSubscriptionAccess(company)) {
+        return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
+      }
 
       const technicians = await prisma.technician.findMany({
         where: { id: { in: technicianIds }, companyId },
@@ -163,7 +184,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Build data object with proper type (no `any`)
       const entryData: Prisma.LogbookEntryCreateInput = {
-        company: { connect: { id: companyId } },
+        company: { connect: { id: company.id } },
         date: parsedDate,
         clientName,
         address,

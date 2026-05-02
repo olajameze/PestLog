@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { buildDashboardInsights } from '../../lib/dashboardInsights';
 import type { DashboardDateRangeOption } from '../../lib/api/mockDashboardData';
+import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 
 async function resolveOwnerCompanyForUser(token: string) {
   const {
@@ -18,6 +19,7 @@ async function resolveOwnerCompanyForUser(token: string) {
       requirePhotos: true,
       requireSignature: true,
       plan: true, // Ensure plan is selected for direct company access
+      subscriptionStatus: true,
       trialEndsAt: true,
     },
   });
@@ -54,18 +56,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: 'Company not found' });
   }
 
+  if (!hasSubscriptionAccess(company)) {
+    return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
+  }
+
   const raw = req.query.range;
   const range: DashboardDateRangeOption =
     raw === '7' || raw === '30' || raw === '90' ? raw : '30';
 
   try {
-    const validPlans = ['free', 'pro', 'business', 'enterprise'] as const;
-    const resolvedPlan = validPlans.find(p => p === company.plan) ?? 'pro';
+    const validPlans = ['trial', 'free', 'pro', 'business', 'enterprise'] as const;
+    const resolvedPlan = validPlans.find((p) => p === company.plan) ?? 'trial';
+    const policyPlan = resolvedPlan === 'trial' ? 'free' : resolvedPlan;
 
     const policy = {
       requirePhotos: company.requirePhotos ?? false,
       requireSignature: company.requireSignature ?? false,
-      plan: resolvedPlan,
+      plan: policyPlan,
     };
     const data = await buildDashboardInsights(prisma, company.id, policy, range);
     return res.status(200).json(data);

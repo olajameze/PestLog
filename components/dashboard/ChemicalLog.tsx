@@ -31,7 +31,8 @@ export default function ChemicalLog({ chemicalLog, loading, onRowClick }: Chemic
         <p className="text-sm text-slate-500">Loading chemical usage…</p>
       ) : (
         <div className="overflow-hidden rounded-3xl border border-slate-200">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
             <thead className="bg-slate-50 text-slate-500">
               <tr>
                 <th className="px-4 py-3">Chemical</th>
@@ -63,6 +64,7 @@ export default function ChemicalLog({ chemicalLog, loading, onRowClick }: Chemic
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </Card>

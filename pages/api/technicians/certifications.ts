@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
+import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
 
 export const config = {
   api: {
@@ -49,6 +50,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!technician) {
       return res.status(404).json({ error: 'Technician not found' });
+    }
+
+    if (!hasSubscriptionAccess(technician.company)) {
+      return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
     }
 
     const ownerCompany = await prisma.company.findUnique({

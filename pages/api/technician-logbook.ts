@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
+import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 
 type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
@@ -79,10 +80,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const technician = await prisma.technician.findFirst({
       where: { email: user.email },
+      include: {
+        company: {
+          select: {
+            plan: true,
+            subscriptionStatus: true,
+            trialEndsAt: true,
+          },
+        },
+      },
     });
 
     if (!technician) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (!hasSubscriptionAccess(technician.company)) {
+      return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
     }
 
     if (req.method === 'GET') {

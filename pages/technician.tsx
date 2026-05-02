@@ -618,7 +618,7 @@ export default function TechnicianPage() {
 
   return (
     <div className="min-h-screen bg-offwhite">
-      <div className="flex">
+      <div className="flex min-w-0">
         <Sidebar role="technician" activeTab="logbook" onSignOut={async () => {
           if (isPreviewMode) {
             router.push('/');
@@ -627,8 +627,8 @@ export default function TechnicianPage() {
           await supabase.auth.signOut();
           router.push('/auth/signin');
         }} />
-        <div className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="max-w-5xl space-y-6">
+        <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="min-w-0 max-w-5xl space-y-6">
         {accessDeniedTarget ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Access to owner-only {accessDeniedTarget === 'upgrade' ? 'billing/upgrade' : 'dashboard'} sections is restricted for technician accounts.
@@ -946,7 +946,7 @@ export default function TechnicianPage() {
                   <h3 className="text-xl font-semibold text-navy">{entry.clientName}</h3>
                   <p className="text-sm text-gray-500">{new Date(entry.date).toLocaleDateString()}</p>
                 </div>
-                <span className="inline-flex rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">{entry.treatment}</span>
+                <span className="inline-flex max-w-full rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 break-words">{entry.treatment}</span>
               </div>
               <p className="mt-4 text-gray-700">{entry.address}</p>
               {entry.rooms && entry.rooms.length > 0 ? (

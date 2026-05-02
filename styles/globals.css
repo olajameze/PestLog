@@ -12,6 +12,26 @@
   --color-primary-600: 29 78 216;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
 
 
 @media (prefers-color-scheme: dark) {
