@@ -4,13 +4,14 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import LandingFooter from '../components/landing/LandingFooter';
-import { 
-  featureCards, 
-  pricingPlans, 
-  trustMicrocopy, 
-  regulationUrgency, 
-  testimonials
+import {
+  featureCards,
+  pricingPlans,
+  trustMicrocopy,
+  regulationUrgency,
+  testimonials,
 } from '../components/landing/content';
+import { PRICING_TRIAL_FOOTNOTE } from '../lib/marketingPlanFeatures';
 
 // --- Animation Helpers ---
 const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -132,13 +133,33 @@ export default function Home() {
           <a href="#features" className="hover:text-slate-900 transition">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
         </div>
-        <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
-          <Link href="/auth/signin?role=admin" className="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-800 transition shadow-sm">
-            Business Login
-          </Link>
-          <Link href="/auth/signin?role=technician" className="bg-slate-100 text-slate-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-200 transition">
-            Technician Login
-          </Link>
+        <div className="ml-auto flex w-full max-w-full flex-col items-end gap-1 sm:w-auto">
+          <div className="flex w-full flex-wrap justify-end gap-2 sm:flex-nowrap">
+            <Link
+              href="/auth/signin?role=admin"
+              title="Company owners and admins: sign in with email and password to manage the full dashboard."
+              className="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-800 transition shadow-sm"
+            >
+              Business Login
+            </Link>
+            <Link
+              href="/auth/signin?role=technician"
+              title="Field technicians: sign in with a one-time code emailed to you (no shared company password)."
+              className="bg-slate-100 text-slate-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-200 transition"
+            >
+              Technician Login
+            </Link>
+          </div>
+          <p className="hidden max-w-md text-right text-[11px] leading-snug text-slate-500 sm:block">
+            <span className="font-semibold text-slate-600">Business</span> — owner or office admin, email + password.
+            <span className="mx-1.5 text-slate-300">|</span>
+            <span className="font-semibold text-slate-600">Technician</span> — invited field staff, one-time email code.
+          </p>
+          <p className="px-1 text-center text-[11px] leading-snug text-slate-500 sm:hidden w-full">
+            <span className="font-semibold text-slate-600">Business</span>: email + password.
+            {' '}
+            <span className="font-semibold text-slate-600">Technician</span>: one-time email code.
+          </p>
         </div>
       </nav>
 
@@ -207,12 +228,9 @@ export default function Home() {
       <section className="px-6 pb-24">
         <FadeIn>
           <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center sm:p-12">
-            <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">Built for real pest control businesses</h2>
+            <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">From stewardship rules to client-ready evidence</h2>
             <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-slate-600">
-              PestTrace is designed for how pest control teams actually work — in the field, on the move, and under pressure to stay compliant.
-            </p>
-            <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-slate-600">
-              Whether you&apos;re an independent technician or managing a growing team, PestTrace gives you the tools to operate more efficiently and professionally.
+              Rodenticide stewardship and professional standards expect consistent, verifiable records. PestTrace keeps treatments, proof, and qualifications aligned — so you are organised in the van and credible in the audit or tender.
             </p>
           </div>
         </FadeIn>
@@ -273,15 +291,30 @@ export default function Home() {
                 <div className={`h-full rounded-[2rem] border bg-white p-6 sm:p-10 ${plan.isPopular ? 'relative border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'}`}>
                   {plan.isPopular && <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide">MOST POPULAR</span>}
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <div className="mb-6"><span className="text-4xl font-black sm:text-5xl">£{plan.price}</span><span className="text-slate-400 text-sm">{plan.cadence}</span></div>
-                  <Link href={plan.href} className={`block text-center py-4 rounded-xl font-bold mb-8 transition ${plan.isPopular ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}>{plan.cta}</Link>
-                  <ul className="space-y-4 text-slate-600 text-sm font-medium">
-                    {plan.features.map(f => <li key={f} className="flex gap-3 items-start"><span className="text-emerald-500 text-base">✓</span>{f}</li>)}
+                  <p className="mb-4 text-sm font-medium leading-relaxed text-slate-500">{plan.bestFor}</p>
+                  <div className="mb-6">
+                    <span className="text-4xl font-black sm:text-5xl">£{plan.price}</span>
+                    <span className="text-slate-400 text-sm">{plan.cadence}</span>
+                  </div>
+                  <Link
+                    href={plan.href}
+                    className={`block text-center py-4 rounded-xl font-bold mb-8 transition ${plan.isPopular ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}
+                  >
+                    {plan.cta}
+                  </Link>
+                  <ul className="space-y-3 text-slate-600 text-sm font-medium">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex gap-3 items-start">
+                        <span className="text-emerald-500 text-base shrink-0">✓</span>
+                        <span>{f}</span>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </FadeIn>
             ))}
           </div>
+          <p className="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-slate-500">{PRICING_TRIAL_FOOTNOTE}</p>
         </div>
       </section>
 

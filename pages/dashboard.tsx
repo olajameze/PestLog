@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { supabase } from '../lib/supabase';
@@ -276,7 +276,8 @@ export default function Dashboard() {
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
-  const [showTrialEndingModal, setShowTrialEndingModal] = useState(false);
+  /** Hides trial-ending modal for this tab session after user closes it (backdrop or action). */
+  const [trialEndingUiDismissed, setTrialEndingUiDismissed] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
@@ -597,27 +598,20 @@ export default function Dashboard() {
     getUser();
   }, [isPreviewMode, router, showToast, router.query.session_id, router.query.upgradedPlan, refreshKey]);
 
-  useEffect(() => {
-    if (!company || company.plan !== 'trial') {
-      setShowTrialEndingModal(false);
-      return;
-    }
+  const showTrialEndingModal = useMemo(() => {
+    if (trialEndingUiDismissed) return false;
+    if (!company || company.plan !== 'trial') return false;
     const days = trialFullDaysRemaining({ plan: company.plan, trialEndsAt: company.trialEndsAt ?? null });
-    if (days === null || days > 2) {
-      setShowTrialEndingModal(false);
-      return;
-    }
+    if (days === null || days > 2) return false;
+    if (typeof window === 'undefined') return false;
     const today = new Date().toISOString().slice(0, 10);
     try {
-      if (sessionStorage.getItem('pesttraceTrialEndingModalDismissed') === today) {
-        setShowTrialEndingModal(false);
-        return;
-      }
+      if (sessionStorage.getItem('pesttraceTrialEndingModalDismissed') === today) return false;
     } catch {
       /* ignore */
     }
-    setShowTrialEndingModal(true);
-  }, [company?.id, company?.plan, company?.trialEndsAt]);
+    return true;
+  }, [company, trialEndingUiDismissed]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -1088,9 +1082,9 @@ if (!user || companyLoadState === 'loading') return (
       {showTrialEndingModal && company?.plan === 'trial' ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setShowTrialEndingModal(false)}
+          onClick={() => setTrialEndingUiDismissed(true)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setShowTrialEndingModal(false);
+            if (e.key === 'Escape') setTrialEndingUiDismissed(true);
           }}
           role="presentation"
         >
@@ -1127,7 +1121,7 @@ if (!user || companyLoadState === 'loading') return (
                   } catch {
                     /* ignore */
                   }
-                  setShowTrialEndingModal(false);
+                  setTrialEndingUiDismissed(true);
                 }}
               >
                 Remind me tomorrow

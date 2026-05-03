@@ -1,28 +1,21 @@
+import { MARKETING_PLAN_FEATURES } from '../../lib/marketingPlanFeatures';
+
+/** Three product stories — each visual once (no duplicate mockups). */
 export const featureCards = [
   {
-    title: 'Log jobs in real-time',
-    body: 'Capture every job on-site with full details, photos, and timestamps.',
-    visual: 'report-preview'
+    title: 'Log jobs and proof in the field',
+    body: 'Capture treatments, photos, e-signatures, follow-ups, and site notes from any device. Technicians use a streamlined flow; owners see the same record instantly.',
+    visual: 'mobile-app-ui',
   },
   {
-    title: 'Store certifications securely',
-    body: 'Keep technician qualifications organised and accessible at all times.',
-    visual: 'mobile-app-ui'
+    title: 'Certificates, reports, and audit evidence',
+    body: 'Track qualification expiry alongside job history. Filter and export professional reports so you can answer clients or regulators without rebuilding folders.',
+    visual: 'report-preview',
   },
   {
-    title: 'Capture proof of work',
-    body: 'Collect photos and e-signatures instantly for complete job verification.',
-    visual: 'dashboard-view'
-  },
-  {
-    title: 'Generate audit-ready reports',
-    body: 'Create professional reports in seconds — ready when you need them.',
-    visual: 'report-preview'
-  },
-  {
-    title: 'Track performance and activity',
-    body: 'Monitor technicians, jobs, and business performance in one dashboard.',
-    visual: 'dashboard-view'
+    title: 'One dashboard for operations — and growth on higher tiers',
+    body: 'Schedule, compliance gaps, chemical usage, and alerts in one place. Business and Enterprise add customer and retention analytics so you see revenue trends, not only job counts.',
+    visual: 'dashboard-view',
   },
 ];
 
@@ -35,40 +28,41 @@ export const howItWorksSteps = [
 export const pricingPlans = [
   {
     name: '🟢 Pro',
-    bestFor: 'Startups & independent technicians',
+    bestFor: 'Startups & owner-operators scaling beyond a handful of jobs',
     price: '25',
     cadence: '/month',
-    features: ['Up to 3 technicians', 'Everything you already include'],
+    features: [...MARKETING_PLAN_FEATURES.pro],
     cta: 'Start Free Trial',
     href: '/auth/signup',
     isPopular: false,
   },
   {
     name: '🟢 Business',
-    bestFor: 'Small to medium-sized teams',
+    bestFor: 'Growing teams that need revenue and performance visibility',
     price: '40',
     cadence: '/month',
-    features: ['Up to 10 technicians', 'Advanced features'],
+    features: [...MARKETING_PLAN_FEATURES.business],
     cta: 'Start Free Trial',
     href: '/auth/signup',
     isPopular: true,
   },
   {
     name: '🔵 Enterprise',
-    bestFor: 'Large operations with multi-site management',
+    bestFor: 'Larger fleets, multi-site, and stricter governance',
     price: '340',
     cadence: '/month',
-    features: ['Unlimited technicians', 'All Pro and Business capabilities', 'Dedicated account manager', 'Advanced security & compliance'],
+    features: [...MARKETING_PLAN_FEATURES.enterprise],
     cta: 'Start Free Trial',
     href: '/auth/signup',
     isPopular: false,
   },
 ];
 
+/** Shown under hero CTA — avoid repeating the same line again in the hero paragraph. */
 export const trustMicrocopy = [
   '7-day free trial',
-  'No contracts',
-  'Built for UK compliance',
+  'Cancel from the app — no long-term contract',
+  'CRRU-minded workflows for UK pest control',
 ];
 
 export const regulationUrgency = {
@@ -78,12 +72,13 @@ export const regulationUrgency = {
 
 export const testimonials = [
   {
-    quote: "PestTrace helped us move from paper logs to fully digital, audit-ready records in under a week. It's saved us hours of admin and made our business far more professional to clients.",
+    quote:
+      "PestTrace helped us move from paper logs to fully digital, audit-ready records in under a week. It's saved us hours of admin and made our business far more professional to clients.",
     author: "Weathers' Pest Solutions",
     role: 'Customer Testimonial',
     company: "Weathers' Pest Solutions",
-    logo: "/weathers-logo.png"
-  }
+    logo: '/weathers-logo.png',
+  },
 ];
 
 export const landingFaqs = [

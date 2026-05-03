@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/ToastProvider';
+import { MARKETING_PLAN_FEATURES, PRICING_TRIAL_FOOTNOTE } from '../lib/marketingPlanFeatures';
 
 type Company = {
   id: string;
@@ -164,7 +165,9 @@ export default function UpgradePage() {
         <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8 text-center">
           <h1 className="text-2xl sm:text-3xl font-bold text-navy mb-3">Upgrade to Pest Trace</h1>
           <div className="mx-auto h-1 w-20 bg-primary-500 rounded-full mb-4"></div>
-          <p className="text-sm sm:text-base text-gray-600">Choose a plan for your team. Unlock Reports, Dashboard, and Pro features.</p>
+          <p className="text-sm sm:text-base text-gray-600">
+            Choose a plan for your team. Features match the lists below — trial limits apply until you subscribe.
+          </p>
         </div>
 
         {/* Status Cards */}
@@ -207,9 +210,11 @@ export default function UpgradePage() {
           <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-navy">🟢 Pro</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£25<span className="text-sm font-medium text-zinc-500">/month</span></p>
+            <p className="mt-2 text-xs font-medium text-zinc-500">Startups & owner-operators scaling beyond a handful of jobs</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Up to 3 technicians</li>
-              <li>• Everything you already include</li>
+              {MARKETING_PLAN_FEATURES.pro.map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
             </ul>
             <button
               onClick={() => handleSubscribe('pro')}
@@ -223,9 +228,11 @@ export default function UpgradePage() {
           <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-navy">🟢 Business</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month</span></p>
+            <p className="mt-2 text-xs font-medium text-zinc-500">Growing teams that need revenue and performance visibility</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Up to 10 technicians</li>
-              <li>• Advanced features</li>
+              {MARKETING_PLAN_FEATURES.business.map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
             </ul>
             <button
               onClick={() => handleSubscribe('business')}
@@ -240,9 +247,11 @@ export default function UpgradePage() {
             <h2 className="text-xl font-bold text-navy">🔵 Enterprise</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£340.00 GBP</p>
             <p className="mt-1 break-words text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
+            <p className="mt-2 text-xs font-medium text-zinc-500">Larger fleets, multi-site, and stricter governance</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Unlimited technicians</li>
-              <li>• All Business capabilities plus bespoke integrations</li>
+              {MARKETING_PLAN_FEATURES.enterprise.map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
             </ul>
             <button
               type="button"
@@ -254,6 +263,8 @@ export default function UpgradePage() {
             </button>
           </div>
         </div>
+
+        <p className="text-center text-xs leading-relaxed text-zinc-500">{PRICING_TRIAL_FOOTNOTE}</p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
           {subscription?.status === 'active' ? (

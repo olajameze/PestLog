@@ -1,7 +1,16 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Pest Trace E2E smoke', () => {
-  test('loads public pages, signs up, and protects dashboard endpoints', async ({ page, request }) => {
+  test('loads public pages, exercises signup when Supabase is reachable, and protects dashboard endpoints', async ({
+    page,
+    request,
+  }) => {
+    await page.goto('/');
+    await expect(page.locator('body')).toBeVisible();
+
+    await page.goto('/auth/signin');
+    await expect(page.locator('body')).toBeVisible();
+
     const baseEmail = `playwright+${Date.now()}@example.com`;
     const password = 'Password123!';
 
@@ -15,15 +24,38 @@ test.describe('Pest Trace E2E smoke', () => {
     await page.fill('#confirm-password', password);
     await page.click('button:has-text("Create Account")');
 
-    const signupTransition = await Promise.race([
-      page.waitForURL('**/auth/signin**', { timeout: 15000 }).then(() => 'signin').catch(() => null),
-      page.waitForURL('**/auth/verify**', { timeout: 15000 }).then(() => 'verify').catch(() => null),
-      page.waitForURL('**/dashboard**', { timeout: 15000 }).then(() => 'dashboard').catch(() => null),
-      page.waitForURL('**/technician**', { timeout: 15000 }).then(() => 'technician').catch(() => null),
-      page.locator('button:has-text("Creating account...")').waitFor({ timeout: 5000 }).then(() => 'submitting').catch(() => null),
-      page.locator('text=Account created').first().waitFor({ timeout: 15000 }).then(() => 'success').catch(() => null),
-    ]);
-    expect(signupTransition).not.toBeNull();
+    const otpLoc = page.locator('#admin-signup-otp');
+    const errorLoc = page.locator('.form-feedback-error');
+
+    try {
+      await Promise.race([
+        otpLoc.waitFor({ state: 'visible', timeout: 25000 }),
+        page.waitForURL('**/auth/signin**', { timeout: 25000 }),
+        page.waitForURL('**/auth/verify**', { timeout: 25000 }),
+        page.waitForURL('**/dashboard**', { timeout: 25000 }),
+        errorLoc.waitFor({ state: 'visible', timeout: 25000 }),
+      ]);
+    } catch {
+      throw new Error('Signup flow produced no OTP step, redirect, or error within 25s');
+    }
+
+    if (await errorLoc.isVisible()) {
+      const msg = (await errorLoc.textContent().catch(() => '')) || '';
+      if (/failed to fetch|network|load failed|networkerror|supabase/i.test(msg)) {
+        test.info().annotations.push({
+          type: 'note',
+          description:
+            'Admin signup did not reach OTP: browser could not reach Supabase. For full signup coverage, ensure NEXT_PUBLIC_SUPABASE_* URLs are reachable from the test environment.',
+        });
+      } else {
+        throw new Error(`Unexpected sign-up error: ${msg}`);
+      }
+    } else {
+      const ok =
+        (await otpLoc.isVisible()) ||
+        /\/(auth\/signin|auth\/verify|dashboard)/.test(page.url());
+      expect(ok).toBeTruthy();
+    }
 
     await page.goto('/dashboard');
     expect(page.url()).toMatch(/\/(auth\/signin|dashboard)$/);

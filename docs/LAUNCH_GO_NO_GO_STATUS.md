@@ -13,6 +13,7 @@ Last updated: 2026-05-03
   - `npm run smoke-test`
   - `npm run e2e`
   - `npm run e2e:webhook`
+  - Optional production: `npm run smoke:production`, `npm run load:health` (see [`docs/PRE_STRIPE_LIVE_RUNBOOK.md`](PRE_STRIPE_LIVE_RUNBOOK.md))
 - `stripe-webhook-gate`: PASS (technical) / OWNER PAYMENT WALKTHROUGH PENDING
   - Webhook endpoint responds correctly to unsigned test payload (`Missing stripe-signature header`).
   - Checkout/subscription endpoints correctly reject unauthenticated requests.
@@ -50,6 +51,7 @@ Last updated: 2026-05-03
 
 - Code freeze and final local preflight:
   - `npm run lint && npm run build && npm run smoke-test && npm run e2e && npm run e2e:webhook`
+  - Optional against production URL: `BASE_URL=https://www.pesttrace.com npm run smoke:production` and `npm run load:health` (see [`docs/PRE_STRIPE_LIVE_RUNBOOK.md`](PRE_STRIPE_LIVE_RUNBOOK.md))
 - Deploy production:
   - `npx vercel --prod`
 - Post-deploy verification:

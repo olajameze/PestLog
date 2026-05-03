@@ -12,6 +12,8 @@
     "postinstall": "prisma generate",
     "migrate": "prisma migrate deploy",
     "smoke-test": "node scripts/run-smoke-test.js",
+    "smoke:production": "node scripts/production-smoke.js",
+    "load:health": "node scripts/concurrent-health-smoke.js",
     "e2e": "npx playwright test",
     "e2e:webhook": "npx playwright test tests/stripe-webhook.spec.ts"
   },

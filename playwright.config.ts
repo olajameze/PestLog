@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: {
     command: 'set NODE_ENV=test&& npm run build && npm start',
     port: 3001,
-    timeout: 120000,
+    timeout: 180000,
     reuseExistingServer: false,
     env: {
       PORT: '3001',
