@@ -282,7 +282,15 @@ export default function TechnicianPage() {
   };
 
   const startVoiceNoteCapture = () => {
-    const SpeechRecognitionApi = (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
+    type WebkitSpeechRecognitionCtor = new () => {
+      lang: string;
+      interimResults: boolean;
+      maxAlternatives: number;
+      onresult: (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void;
+      onerror: () => void;
+      start: () => void;
+    };
+    const SpeechRecognitionApi = (window as Window & { webkitSpeechRecognition?: WebkitSpeechRecognitionCtor }).webkitSpeechRecognition;
     if (!SpeechRecognitionApi) {
       showToast('Voice notes unavailable', 'This browser does not support voice recognition.', 'info');
       return;

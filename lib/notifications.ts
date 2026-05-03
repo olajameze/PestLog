@@ -14,16 +14,17 @@ export function parseNotifications(raw: unknown): AppNotification[] {
   if (!Array.isArray(notifications)) return [];
   return notifications
     .filter((item) => item && typeof item === 'object')
-    .map((item) => {
+    .map((item): AppNotification => {
       const row = item as Record<string, unknown>;
+      const severity: AppNotification['severity'] =
+        row.severity === 'high' || row.severity === 'medium' || row.severity === 'low'
+          ? row.severity
+          : 'low';
       return {
         id: typeof row.id === 'string' ? row.id : `${Date.now()}-${Math.random()}`,
         title: typeof row.title === 'string' ? row.title : 'Notification',
         message: typeof row.message === 'string' ? row.message : '',
-        severity:
-          row.severity === 'high' || row.severity === 'medium' || row.severity === 'low'
-            ? row.severity
-            : 'low',
+        severity,
         read: Boolean(row.read),
         createdAt:
           typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString(),
