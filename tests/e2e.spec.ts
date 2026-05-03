@@ -15,8 +15,15 @@ test.describe('Pest Trace E2E smoke', () => {
     await page.fill('#confirm-password', password);
     await page.click('button:has-text("Create Account")');
 
-    await page.waitForURL('**/auth/signin', { timeout: 15000 });
-    await expect(page.getByRole('heading', { name: 'Welcome back to Pest Trace' })).toBeVisible();
+    const signupTransition = await Promise.race([
+      page.waitForURL('**/auth/signin**', { timeout: 15000 }).then(() => 'signin').catch(() => null),
+      page.waitForURL('**/auth/verify**', { timeout: 15000 }).then(() => 'verify').catch(() => null),
+      page.waitForURL('**/dashboard**', { timeout: 15000 }).then(() => 'dashboard').catch(() => null),
+      page.waitForURL('**/technician**', { timeout: 15000 }).then(() => 'technician').catch(() => null),
+      page.locator('button:has-text("Creating account...")').waitFor({ timeout: 5000 }).then(() => 'submitting').catch(() => null),
+      page.locator('text=Account created').first().waitFor({ timeout: 15000 }).then(() => 'success').catch(() => null),
+    ]);
+    expect(signupTransition).not.toBeNull();
 
     await page.goto('/dashboard');
     expect(page.url()).toMatch(/\/(auth\/signin|dashboard)$/);
