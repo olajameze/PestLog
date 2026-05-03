@@ -9,6 +9,7 @@ import {
   parseEnterpriseSettings,
 } from '../../../lib/enterpriseFeatures';
 import { writeAuditLog } from '../../../lib/audit/log';
+import { canUseEnterprisePreview } from '../../../lib/trialEnterprisePreview';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization;
@@ -23,19 +24,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, plan: true, notificationPreferences: true },
+    select: { id: true, plan: true, trialEndsAt: true, notificationPreferences: true },
   });
   if (!company) return res.status(403).json({ error: 'Forbidden' });
-  if (company.plan !== 'enterprise') return res.status(403).json({ error: 'Enterprise plan required' });
+  if (!canUseEnterprisePreview(company)) {
+    return res.status(403).json({ error: 'Enterprise plan required' });
+  }
 
   const enterprise = parseEnterpriseSettings(company.notificationPreferences);
-  if (enterprise.security.requireVerifiedEmail && !user.email_confirmed_at) {
-    return res.status(403).json({ error: 'Email verification is required by enterprise security policy.' });
-  }
-  if (enterprise.security.ipAllowlistEnabled) {
-    const ip = getRequestIp(req);
-    if (!isIpAllowed(ip, enterprise.security.allowedIps)) {
-      return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
+  if (company.plan === 'enterprise') {
+    if (enterprise.security.requireVerifiedEmail && !user.email_confirmed_at) {
+      return res.status(403).json({ error: 'Email verification is required by enterprise security policy.' });
+    }
+    if (enterprise.security.ipAllowlistEnabled) {
+      const ip = getRequestIp(req);
+      if (!isIpAllowed(ip, enterprise.security.allowedIps)) {
+        return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
+      }
     }
   }
 

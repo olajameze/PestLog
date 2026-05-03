@@ -10,7 +10,6 @@ type NotificationPreferences = {
   certificationExpiry: boolean;
   digestDaily?: boolean;
   digestWeekly?: boolean;
-  apiKey?: string;
   enterprise?: {
     accountManager?: {
       name?: string;
@@ -50,7 +49,6 @@ interface SettingsTabProps {
   subscription: Subscription | null;
   onSubscribe: () => void;
   onManageSubscription: () => void;
-  onGenerateApiKey: () => Promise<string | null>;
   onUpdateCompanySettings: (settings: {
     name: string;
     phone?: string;
@@ -75,7 +73,6 @@ export default function SettingsTab({
   onSubscribe,
   onManageSubscription,
   onUpdateCompanySettings,
-  onGenerateApiKey,
   onDeleteAccount,
   deletingAccount,
   savingSettings,
@@ -97,9 +94,7 @@ export default function SettingsTab({
     certificationExpiry: company.notificationPreferences?.certificationExpiry ?? true,
     digestDaily: company.notificationPreferences?.digestDaily ?? false,
     digestWeekly: company.notificationPreferences?.digestWeekly ?? true,
-    apiKey: company.notificationPreferences?.apiKey,
   });
-  const [apiKeyLoading, setApiKeyLoading] = useState(false);
   const [accountManagerName, setAccountManagerName] = useState(
     company.notificationPreferences?.enterprise?.accountManager?.name || '',
   );
@@ -150,18 +145,6 @@ export default function SettingsTab({
         },
       },
     });
-  };
-
-  const handleGenerateApiKey = async () => {
-    setApiKeyLoading(true);
-    const apiKey = await onGenerateApiKey();
-    if (apiKey) {
-      setNotificationPreferences((prev) => ({
-        ...prev,
-        apiKey,
-      }));
-    }
-    setApiKeyLoading(false);
   };
 
   const currentPlanLabel = subscription?.plan ? subscription.plan.toUpperCase() : 'TRIAL';
@@ -382,6 +365,24 @@ export default function SettingsTab({
               className="mt-2 w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm text-slate-800"
               rows={4}
             />
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+              <p className="font-semibold text-slate-900">Dedicated account representative</p>
+              <p className="mt-2">
+                {accountManagerName.trim()
+                  ? `${accountManagerName.trim()} is your primary enterprise contact after you save.`
+                  : 'Enterprise customers have a dedicated account representative.'}
+              </p>
+              <p className="mt-1">
+                Contact:{' '}
+                <a
+                  href={`mailto:${(accountManagerEmail.trim() || supportAddr)}`}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  {accountManagerEmail.trim() || supportAddr}
+                </a>
+              </p>
+              {accountManagerPhone.trim() ? <p className="mt-1">Phone: {accountManagerPhone.trim()}</p> : null}
+            </div>
           </section>
         ) : null}
 
@@ -410,57 +411,6 @@ export default function SettingsTab({
           </div>
         </div>
         </section>
-
-        {subscription?.plan === 'enterprise' && (
-          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
-            <h3 className="text-xl font-semibold text-navy">Enterprise API Access</h3>
-            <p className="mt-2 text-sm text-slate-600">Generate a dedicated API key for secure custom integrations and enterprise automation.</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                <label htmlFor="enterprise-api-key" className="text-xs uppercase tracking-[0.24em] text-slate-500">API key</label>
-                <input
-                  id="enterprise-api-key"
-                  type="text"
-                  readOnly
-                  value={notificationPreferences.apiKey || ''}
-                  className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-800"
-                />
-              </div>
-              <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-900">Dedicated API access</p>
-                  <p className="mt-2 text-sm text-slate-600">Only enterprise customers can generate and manage this key.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleGenerateApiKey}
-                  disabled={apiKeyLoading}
-                  className="btn btn-primary mt-4"
-                >
-                  {apiKeyLoading ? 'Generating...' : (notificationPreferences.apiKey ? 'Regenerate API key' : 'Generate API key')}
-                </button>
-              </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-100 p-4 text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">Dedicated account manager</p>
-              <p className="mt-2">
-                {accountManagerName
-                  ? `${accountManagerName} is assigned as your dedicated account representative.`
-                  : 'Enterprise customers have a dedicated account representative.'}
-              </p>
-              <p className="mt-1">
-                Contact:{' '}
-                <a
-                  href={`mailto:${accountManagerEmail || supportAddr}`}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  {accountManagerEmail || supportAddr}
-                </a>
-              </p>
-              {accountManagerPhone ? <p className="mt-1">Phone: {accountManagerPhone}</p> : null}
-            </div>
-          </section>
-        )}
 
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
           <p className="text-sm text-slate-600">

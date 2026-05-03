@@ -8,6 +8,7 @@ import Card from '../components/ui/Card';
 import FormInput from '../components/ui/FormInput';
 import { useToast } from '../components/ui/ToastProvider';
 import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
+import { isActiveTrial } from '../lib/trialEnterprisePreview';
 
 type Company = {
   id: string;
@@ -373,6 +374,7 @@ export default function ReportsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
   const [npsSubmitting, setNpsSubmitting] = useState(false);
   const [plan, setPlan] = useState<'trial' | 'pro' | 'business' | 'enterprise'>('trial');
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fetching, setFetching] = useState(false);
@@ -397,6 +399,8 @@ export default function ReportsPage() {
   const [selectedEntryIds, setSelectedEntryIds] = useState<string[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [overdueBanner, setOverdueBanner] = useState<string | null>(null);
+
+  const reportsTrialPreview = useMemo(() => isActiveTrial({ plan, trialEndsAt }), [plan, trialEndsAt]);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -441,6 +445,7 @@ export default function ReportsPage() {
                 ? queryPlan
                 : subData.plan || 'trial'
             );
+            setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
             if (
               !hasSubscriptionAccess({
                 plan: subData.plan,
@@ -463,6 +468,7 @@ export default function ReportsPage() {
             if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
               setPlan(queryPlan);
             }
+            setTrialEndsAt(companyData.trialEndsAt ? String(companyData.trialEndsAt) : null);
           }
 
           const techRes = await fetch('/api/technicians', {
@@ -502,6 +508,7 @@ export default function ReportsPage() {
             ? queryPlan
             : subData.plan || 'trial'
         );
+        setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
       } else {
         const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
         if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
@@ -531,7 +538,7 @@ export default function ReportsPage() {
     const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
     const upgradeBlurb =
       queryPlan === 'enterprise'
-        ? 'Enterprise reporting, analytics, and API access are available.'
+        ? 'Enterprise reporting, analytics, and NPS tools are available.'
         : queryPlan === 'business'
           ? 'Business reporting and analytics are available on this page.'
           : 'Enhanced reporting is available on this page.';
@@ -559,6 +566,9 @@ export default function ReportsPage() {
       const subData = await res.json();
       if (subData.plan) {
         setPlan(subData.plan);
+      }
+      if (subData.trialEndsAt !== undefined) {
+        setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
       }
     };
 
@@ -954,7 +964,7 @@ export default function ReportsPage() {
     setReportGeneratedMessage(
       `Report ready with ${result.entries.length} jobs, ${result.certifications.length} certifications, and ${result.entries.reduce((count: number, entry: ReportEntry) => count + parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length, 0)} photos.`
     );
-    if (plan === 'business' || plan === 'enterprise') {
+    if (plan === 'business' || plan === 'enterprise' || reportsTrialPreview) {
       await fetchAnalytics(selectedTechnician);
     } else {
       setAnalytics(null);
@@ -1631,7 +1641,7 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            {(plan === 'business' || plan === 'enterprise') ? (
+            {(plan === 'business' || plan === 'enterprise' || reportsTrialPreview) ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -1730,7 +1740,7 @@ export default function ReportsPage() {
                       </div>
                     </div>
 
-                    {plan === 'enterprise' ? (
+                    {(plan === 'enterprise' || reportsTrialPreview) ? (
                       <EnterprisePerformanceMetrics
                         analytics={analytics}
                         onSubmitNps={submitEnterpriseNps}

@@ -17,23 +17,28 @@ import type { NextBestAction } from '../../lib/api/mockDashboardData';
 
 interface DashboardEnhancementsProps {
   plan?: string;
+  /** Enterprise-tier dashboard cards while on active trial (without changing `plan`). */
+  enterprisePreview?: boolean;
 }
 
-export default function DashboardEnhancements({ plan }: DashboardEnhancementsProps) {
+export default function DashboardEnhancements({ plan, enterprisePreview = false }: DashboardEnhancementsProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const userPlan = useUserPlan(plan);
   const { range, setRange, options } = useDateRange();
   const { data, loading, refresh } = useDashboardData(range);
 
-  const showAnalytics = userPlan === 'business' || userPlan === 'enterprise';
-  const showEnterprise = userPlan === 'enterprise';
+  const showAnalytics = userPlan === 'business' || userPlan === 'enterprise' || enterprisePreview;
+  const showEnterprise = userPlan === 'enterprise' || enterprisePreview;
 
   const planDescription = useMemo(() => {
     if (userPlan === 'enterprise') return 'Enterprise analytics are available.';
+    if (enterprisePreview && userPlan === 'trial') {
+      return 'Enterprise analytics are included as a preview during your trial. Subscribe to keep them after trial ends.';
+    }
     if (userPlan === 'business') return 'Business customers have CLV tracking and ratio insights.';
     return 'Upgrade to Business to unlock customer analytics and retention reporting.';
-  }, [userPlan]);
+  }, [userPlan, enterprisePreview]);
 
   const openReports = (query: Record<string, string>) => {
     router.push({ pathname: '/reports', query });
@@ -88,7 +93,8 @@ export default function DashboardEnhancements({ plan }: DashboardEnhancementsPro
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Dashboard insights</p>
             <h2 id="dashboard-enhancements-heading" className="text-2xl font-semibold text-navy">Operational & customer visibility</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Operational metrics are computed from your logbook, certifications, and company rules. Business and Enterprise plans unlock the customer analytics cards below.
+              Operational metrics are computed from your logbook, certifications, and company rules. Business and Enterprise plans unlock the customer analytics cards below
+              {enterprisePreview ? ' (Enterprise preview on your trial).' : '.'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

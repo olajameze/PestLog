@@ -8,6 +8,8 @@ type CompanyPolicy = {
   requirePhotos: boolean;
   requireSignature: boolean;
   plan?: 'free' | 'pro' | 'business' | 'enterprise';
+  /** Plan tier used only for feature limits (e.g. chemical log rows). Defaults to `plan`. */
+  featureTier?: 'free' | 'pro' | 'business' | 'enterprise';
 };
 
 type DashboardEnterpriseOptions = {
@@ -225,7 +227,10 @@ for (const e of entriesInRange) {
 const chemicalLog = [...chemicalMap.entries()]
   .sort((a, b) => b[1].volume - a[1].volume)
   // Higher plans see more chemical history
-  .slice(0, policy.plan === 'enterprise' ? 20 : policy.plan === 'business' ? 12 : 6)
+  .slice(0, (() => {
+    const tier = policy.featureTier ?? policy.plan;
+    return tier === 'enterprise' ? 20 : tier === 'business' ? 12 : 6;
+  })())
   .map(([chemical, agg], i) => ({
     id: `chem-${i}-${chemical}`,
     chemical,

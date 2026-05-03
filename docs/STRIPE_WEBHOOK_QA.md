@@ -35,7 +35,7 @@ Copy the **webhook signing secret** (`whsec_…`) into `STRIPE_WEBHOOK_SECRET` a
 |----------------|-------------|
 | Pro+ | Open `/reports` or call `GET /api/reports` with session — should not return trial-expired 403. |
 | Business+ | Dashboard: “Customer & retention analytics” should show CLV-related content. |
-| Enterprise | `GET /api/enterprise/api-key` with owner session — should not return 403 “Enterprise plan required”. |
+| Enterprise | Reports **Enterprise performance / NPS** section with owner session during active trial or on Enterprise plan — `POST /api/enterprise/nps` should not return 403 “Enterprise plan required”. |
 
 ## Subscription lifecycle
 

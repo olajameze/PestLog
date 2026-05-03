@@ -4,6 +4,13 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
 
+function notificationPreferencesWithoutApiKey(raw: unknown): Prisma.InputJsonValue {
+  if (!raw || typeof raw !== 'object') return {};
+  const o = { ...(raw as Record<string, unknown>) };
+  delete o.apiKey;
+  return o as Prisma.InputJsonValue;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Get the authorization header
@@ -109,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
       requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
       defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
-      notificationPreferences: typeof notificationPreferences === 'object' ? notificationPreferences : {},
+      notificationPreferences: notificationPreferencesWithoutApiKey(notificationPreferences),
       email: user.email,
       subscriptionStatus: 'trial',
       plan: 'trial',
@@ -124,7 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
       requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
       defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
-      notificationPreferences: typeof notificationPreferences === 'object' ? notificationPreferences : {},
+      notificationPreferences: notificationPreferencesWithoutApiKey(notificationPreferences),
     }
   });
   return res.status(200).json(company);
@@ -183,7 +190,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof requireSignature === 'boolean') updateData.requireSignature = requireSignature;
       if (typeof requirePhotos === 'boolean') updateData.requirePhotos = requirePhotos;
       if (typeof defaultReportRangeDays === 'number') updateData.defaultReportRangeDays = defaultReportRangeDays;
-      if (notificationPreferences && typeof notificationPreferences === 'object') updateData.notificationPreferences = notificationPreferences;
+      if (notificationPreferences && typeof notificationPreferences === 'object') {
+        updateData.notificationPreferences = notificationPreferencesWithoutApiKey(notificationPreferences);
+      }
 
       const updatedCompany = await prisma.company.update({
         where: { id: company.id },

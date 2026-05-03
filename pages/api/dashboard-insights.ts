@@ -10,6 +10,7 @@ import {
   parseEnterpriseSettings,
 } from '../../lib/enterpriseFeatures';
 import { parseNotifications } from '../../lib/notifications';
+import { canUseEnterprisePreview } from '../../lib/trialEnterprisePreview';
 
 async function resolveOwnerCompanyForUser(token: string) {
   const {
@@ -101,6 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       requirePhotos: company.requirePhotos ?? false,
       requireSignature: company.requireSignature ?? false,
       plan: policyPlan,
+      featureTier: canUseEnterprisePreview(company) ? 'enterprise' : policyPlan,
     };
     const data = await buildDashboardInsights(prisma, company.id, policy, range, {
       npsResponses: enterpriseSettings.npsResponses,

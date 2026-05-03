@@ -16,6 +16,7 @@ import { checkPlan } from '../lib/planGuard';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
 import { formatTechnicianLimit, getTechnicianLimit } from '../lib/planLimits';
+import { canUseEnterprisePreview, trialFullDaysRemaining } from '../lib/trialEnterprisePreview';
 
 const DashboardEnhancements = dynamic(() => import('../components/dashboard/DashboardEnhancements'));
 const OnboardingTour = dynamic(() => import('../components/onboarding/OnboardingTour'), { ssr: false });
@@ -40,7 +41,6 @@ interface Company {
     trialExpiry?: boolean;
     renewal?: boolean;
     certificationExpiry?: boolean;
-    apiKey?: string;
     enterprise?: {
       accountManager?: {
         name?: string;
@@ -276,6 +276,7 @@ export default function Dashboard() {
   const [loadingCheckout, setLoadingCheckout] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showTrialEndingModal, setShowTrialEndingModal] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
@@ -574,7 +575,7 @@ export default function Dashboard() {
         const planLabel = queryPlan.charAt(0).toUpperCase() + queryPlan.slice(1);
         const detail =
           queryPlan === 'enterprise'
-            ? 'Enterprise reporting, retention analytics, and API features are now available.'
+            ? 'Enterprise reporting, retention analytics, and NPS tools are now available.'
             : queryPlan === 'business'
               ? 'Business reporting and analytics are now available.'
               : 'Pro reports and certifications are now available.';
@@ -595,6 +596,28 @@ export default function Dashboard() {
     };
     getUser();
   }, [isPreviewMode, router, showToast, router.query.session_id, router.query.upgradedPlan, refreshKey]);
+
+  useEffect(() => {
+    if (!company || company.plan !== 'trial') {
+      setShowTrialEndingModal(false);
+      return;
+    }
+    const days = trialFullDaysRemaining({ plan: company.plan, trialEndsAt: company.trialEndsAt ?? null });
+    if (days === null || days > 2) {
+      setShowTrialEndingModal(false);
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      if (sessionStorage.getItem('pesttraceTrialEndingModalDismissed') === today) {
+        setShowTrialEndingModal(false);
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+    setShowTrialEndingModal(true);
+  }, [company?.id, company?.plan, company?.trialEndsAt]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -671,33 +694,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleGenerateApiKey = async (): Promise<string | null> => {
-    if (isPreviewMode) {
-      showToast('Preview mode', 'Cannot generate API key in preview mode.', 'info');
-      return null;
-    }
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      router.push('/auth/signin');
-      return null;
-    }
-
-    const res = await fetch('/api/enterprise/api-key', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-    const result = await res.json();
-    if (!res.ok) {
-      showToast('API key failed', result.error || 'Unable to generate API key.', 'error');
-      return null;
-    }
-    showToast('API key generated', 'Your enterprise API key is ready.', 'success');
-    return result.apiKey || null;
-  };
-
   const handleUpdateCompanySettings = async (settings: {
     name: string;
     phone?: string;
@@ -711,7 +707,6 @@ export default function Dashboard() {
       trialExpiry: boolean;
       renewal: boolean;
       certificationExpiry: boolean;
-      apiKey?: string;
       enterprise?: {
         accountManager?: {
           name?: string;
@@ -736,12 +731,10 @@ export default function Dashboard() {
       return;
     }
 
-    const existingApiKey = company.notificationPreferences?.apiKey;
     const payload = {
       ...settings,
       notificationPreferences: {
         ...settings.notificationPreferences,
-        apiKey: settings.notificationPreferences.apiKey ?? existingApiKey,
       },
     };
 
@@ -1058,7 +1051,13 @@ if (!user || companyLoadState === 'loading') return (
                   setShowCertModal={setShowCertModal}
                   onLoadTechCerts={loadTechCerts}
                 />
-                <DashboardEnhancements plan={company.plan} />
+                <DashboardEnhancements
+                  plan={company.plan}
+                  enterprisePreview={canUseEnterprisePreview({
+                    plan: company.plan,
+                    trialEndsAt: company.trialEndsAt ?? null,
+                  })}
+                />
               </>
               )}
               {currentTab === 'logbook' && (
@@ -1072,7 +1071,6 @@ if (!user || companyLoadState === 'loading') return (
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
                   onUpdateCompanySettings={handleUpdateCompanySettings}
-                  onGenerateApiKey={handleGenerateApiKey}
                   onDeleteAccount={handleRequestDeleteAccount}
                   deletingAccount={deletingAccount}
                   savingSettings={savingSettings}
@@ -1087,6 +1085,60 @@ if (!user || companyLoadState === 'loading') return (
           </ErrorBoundary>
         </main>
       </div>
+      {showTrialEndingModal && company?.plan === 'trial' ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowTrialEndingModal(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setShowTrialEndingModal(false);
+          }}
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="trial-ending-title"
+            className="max-w-md rounded-2xl border border-amber-200 bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="trial-ending-title" className="text-xl font-bold text-navy">
+              Your trial ends soon
+            </h2>
+            <p className="mt-3 text-sm text-slate-600">
+              You have{' '}
+              <strong>
+                {trialFullDaysRemaining({ plan: company.plan, trialEndsAt: company.trialEndsAt ?? null }) ?? 0}
+              </strong>{' '}
+              day
+              {(trialFullDaysRemaining({ plan: company.plan, trialEndsAt: company.trialEndsAt ?? null }) ?? 0) === 1
+                ? ''
+                : 's'}{' '}
+              left. Upgrade to keep Enterprise preview analytics, retention insights, and NPS tools after your trial.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  try {
+                    sessionStorage.setItem(
+                      'pesttraceTrialEndingModalDismissed',
+                      new Date().toISOString().slice(0, 10),
+                    );
+                  } catch {
+                    /* ignore */
+                  }
+                  setShowTrialEndingModal(false);
+                }}
+              >
+                Remind me tomorrow
+              </Button>
+              <Button variant="primary" onClick={() => router.push('/upgrade')}>
+                View plans
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <ConfirmDialog
         open={Boolean(confirmRemoveId)}
         title="Remove technician?"
