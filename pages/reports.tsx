@@ -1308,88 +1308,93 @@ export default function ReportsPage() {
         ) : null}
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {!isOwner ? (
-              <div className="form-group">
-                <label className="form-label">Technician</label>
-                <div className="form-input bg-slate-50 text-slate-700 px-3 py-2 rounded-xl">
-                  {technicians[0]?.name || 'Loading...'}
-                </div>
-              </div>
-            ) : (
-              <div className="form-group">
-                <label htmlFor="technician-select" className="form-label">Technician</label>
-                <select
-                  id="technician-select"
-                  value={selectedTechnician}
-                  onChange={(e) => setSelectedTechnician(e.target.value)}
-                  className="form-select"
-                >
-                  {technicians.map((tech) => (
-                    <option key={tech.id} value={tech.id}>{tech.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="form-group">
-              <label htmlFor="search" className="form-label">Search</label>
-              <input
-                id="search"
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Client or address..."
-                className="form-input"
-              />
-              <div className="mt-2 flex items-center gap-2">
+              <label htmlFor="search" className="form-label">Search reports</label>
+              <div className="flex gap-2">
+                <input
+                  id="search"
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Client, address, treatment..."
+                  className="form-input"
+                />
                 <button
                   type="button"
                   onClick={openQuickSearch}
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-secondary btn-sm whitespace-nowrap px-3"
+                  aria-label="Open quick search palette"
                 >
-                  Quick Search (Ctrl/Cmd+K)
+                  Ctrl/Cmd+K
                 </button>
-                <p className="text-xs text-slate-500">Keyboard-first search across logbook records.</p>
               </div>
             </div>
-            <div className="form-group">
-                <label htmlFor="start-date" className="form-label">Start Date (optional)</label>
-              <input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="form-input"
-              />
-            </div>
-            <div className="form-group">
-                <label htmlFor="end-date" className="form-label">End Date (optional)</label>
-              <input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="form-input"
-              />
-            </div>
-            <div className="form-group flex flex-col justify-end sm:col-span-2 xl:col-span-1">
-              <button
-                type="button"
-                onClick={fetchReport}
-                className="btn btn-primary hover-lift"
-                disabled={fetching}
-              >
-                {fetching ? (
-                  <>
-                    <span className="spinner"></span>
-                    <span>Fetching...</span>
-                  </>
-                ) : (
-                  'Fetch Report'
-                )}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={fetchReport}
+              className="btn btn-primary hover-lift h-fit"
+              disabled={fetching}
+            >
+              {fetching ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Fetching...</span>
+                </>
+              ) : (
+                'Fetch Report'
+              )}
+            </button>
           </div>
+          <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4" open>
+            <summary className="cursor-pointer text-sm font-semibold text-slate-800">
+              Advanced filters
+            </summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-3">
+              {!isOwner ? (
+                <div className="form-group">
+                  <label className="form-label">Technician</label>
+                  <div className="form-input bg-white text-slate-700 px-3 py-2 rounded-xl">
+                    {technicians[0]?.name || 'Loading...'}
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label htmlFor="technician-select" className="form-label">Technician</label>
+                  <select
+                    id="technician-select"
+                    value={selectedTechnician}
+                    onChange={(e) => setSelectedTechnician(e.target.value)}
+                    className="form-select"
+                  >
+                    {technicians.map((tech) => (
+                      <option key={tech.id} value={tech.id}>{tech.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="form-group">
+                <label htmlFor="start-date" className="form-label">Start date</label>
+                <input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="form-input bg-white"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="end-date" className="form-label">End date</label>
+                <input
+                  id="end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="form-input bg-white"
+                />
+              </div>
+            </div>
+          </details>
           {isOwner ? (
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
