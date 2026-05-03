@@ -34,16 +34,53 @@ export default function SignUp() {
       return;
     }
     setLoading(true);
+    if (isTechnicianSignup) {
+      const createRes = await fetch('/api/auth/technician-signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: resolvedEmail,
+          password,
+          fullName,
+        }),
+      });
+      const createData = (await createRes.json().catch(() => ({}))) as { error?: string };
+      if (!createRes.ok) {
+        const message = createData.error || 'Unable to create technician account.';
+        setError(message);
+        showToast('Sign up failed', message, 'error');
+        setLoading(false);
+        return;
+      }
+
+      const signIn = await supabase.auth.signInWithPassword({
+        email: resolvedEmail,
+        password,
+      });
+      if (signIn.error || !signIn.data.session) {
+        const message = signIn.error?.message || 'Account created, but auto sign-in failed. Please sign in manually.';
+        setSuccessMessage(message);
+        showToast('Technician account created', message, 'info');
+        setLoading(false);
+        await router.push('/auth/signin?role=technician');
+        return;
+      }
+
+      setSuccessMessage('Technician account created. Redirecting to workspace...');
+      showToast('Account created', 'Welcome! Redirecting to technician workspace.', 'success');
+      setLoading(false);
+      await router.push('/technician');
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
       email: resolvedEmail,
       password,
       options: {
-        emailRedirectTo: isTechnicianSignup
-          ? `${window.location.origin}/technician`
-          : `${window.location.origin}/dashboard`,
+        emailRedirectTo: `${window.location.origin}/dashboard`,
         data: {
-          role: isTechnicianSignup ? 'technician' : 'admin',
-          businessName: isTechnicianSignup ? '' : businessName,
+          role: 'admin',
+          businessName,
           fullName,
         },
       },

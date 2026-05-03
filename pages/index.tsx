@@ -132,7 +132,7 @@ export default function Home() {
           <a href="#features" className="hover:text-slate-900 transition">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
         </div>
-        <div className="ml-auto flex w-full items-center justify-end gap-2 sm:w-auto">
+        <div className="ml-auto flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
           <Link href="/auth/signin?role=admin" className="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold hover:bg-slate-800 transition shadow-sm">
             Business Login
           </Link>
@@ -144,19 +144,19 @@ export default function Home() {
 
       {/* Hero Section */}
       <FadeIn>
-        <header className="px-6 pt-20 pb-24 text-center max-w-5xl mx-auto">
-          <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.05]">
+        <header className="mx-auto max-w-5xl px-4 pb-24 pt-20 text-center sm:px-6">
+          <h1 className="mb-8 text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-7xl xl:text-8xl">
             Stay audit-ready. <br />
             <span className="text-emerald-600">Eliminate paperwork.</span>
           </h1>
-          <p className="text-xl md:text-2xl text-slate-500 mb-12 max-w-2xl mx-auto leading-relaxed">
+          <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-slate-500 sm:text-xl md:text-2xl">
             PestTrace is the compliance and job tracking platform built specifically for UK pest control businesses to meet strict regulations.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Link href="/auth/signup" className="bg-emerald-500 text-white px-10 py-5 rounded-2xl font-bold text-xl hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all hover:-translate-y-1">
+          <div className="flex flex-col justify-center gap-4 sm:flex-row">
+            <Link href="/auth/signup" className="rounded-2xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow-xl shadow-emerald-200 transition-all hover:-translate-y-1 hover:bg-emerald-600 sm:px-10 sm:py-5 sm:text-xl">
               Start Free Trial
             </Link>
-            <button className="bg-slate-50 text-slate-900 px-10 py-5 rounded-2xl font-bold text-xl hover:bg-slate-100 transition">
+            <button className="rounded-2xl bg-slate-50 px-6 py-4 text-lg font-bold text-slate-900 transition hover:bg-slate-100 sm:px-10 sm:py-5 sm:text-xl">
               See How It Works
             </button>
           </div>
@@ -179,7 +179,7 @@ export default function Home() {
             <p>2) Technicians receive an invite email and set their own password.</p>
             <p>3) Technicians then sign in via Technician Login to access only their technician workspace.</p>
           </div>
-          <div className="mt-8 text-sm text-slate-400 font-medium flex justify-center gap-6">
+          <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-medium text-slate-400 sm:gap-6">
             {trustMicrocopy.map(item => <span key={item} className="flex items-center gap-1.5"><span className="text-emerald-500">✓</span> {item}</span>)}
           </div>
         </header>
@@ -197,7 +197,7 @@ export default function Home() {
               href={regulationUrgency.href} 
               target="_blank"
               rel="noopener noreferrer"
-              className="whitespace-nowrap px-8 py-4 bg-amber-900 text-amber-50 rounded-xl font-bold hover:bg-amber-950 transition"
+              className="rounded-xl bg-amber-900 px-8 py-4 text-center font-bold text-amber-50 transition hover:bg-amber-950"
             >
               {regulationUrgency.cta}
             </Link>
@@ -211,8 +211,8 @@ export default function Home() {
           <div key={feature.title} className={`flex flex-col md:flex-row items-center gap-16 ${idx % 2 !== 0 ? 'md:flex-row-reverse' : ''}`}>
             <div className="flex-1">
               <FadeIn>
-                <h2 className="text-4xl font-bold mb-6 tracking-tight leading-tight">{feature.title}</h2>
-                <p className="text-xl text-slate-500 leading-relaxed">{feature.body}</p>
+                <h2 className="mb-6 text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{feature.title}</h2>
+                <p className="text-lg leading-relaxed text-slate-500 sm:text-xl">{feature.body}</p>
               </FadeIn>
             </div>
             <div className="flex-1 w-full">
@@ -270,16 +270,16 @@ export default function Home() {
       <section id="pricing" className="py-32 px-6 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-5xl font-extrabold mb-4">Simple, fair pricing</h2>
-            <p className="text-xl text-slate-500">Scale your pest control business without hidden costs.</p>
+            <h2 className="mb-4 text-3xl font-extrabold sm:text-5xl">Simple, fair pricing</h2>
+            <p className="text-lg text-slate-500 sm:text-xl">Scale your pest control business without hidden costs.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {pricingPlans.map((plan) => (
               <FadeIn key={plan.name} delay={plan.isPopular ? 0.1 : 0}>
-                <div className={`h-full p-10 rounded-[2rem] bg-white border ${plan.isPopular ? 'border-emerald-500 ring-4 ring-emerald-500/5 relative' : 'border-slate-200'}`}>
+                <div className={`h-full rounded-[2rem] border bg-white p-6 sm:p-10 ${plan.isPopular ? 'relative border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'}`}>
                   {plan.isPopular && <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide">MOST POPULAR</span>}
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                  <div className="mb-6"><span className="text-5xl font-black">£{plan.price}</span><span className="text-slate-400 text-sm">{plan.cadence}</span></div>
+                  <div className="mb-6"><span className="text-4xl font-black sm:text-5xl">£{plan.price}</span><span className="text-slate-400 text-sm">{plan.cadence}</span></div>
                   <Link href={plan.href} className={`block text-center py-4 rounded-xl font-bold mb-8 transition ${plan.isPopular ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-100' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'}`}>{plan.cta}</Link>
                   <ul className="space-y-4 text-slate-600 text-sm font-medium">
                     {plan.features.map(f => <li key={f} className="flex gap-3 items-start"><span className="text-emerald-500 text-base">✓</span>{f}</li>)}

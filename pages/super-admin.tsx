@@ -263,7 +263,7 @@ export default function SuperAdminPage({
                   return (
                   <Fragment key={user.id}>
                   <tr className="border-t border-zinc-100">
-                    <td className="px-4 py-3 text-zinc-800">{user.email || '—'}</td>
+                    <td className="break-all px-4 py-3 text-zinc-800">{user.email || '—'}</td>
                     <td className="px-4 py-3 text-zinc-700">{user.role}</td>
                     <td className="px-4 py-3 text-zinc-700">{isDisabled ? 'Disabled' : 'Active'}</td>
                     <td className="px-4 py-3 text-zinc-700">{user.emailConfirmedAt ? 'Yes' : 'No'}</td>
@@ -274,7 +274,7 @@ export default function SuperAdminPage({
                       {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleString() : '—'}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex min-w-[340px] flex-wrap gap-2">
+                      <div className="flex min-w-[240px] flex-col gap-2 sm:flex-row sm:flex-wrap">
                         <Button
                           size="sm"
                           variant={isDisabled ? 'success' : 'secondary'}

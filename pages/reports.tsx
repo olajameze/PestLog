@@ -1152,16 +1152,16 @@ export default function ReportsPage() {
         ) : null}
 
         <div className="bg-white rounded-xl shadow-md p-6 sm:p-8">
-          <div className="grid gap-4 sm:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {!isOwner ? (
-              <div className="form-group sm:col-span-1">
+              <div className="form-group">
                 <label className="form-label">Technician</label>
                 <div className="form-input bg-slate-50 text-slate-700 px-3 py-2 rounded-xl">
                   {technicians[0]?.name || 'Loading...'}
                 </div>
               </div>
             ) : (
-              <div className="form-group sm:col-span-1">
+              <div className="form-group">
                 <label htmlFor="technician-select" className="form-label">Technician</label>
                 <select
                   id="technician-select"
@@ -1186,7 +1186,7 @@ export default function ReportsPage() {
                 className="form-input"
               />
             </div>
-            <div className="form-group flex items-end">
+            <div className="form-group flex items-end sm:col-span-2 xl:col-span-1">
               <label className="inline-flex items-center gap-2 text-sm text-slate-700 pb-3">
                 <input
                   type="checkbox"
@@ -1219,7 +1219,7 @@ export default function ReportsPage() {
                 className="form-input"
               />
             </div>
-            <div className="form-group flex flex-col justify-end">
+            <div className="form-group flex flex-col justify-end sm:col-span-2 xl:col-span-1">
               <button
                 type="button"
                 onClick={fetchReport}
@@ -1232,7 +1232,7 @@ export default function ReportsPage() {
                     <span>Fetching...</span>
                   </>
                 ) : (
-                  '📊 Fetch Report'
+                  'Fetch Report'
                 )}
               </button>
               {quickSearchMode ? (
@@ -1268,7 +1268,7 @@ export default function ReportsPage() {
 
         {report && (
           <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-5 shadow-sm">
+            <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex-1 text-center">
                 <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-2">{isOwner ? 'Company Report Results' : 'My Report Results'}</h2>
                 <p className="text-sm text-slate-600">Review your logged jobs by client name or address. Export as PDF for compliance.</p>
@@ -1276,9 +1276,9 @@ export default function ReportsPage() {
               <button
                 type="button"
                 onClick={downloadPdf}
-                className="btn btn-success hover-lift px-5 py-3"
+                className="btn btn-success hover-lift w-full px-5 py-3 sm:w-auto"
               >
-                📥 Download PDF
+                Download PDF
               </button>
             </div>
 

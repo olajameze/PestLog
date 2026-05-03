@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function AuthLayout({
   title,
@@ -13,8 +14,16 @@ export default function AuthLayout({
     <div className="min-h-screen bg-offwhite">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex min-h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
-          <Link href="/" className="text-2xl font-semibold text-navy sm:text-3xl">
-            Pest Trace
+          <Link href="/" className="flex items-center gap-2 text-2xl font-semibold text-navy sm:text-3xl">
+            <Image
+              src="/pest-trace.png"
+              alt="Pest Trace logo"
+              width={34}
+              height={34}
+              className="h-8 w-8 object-contain sm:h-9 sm:w-9"
+              priority
+            />
+            <span>Pest Trace</span>
           </Link>
           <Link
             href="/auth/signin"

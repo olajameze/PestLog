@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Button from './ui/Button';
 import { DashboardIcon, LogbookIcon, ReportsIcon, SettingsIcon } from './icons';
 
@@ -53,7 +54,17 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
         <div className="flex h-full flex-col justify-between">
           <div>
             <div className="border-b border-zinc-200 px-5 py-5">
-              <h2 className="text-3xl font-semibold text-navy">Pest Trace</h2>
+              <div className="flex items-center gap-2">
+                <Image
+                  src="/pest-trace.png"
+                  alt="Pest Trace logo"
+                  width={36}
+                  height={36}
+                  className="h-9 w-9 object-contain"
+                  priority
+                />
+                <h2 className="text-3xl font-semibold text-navy">Pest Trace</h2>
+              </div>
               <p className="mt-1 text-sm text-zinc-500">Compliance Suite</p>
               <button
                 onClick={() => setMobileOpen(false)}

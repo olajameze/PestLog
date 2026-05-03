@@ -42,7 +42,7 @@ export default function SignIn() {
         email_confirmed?: boolean;
       };
       const verified = Boolean(u.email_confirmed_at ?? u.confirmed_at ?? u.email_confirmed);
-      if (!verified) {
+      if (!verified && !isTechnicianFlow) {
         setSuccessMessage('Please verify your email before accessing the dashboard.');
         showToast('Email verification required', 'Check your inbox for the verification email.', 'info');
         router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
