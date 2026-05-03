@@ -8,6 +8,7 @@ type PasswordFieldProps = {
   placeholder?: string;
   required?: boolean;
   readOnly?: boolean;
+  error?: string;
 };
 
 export default function PasswordField({
@@ -18,8 +19,10 @@ export default function PasswordField({
   placeholder,
   required = false,
   readOnly = false,
+  error,
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const errorId = `${id}-error`;
 
   return (
     <div className="form-group">
@@ -35,17 +38,26 @@ export default function PasswordField({
           placeholder={placeholder}
           required={required}
           readOnly={readOnly}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
           className="form-input w-full pr-20"
         />
         <button
           type="button"
           onClick={() => setVisible((prev) => !prev)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-600 hover:text-slate-900"
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded px-1 text-xs font-semibold text-slate-600 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
           aria-label={visible ? 'Hide password' : 'Show password'}
+          aria-controls={id}
+          aria-pressed={visible}
         >
           {visible ? 'Hide' : 'Show'}
         </button>
       </div>
+      {error ? (
+        <p id={errorId} className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

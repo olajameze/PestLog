@@ -10,7 +10,6 @@ import FormInput from '../components/ui/FormInput';
 import SettingsTab from '../components/settings/SettingsTab';
 import { useToast } from '../components/ui/ToastProvider';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
-import OfflineBanner from '../components/offline/OfflineBanner';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { Skeleton } from '../components/ui/Skeleton';
 import { checkPlan } from '../lib/planGuard';
@@ -165,11 +164,26 @@ const PlanModal = ({
   onClose: () => void;
   onSubscribe: (plan: 'pro' | 'business' | 'enterprise') => void;
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4">
-    <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6">
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"
+    onClick={onClose}
+    onKeyDown={(event) => {
+      if (event.key === 'Escape') onClose();
+    }}
+    tabIndex={-1}
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="plan-modal-title"
+      className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-4 shadow-2xl sm:p-6"
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
-        <h2 className="text-xl font-bold text-navy sm:text-2xl">Choose Your Plan</h2>
-        <Button size="sm" variant="secondary" onClick={onClose} className="px-3 py-2">✕</Button>
+        <h2 id="plan-modal-title" className="text-xl font-bold text-navy sm:text-2xl">Choose Your Plan</h2>
+        <Button size="sm" variant="secondary" onClick={onClose} className="px-3 py-2" ariaLabel="Close plan selector">
+          ✕
+        </Button>
       </div>
       <div className="mb-8 grid gap-6 md:grid-cols-3">
         {/* Pro */}
@@ -815,14 +829,19 @@ export default function Dashboard() {
       router.push('/auth/signin');
       return;
     }
+    const previous = technicians;
+    setTechnicians((prev) => prev.filter((t) => t.id !== technicianId));
     const token = session.access_token;
     const res = await fetch(`/api/technicians?id=${technicianId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
-      setTechnicians(technicians.filter(t => t.id !== technicianId));
       showToast('Technician removed', 'The technician was removed.', 'success');
+    } else {
+      setTechnicians(previous);
+      const err = await res.json().catch(() => ({ error: 'Remove failed' }));
+      showToast('Remove failed', err.error || 'Unable to remove technician.', 'error');
     }
   };
 
@@ -836,6 +855,11 @@ export default function Dashboard() {
       router.push('/auth/signin');
       return;
     }
+    const optimisticInviteAt = new Date().toISOString();
+    setInviteStatusByTechnician((prev) => ({
+      ...prev,
+      [technicianId]: optimisticInviteAt,
+    }));
     const res = await fetch('/api/technicians/invite', {
       method: 'POST',
       headers: {
@@ -870,6 +894,13 @@ export default function Dashboard() {
       return;
     }
     const err = await res.json().catch(() => ({ error: 'Invite failed' }));
+    setInviteStatusByTechnician((prev) => {
+      const next = { ...prev };
+      if (next[technicianId] === optimisticInviteAt) {
+        delete next[technicianId];
+      }
+      return next;
+    });
     showToast('Invite failed', err.error || 'Unable to send technician invite.', 'error');
   };
 
@@ -911,7 +942,6 @@ if (!user || companyLoadState === 'loading') return (
           onTabChange={(tab: string) => setActiveTab(tab as Tab)} 
           onSignOut={handleSignOut}
         />
-        <OfflineBanner />
         <main className="min-w-0 flex-1 p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
           <ErrorBoundary>
             {companyLoadState === 'error' && !company ? (
@@ -1051,11 +1081,26 @@ if (!user || companyLoadState === 'loading') return (
       )}
       {/* Certification Modal */}
       {showCertModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowCertModal(false)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') setShowCertModal(false);
+          }}
+          tabIndex={-1}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cert-modal-title"
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="flex-1 text-center text-2xl font-bold text-navy">Upload Certification</h2>
-              <Button size="sm" variant="secondary" onClick={() => setShowCertModal(false)}>✕</Button>
+              <h2 id="cert-modal-title" className="flex-1 text-center text-2xl font-bold text-navy">Upload Certification</h2>
+              <Button size="sm" variant="secondary" onClick={() => setShowCertModal(false)} ariaLabel="Close certification modal">
+                ✕
+              </Button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1593,6 +1638,45 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
   const { isOnline } = useOfflineQueue();
+  const draftKey = `owner-logbook-draft:${companyId}`;
+
+  useEffect(() => {
+    const raw = localStorage.getItem(draftKey);
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof draft.date === 'string') setDate(draft.date);
+      if (typeof draft.clientName === 'string') setClientName(draft.clientName);
+      if (typeof draft.address === 'string') setAddress(draft.address);
+      if (typeof draft.treatment === 'string') setTreatment(draft.treatment);
+      if (typeof draft.notes === 'string') setNotes(draft.notes);
+      if (typeof draft.technicianId === 'string') setTechnicianId(draft.technicianId);
+      if (typeof draft.followUpDate === 'string') setFollowUpDate(draft.followUpDate);
+      if (typeof draft.internalNotes === 'string') setInternalNotes(draft.internalNotes);
+      if (typeof draft.productAmount === 'string') setProductAmount(draft.productAmount);
+      if (typeof draft.recommendation === 'string') setRecommendation(draft.recommendation);
+    } catch {
+      // Ignore invalid draft payload.
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        date,
+        clientName,
+        address,
+        treatment,
+        notes,
+        technicianId,
+        followUpDate,
+        internalNotes,
+        productAmount,
+        recommendation,
+      }),
+    );
+  }, [draftKey, date, clientName, address, treatment, notes, technicianId, followUpDate, internalNotes, productAmount, recommendation]);
 
   const getCanvasPoint = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
@@ -1824,6 +1908,7 @@ function AddLogbookEntryForm({ companyId, technicians, onAdd }: {
       setPoisonUsed('');
       setBaitStations([]);
       if (photoInputRef.current) photoInputRef.current.value = '';
+      localStorage.removeItem(draftKey);
     };
 
     if (isOnline && accessToken) {

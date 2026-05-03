@@ -9,6 +9,7 @@ import {
   isIpAllowed,
   parseEnterpriseSettings,
 } from '../../lib/enterpriseFeatures';
+import { parseNotifications } from '../../lib/notifications';
 
 async function resolveOwnerCompanyForUser(token: string) {
   const {
@@ -104,6 +105,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const data = await buildDashboardInsights(prisma, company.id, policy, range, {
       npsResponses: enterpriseSettings.npsResponses,
     });
+    const existing = parseNotifications(company.notificationPreferences);
+    const bySource = new Map(existing.map((item) => [item.sourceId, item]));
+    let changed = false;
+    for (const alert of data.urgentAlerts) {
+      const sourceId = `urgent:${alert.id}`;
+      if (bySource.has(sourceId)) continue;
+      existing.unshift({
+        id: `${Date.now()}-${Math.random()}`,
+        title: alert.title,
+        message: alert.description,
+        severity: alert.severity,
+        read: false,
+        createdAt: new Date().toISOString(),
+        sourceId,
+      });
+      changed = true;
+    }
+    if (changed) {
+      const base =
+        company.notificationPreferences && typeof company.notificationPreferences === 'object'
+          ? (company.notificationPreferences as Record<string, unknown>)
+          : {};
+      await prisma.company.update({
+        where: { id: company.id },
+        data: {
+          notificationPreferences: {
+            ...base,
+            notifications: existing.slice(0, 120),
+          },
+        },
+      });
+    }
     return res.status(200).json(data);
   } catch (error) {
     console.error('dashboard-insights', error);

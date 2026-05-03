@@ -286,6 +286,43 @@ if (policy.requirePhotos) {
   }
 }
 
+const nextBestActions: DashboardData['nextBestActions'] = [];
+if (urgentAlerts.length > 0) {
+  const highAlert = urgentAlerts.find((alert) => alert.severity === 'high' && alert.action);
+  if (highAlert?.action) {
+    nextBestActions.push({
+      id: `nba-alert-${highAlert.id}`,
+      title: 'Address highest priority alert',
+      description: highAlert.title,
+      action: highAlert.action,
+    });
+  }
+}
+if (openActions.length > 0) {
+  nextBestActions.push({
+    id: 'nba-open-actions',
+    title: 'Close compliance gaps',
+    description: `${openActions.length} jobs need attention in the current range.`,
+    action: { type: 'open_reports', followUpOnly: true },
+  });
+}
+if (currentRate < 85) {
+  nextBestActions.push({
+    id: 'nba-compliance-rate',
+    title: 'Improve compliance completion rate',
+    description: `Current compliance is ${currentRate}%. Review jobs missing signatures/photos.`,
+    action: { type: 'open_reports' },
+  });
+}
+if (nextBestActions.length === 0) {
+  nextBestActions.push({
+    id: 'nba-maintain',
+    title: 'Maintain today`s momentum',
+    description: 'Review reports for scheduling and keep follow-ups moving.',
+    action: { type: 'open_reports' },
+  });
+}
+
 const clientCounts = new Map<string, number>();
 for (const e of entriesInRange) {
   const k = normalizeClientKey(e.clientName);
@@ -401,6 +438,7 @@ for (const e of entriesInRange) {
     },
     chemicalLog,
     urgentAlerts: urgentAlerts.slice(0, 8),
+    nextBestActions: nextBestActions.slice(0, 4),
     customerValue: {
       clv: uniqueClients === 0 ? 0 : clv,
       cac,

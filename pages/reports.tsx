@@ -1,6 +1,6 @@
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import Sidebar from '../components/sidebar';
@@ -169,6 +169,20 @@ type ReportResponse = {
   companyName: string;
   entries: ReportEntry[];
   certifications: Certification[];
+};
+
+type SavedReportView = {
+  id: string;
+  name: string;
+  filters: {
+    technicianId?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    followUpOnly?: boolean;
+  };
+  createdAt: string;
+  updatedAt: string;
 };
 
 type AnalyticsPayload = {
@@ -376,6 +390,11 @@ export default function ReportsPage() {
   } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [updatedEntryMessage, setUpdatedEntryMessage] = useState<string | null>(null);
+  const [savedViews, setSavedViews] = useState<SavedReportView[]>([]);
+  const [savedViewName, setSavedViewName] = useState('');
+  const [savingView, setSavingView] = useState(false);
+  const [selectedEntryIds, setSelectedEntryIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -624,9 +643,176 @@ export default function ReportsPage() {
     if (queryFollowUpOnly) setJobFilter('follow-up');
   }, [router.isReady, router.query.search, router.query.startDate, router.query.endDate, router.query.followUpOnly]);
 
-  const visibleEntries = report
-    ? report.entries.filter((entry) => (jobFilter === 'follow-up' ? entryNeedsFollowUp(entry) : true))
-    : [];
+  const visibleEntries = useMemo(
+    () =>
+      report
+        ? report.entries.filter((entry) => (jobFilter === 'follow-up' ? entryNeedsFollowUp(entry) : true))
+        : [],
+    [report, jobFilter],
+  );
+  const clientTimeline = useMemo(() => {
+    const map = new Map<string, ReportEntry[]>();
+    for (const entry of visibleEntries) {
+      const current = map.get(entry.clientName) ?? [];
+      current.push(entry);
+      map.set(entry.clientName, current);
+    }
+    return [...map.entries()]
+      .map(([client, items]) => ({
+        client,
+        items: items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      }))
+      .sort((a, b) => b.items.length - a.items.length)
+      .slice(0, 8);
+  }, [visibleEntries]);
+
+  useEffect(() => {
+    setSelectedEntryIds((prev) => prev.filter((id) => visibleEntries.some((entry) => entry.id === id)));
+  }, [visibleEntries]);
+
+  useEffect(() => {
+    const loadSavedViews = async () => {
+      if (!isOwner || isPreviewMode) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch('/api/report-views', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json().catch(() => []);
+      setSavedViews(Array.isArray(data) ? data : []);
+    };
+    if (!loading) {
+      loadSavedViews();
+    }
+  }, [isOwner, loading, isPreviewMode]);
+
+  const buildCurrentFilters = () => ({
+    technicianId: selectedTechnician || undefined,
+    search: search.trim() || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    followUpOnly: jobFilter === 'follow-up',
+  });
+
+  const applySavedView = (view: SavedReportView) => {
+    setSelectedTechnician(view.filters.technicianId || selectedTechnician);
+    setSearch(view.filters.search || '');
+    setStartDate(view.filters.startDate || '');
+    setEndDate(view.filters.endDate || '');
+    setJobFilter(view.filters.followUpOnly ? 'follow-up' : 'all');
+    showToast('View applied', `Loaded "${view.name}".`, 'success');
+  };
+
+  const saveCurrentView = async () => {
+    if (!isOwner) return;
+    const name = savedViewName.trim();
+    if (!name) {
+      showToast('Name required', 'Give this saved view a name first.', 'error');
+      return;
+    }
+    setSavingView(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.push('/auth/signin');
+      return;
+    }
+    const res = await fetch('/api/report-views', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        name,
+        filters: buildCurrentFilters(),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Unable to save view.' }));
+      showToast('Save failed', err.error || 'Unable to save view.', 'error');
+      setSavingView(false);
+      return;
+    }
+    const created = (await res.json().catch(() => null)) as SavedReportView | null;
+    if (created) {
+      setSavedViews((prev) => [created, ...prev.filter((item) => item.id !== created.id)]);
+    }
+    setSavedViewName('');
+    setSavingView(false);
+    showToast('Saved', 'Report view saved for quick reuse.', 'success');
+  };
+
+  const deleteSavedView = async (viewId: string) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.push('/auth/signin');
+      return;
+    }
+    const res = await fetch(`/api/report-views?id=${encodeURIComponent(viewId)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) {
+      showToast('Delete failed', 'Unable to remove saved view.', 'error');
+      return;
+    }
+    setSavedViews((prev) => prev.filter((view) => view.id !== viewId));
+    showToast('Deleted', 'Saved view removed.', 'success');
+  };
+
+  const runBulkAction = async (action: 'set_status' | 'delete', status?: 'open' | 'completed' | 'cancelled') => {
+    if (!isOwner) return;
+    if (!selectedEntryIds.length) {
+      showToast('No selection', 'Select one or more jobs first.', 'error');
+      return;
+    }
+    setBulkActionLoading(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      router.push('/auth/signin');
+      return;
+    }
+    const res = await fetch('/api/logbook-entries/bulk', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        action,
+        status,
+        entryIds: selectedEntryIds,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Bulk action failed.' }));
+      showToast('Bulk action failed', err.error || 'Bulk action failed.', 'error');
+      setBulkActionLoading(false);
+      return;
+    }
+    setReport((prev) => {
+      if (!prev) return prev;
+      if (action === 'delete') {
+        return {
+          ...prev,
+          entries: prev.entries.filter((entry) => !selectedEntryIds.includes(entry.id)),
+        };
+      }
+      return {
+        ...prev,
+        entries: prev.entries.map((entry) =>
+          selectedEntryIds.includes(entry.id)
+            ? { ...entry, status: status || entry.status }
+            : entry,
+        ),
+      };
+    });
+    const affected = selectedEntryIds.length;
+    setSelectedEntryIds([]);
+    setBulkActionLoading(false);
+    showToast('Bulk action complete', `${affected} job(s) updated.`, 'success');
+  };
 
   const fetchReport = async () => {
     if (!selectedTechnician) {
@@ -747,6 +933,14 @@ export default function ReportsPage() {
   const deleteReportEntry = async (entryId: string) => {
     if (!confirm('Delete this job from the report? This cannot be undone.')) return;
     setDeletingEntryId(entryId);
+    const previousReport = report;
+    setReport((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        entries: prev.entries.filter((entry) => entry.id !== entryId),
+      };
+    });
 
     const { data: { session } } = await supabase.auth.getSession();
     const res = await fetch(`/api/logbook-entries/${entryId}`, {
@@ -757,19 +951,12 @@ export default function ReportsPage() {
     });
 
     if (!res.ok) {
+      setReport(previousReport);
       const error = await res.json().catch(() => ({ error: 'Failed to delete report entry' }));
       showToast('Delete failed', error.error || 'Failed to delete report entry', 'error');
       setDeletingEntryId(null);
       return;
     }
-
-    setReport((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        entries: prev.entries.filter((entry) => entry.id !== entryId),
-      };
-    });
     showToast('Deleted', 'Job removed from report successfully.', 'success');
     setDeletingEntryId(null);
   };
@@ -1247,6 +1434,54 @@ export default function ReportsPage() {
               ) : null}
             </div>
           </div>
+          {isOwner ? (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                <div className="form-group lg:flex-1">
+                  <label htmlFor="saved-view-name" className="form-label">Save current filters as</label>
+                  <input
+                    id="saved-view-name"
+                    type="text"
+                    value={savedViewName}
+                    onChange={(event) => setSavedViewName(event.target.value)}
+                    placeholder="e.g. Weekly follow-ups"
+                    className="form-input"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={saveCurrentView}
+                  disabled={savingView}
+                  className="btn btn-secondary"
+                >
+                  {savingView ? 'Saving...' : 'Save View'}
+                </button>
+              </div>
+              {savedViews.length > 0 ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {savedViews.map((view) => (
+                    <div key={view.id} className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-slate-700 hover:text-slate-900"
+                        onClick={() => applySavedView(view)}
+                      >
+                        {view.name}
+                      </button>
+                      <button
+                        type="button"
+                        className="text-xs text-red-600 hover:text-red-800"
+                        onClick={() => deleteSavedView(view.id)}
+                        aria-label={`Delete saved view ${view.name}`}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {quickSearchMode ? (
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-800">Quick results ({quickSearchResults.length})</p>
@@ -1467,6 +1702,43 @@ export default function ReportsPage() {
                   </button>
                 </div>
               </div>
+              {isOwner && visibleEntries.length > 0 ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-3">
+                      <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={selectedEntryIds.length > 0 && selectedEntryIds.length === visibleEntries.length}
+                          onChange={(event) => {
+                            if (event.target.checked) {
+                              setSelectedEntryIds(visibleEntries.map((entry) => entry.id));
+                            } else {
+                              setSelectedEntryIds([]);
+                            }
+                          }}
+                        />
+                        Select all visible jobs
+                      </label>
+                      <span className="text-sm text-slate-500">{selectedEntryIds.length} selected</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className="btn btn-secondary btn-sm" disabled={bulkActionLoading} onClick={() => runBulkAction('set_status', 'open')}>
+                        Mark Open
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm" disabled={bulkActionLoading} onClick={() => runBulkAction('set_status', 'completed')}>
+                        Mark Completed
+                      </button>
+                      <button type="button" className="btn btn-secondary btn-sm" disabled={bulkActionLoading} onClick={() => runBulkAction('set_status', 'cancelled')}>
+                        Mark Cancelled
+                      </button>
+                      <button type="button" className="btn btn-danger btn-sm" disabled={bulkActionLoading} onClick={() => runBulkAction('delete')}>
+                        {bulkActionLoading ? 'Applying...' : 'Delete Selected'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
               {visibleEntries.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
                   {jobFilter === 'follow-up'
@@ -1479,6 +1751,22 @@ export default function ReportsPage() {
                     <div key={entry.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex-1">
+                          {isOwner ? (
+                            <label className="mb-2 inline-flex items-center gap-2 text-xs text-slate-600">
+                              <input
+                                type="checkbox"
+                                checked={selectedEntryIds.includes(entry.id)}
+                                onChange={(event) => {
+                                  if (event.target.checked) {
+                                    setSelectedEntryIds((prev) => Array.from(new Set([...prev, entry.id])));
+                                  } else {
+                                    setSelectedEntryIds((prev) => prev.filter((id) => id !== entry.id));
+                                  }
+                                }}
+                              />
+                              Select
+                            </label>
+                          ) : null}
                           <h4 className="text-lg font-semibold text-navy">{entry.clientName}</h4>
                           <p className="text-sm text-gray-600">{entry.address}</p>
                           <p className="text-xs sm:text-sm text-gray-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
@@ -1630,6 +1918,32 @@ export default function ReportsPage() {
                           />
                         </div>
                       ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xl sm:text-2xl font-bold text-navy">🕒 Client Timeline</h3>
+              {clientTimeline.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
+                  Timeline appears when report entries are available.
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {clientTimeline.map((timeline) => (
+                    <div key={timeline.client} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <p className="text-sm font-semibold text-slate-900">{timeline.client}</p>
+                      <div className="mt-3 space-y-2">
+                        {timeline.items.slice(0, 4).map((item) => (
+                          <div key={item.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
+                            <p className="text-xs text-slate-500">{new Date(item.date).toLocaleDateString()}</p>
+                            <p className="text-sm font-medium text-slate-800">{item.treatment}</p>
+                            {item.status ? <p className="text-xs text-slate-600">Status: {item.status}</p> : null}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>

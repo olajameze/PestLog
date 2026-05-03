@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Button from './ui/Button';
@@ -13,6 +13,18 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab = 'technicians', onTabChange, onSignOut, role = 'owner' }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileNavRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    const firstFocusable = mobileNavRef.current?.querySelector<HTMLElement>('button, a, [tabindex]:not([tabindex="-1"])');
+    firstFocusable?.focus();
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [mobileOpen]);
 
   const ownerTabs = [
     { id: 'technicians', label: 'Dashboard', href: '/dashboard?tab=technicians', icon: DashboardIcon },
@@ -34,6 +46,8 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
         onClick={() => setMobileOpen(true)}
         className="fixed left-4 top-4 z-40 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg lg:hidden"
         aria-label="Open navigation menu"
+        aria-expanded={mobileOpen}
+        aria-controls="app-sidebar"
       >
         ☰
       </button>
@@ -69,12 +83,13 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
               <button
                 onClick={() => setMobileOpen(false)}
                 className="mt-3 rounded-lg p-2 hover:bg-zinc-100 lg:hidden"
+                aria-label="Close navigation menu"
               >
                 ✕
               </button>
             </div>
 
-            <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
+            <nav id="app-sidebar" ref={mobileNavRef} className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3">
               {tabs.map((tab) => (
                 <Link
                   key={tab.id}
@@ -88,6 +103,7 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
                       ? 'bg-primary-500 text-white'
                       : 'text-zinc-700 hover:bg-zinc-100 hover:text-navy'
                   }`}
+                  aria-current={isActive(tab.id) ? 'page' : undefined}
                 >
                   <tab.icon size={18} className={isActive(tab.id) ? 'text-white' : 'text-slate-500'} />
                   {tab.label}

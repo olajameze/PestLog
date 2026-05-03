@@ -117,6 +117,8 @@ const treatments = [
   'Bait Station Service',
   'Audit/Compliance Inspection',
 ];
+const ENABLE_VOICE_NOTES = process.env.NEXT_PUBLIC_ENABLE_VOICE_NOTES === 'true';
+const ENABLE_PHOTO_ANNOTATION = process.env.NEXT_PUBLIC_ENABLE_PHOTO_ANNOTATION === 'true';
 
 export default function TechnicianPage() {
   const router = useRouter();
@@ -132,6 +134,7 @@ export default function TechnicianPage() {
   const [address, setAddress] = useState('');
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
+  const [photoAnnotation, setPhotoAnnotation] = useState('');
   const [rooms, setRooms] = useState<RoomForm[]>([]);
   const [baitBoxesPlaced, setBaitBoxesPlaced] = useState('');
   const [poisonUsed, setPoisonUsed] = useState('');
@@ -141,11 +144,14 @@ export default function TechnicianPage() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [templates, setTemplates] = useState<Array<{ id: string; name: string; treatment: string; notes: string; poisonUsed: string; baitBoxesPlaced: string }>>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [certExpiryDate, setCertExpiryDate] = useState('');
   const [certUploading, setCertUploading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawing = useRef(false);
+  const lastDraftKeyRef = useRef('');
 
   const addRoom = () => {
     setRooms((prev) => [...prev, { name: '', note: '' }]);
@@ -161,6 +167,140 @@ export default function TechnicianPage() {
 
   const removeRoom = (index: number) => {
     setRooms((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const currentDraftKey = profile ? `tech-draft:${profile.id}` : '';
+  const templateStorageKey = profile ? `tech-templates:${profile.companyId}` : '';
+
+  useEffect(() => {
+    if (!currentDraftKey) return;
+    if (lastDraftKeyRef.current === currentDraftKey) return;
+    const raw = localStorage.getItem(currentDraftKey);
+    if (!raw) {
+      lastDraftKeyRef.current = currentDraftKey;
+      return;
+    }
+    try {
+      const draft = JSON.parse(raw) as Record<string, unknown>;
+      window.setTimeout(() => {
+        if (typeof draft.date === 'string') setDate(draft.date);
+        if (typeof draft.clientName === 'string') setClientName(draft.clientName);
+        if (typeof draft.address === 'string') setAddress(draft.address);
+        if (typeof draft.treatment === 'string') setTreatment(draft.treatment);
+        if (typeof draft.notes === 'string') setNotes(draft.notes);
+        if (Array.isArray(draft.rooms)) {
+          setRooms(
+            draft.rooms.map((item) => ({
+              name: typeof (item as { name?: unknown })?.name === 'string' ? (item as { name: string }).name : '',
+              note: typeof (item as { note?: unknown })?.note === 'string' ? (item as { note: string }).note : '',
+            })),
+          );
+        }
+        if (typeof draft.baitBoxesPlaced === 'string') setBaitBoxesPlaced(draft.baitBoxesPlaced);
+        if (typeof draft.poisonUsed === 'string') setPoisonUsed(draft.poisonUsed);
+        if (typeof draft.followUpDate === 'string') setFollowUpDate(draft.followUpDate);
+        if (typeof draft.photoAnnotation === 'string') setPhotoAnnotation(draft.photoAnnotation);
+      }, 0);
+    } catch {
+      // Ignore invalid draft.
+    }
+    lastDraftKeyRef.current = currentDraftKey;
+  }, [currentDraftKey]);
+
+  useEffect(() => {
+    if (!currentDraftKey) return;
+    localStorage.setItem(
+      currentDraftKey,
+      JSON.stringify({
+        date,
+        clientName,
+        address,
+        treatment,
+        notes,
+        rooms,
+        baitBoxesPlaced,
+        poisonUsed,
+        followUpDate,
+        photoAnnotation,
+      }),
+    );
+  }, [currentDraftKey, date, clientName, address, treatment, notes, rooms, baitBoxesPlaced, poisonUsed, followUpDate, photoAnnotation]);
+
+  useEffect(() => {
+    if (!templateStorageKey) return;
+    const raw = localStorage.getItem(templateStorageKey);
+    if (!raw) return;
+    try {
+      const data = JSON.parse(raw);
+      if (!Array.isArray(data)) return;
+      window.setTimeout(() => {
+        setTemplates(
+          data.map((item) => ({
+            id: typeof item?.id === 'string' ? item.id : `${Date.now()}-${Math.random()}`,
+            name: typeof item?.name === 'string' ? item.name : 'Template',
+            treatment: typeof item?.treatment === 'string' ? item.treatment : treatments[0],
+            notes: typeof item?.notes === 'string' ? item.notes : '',
+            poisonUsed: typeof item?.poisonUsed === 'string' ? item.poisonUsed : '',
+            baitBoxesPlaced: typeof item?.baitBoxesPlaced === 'string' ? item.baitBoxesPlaced : '',
+          })),
+        );
+      }, 0);
+    } catch {
+      // Ignore invalid template data.
+    }
+  }, [templateStorageKey]);
+
+  const saveCurrentTemplate = () => {
+    if (!templateStorageKey) return;
+    const name = window.prompt('Template name');
+    if (!name?.trim()) return;
+    const next = [
+      {
+        id: `${Date.now()}-${Math.random()}`,
+        name: name.trim(),
+        treatment,
+        notes,
+        poisonUsed,
+        baitBoxesPlaced,
+      },
+      ...templates,
+    ].slice(0, 20);
+    setTemplates(next);
+    localStorage.setItem(templateStorageKey, JSON.stringify(next));
+    showToast('Template saved', `"${name.trim()}" is ready to reuse.`, 'success');
+  };
+
+  const applyTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const template = templates.find((item) => item.id === templateId);
+    if (!template) return;
+    setTreatment(template.treatment);
+    setNotes(template.notes);
+    setPoisonUsed(template.poisonUsed);
+    setBaitBoxesPlaced(template.baitBoxesPlaced);
+    showToast('Template applied', `Loaded "${template.name}".`, 'success');
+  };
+
+  const startVoiceNoteCapture = () => {
+    const SpeechRecognitionApi = (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognitionApi) {
+      showToast('Voice notes unavailable', 'This browser does not support voice recognition.', 'info');
+      return;
+    }
+    const recognition = new SpeechRecognitionApi();
+    recognition.lang = 'en-GB';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript || '';
+      if (!transcript) return;
+      setNotes((prev) => (prev ? `${prev}\n${transcript}` : transcript));
+      showToast('Voice note added', 'Transcript appended to notes.', 'success');
+    };
+    recognition.onerror = () => {
+      showToast('Voice note failed', 'Unable to capture voice note.', 'error');
+    };
+    recognition.start();
   };
 
   useEffect(() => {
@@ -426,6 +566,10 @@ export default function TechnicianPage() {
     e.preventDefault();
     if (!profile) return;
     setSubmitting(true);
+    const finalNotes =
+      ENABLE_PHOTO_ANNOTATION && photoAnnotation.trim()
+        ? `${notes}${notes ? '\n' : ''}[Photo note] ${photoAnnotation.trim()}`
+        : notes;
 
     if (isPreviewMode) {
       setEntries((prev) => [
@@ -435,7 +579,7 @@ export default function TechnicianPage() {
           clientName,
           address,
           treatment,
-          notes,
+          notes: finalNotes,
           rooms: rooms
             .map((room) => room.name.trim())
             .filter((room) => room.length > 0),
@@ -459,7 +603,9 @@ export default function TechnicianPage() {
       setFollowUpDate('');
       setPhotoUrls([]);
       setPhotoPreviewUrls([]);
+      setPhotoAnnotation('');
       clearSignature();
+      if (currentDraftKey) localStorage.removeItem(currentDraftKey);
       showToast('Preview mode', 'Entry saved locally in preview mode.', 'success');
       setSubmitting(false);
       return;
@@ -470,6 +616,26 @@ export default function TechnicianPage() {
       router.push('/auth/signin');
       return;
     }
+
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticEntry: LogbookEntry = {
+      id: optimisticId,
+      date: date || new Date().toISOString(),
+      clientName,
+      address,
+      treatment,
+      notes: finalNotes,
+      rooms: rooms
+        .map((room) => room.name.trim())
+        .filter((room) => room.length > 0),
+      baitBoxesPlaced,
+      poisonUsed,
+      followUpDate: followUpDate || undefined,
+      photoUrl: photoUrls[0],
+      photoUrls,
+      signature: signatureDataUrl,
+    };
+    setEntries((prev) => [optimisticEntry, ...prev]);
 
     const res = await fetch('/api/technician-logbook', {
       method: 'POST',
@@ -482,7 +648,7 @@ export default function TechnicianPage() {
         clientName,
         address,
         treatment,
-        notes,
+        notes: finalNotes,
         rooms: rooms
           .map((room) => room.name.trim())
           .filter((room) => room.length > 0),
@@ -497,7 +663,7 @@ export default function TechnicianPage() {
 
     if (res.ok) {
       const entry = await res.json();
-      setEntries([entry, ...entries]);
+      setEntries((prev) => [entry, ...prev.filter((item) => item.id !== optimisticId)]);
       setDate('');
       setClientName('');
       setAddress('');
@@ -509,8 +675,11 @@ export default function TechnicianPage() {
       setFollowUpDate('');
       setPhotoUrls([]);
       setPhotoPreviewUrls([]);
+      setPhotoAnnotation('');
       clearSignature();
+      if (currentDraftKey) localStorage.removeItem(currentDraftKey);
     } else {
+      setEntries((prev) => prev.filter((item) => item.id !== optimisticId));
       const err = await res.json().catch(() => ({ error: 'Could not save entry' }));
       const message = err.details ? `${err.error || 'Could not save entry'}: ${err.details}` : (err.error || 'Could not save entry');
       console.error('Technician logbook save failed', err);
@@ -727,6 +896,23 @@ export default function TechnicianPage() {
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={saveCurrentTemplate} className="btn btn-secondary btn-sm">
+                    Save Template
+                  </button>
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(event) => applyTemplate(event.target.value)}
+                    className="form-select !min-h-[2.25rem] !py-1 !px-2 text-sm"
+                  >
+                    <option value="">Apply Template</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="form-group">
                 <label htmlFor="technician-entry-photo" className="form-label">Optional Photos (up to 4)</label>
@@ -850,7 +1036,26 @@ export default function TechnicianPage() {
                 placeholder="Enter treatment substances, observations, and any notes about the job..."
                 className="form-textarea"
               />
+              {ENABLE_VOICE_NOTES ? (
+                <button type="button" onClick={startVoiceNoteCapture} className="mt-2 btn btn-secondary btn-sm">
+                  Add Voice Note
+                </button>
+              ) : null}
             </div>
+
+            {ENABLE_PHOTO_ANNOTATION ? (
+              <div className="form-group">
+                <label htmlFor="technician-photo-annotation" className="form-label">Photo Annotation</label>
+                <textarea
+                  id="technician-photo-annotation"
+                  value={photoAnnotation}
+                  onChange={(e) => setPhotoAnnotation(e.target.value)}
+                  rows={2}
+                  placeholder="Optional context for uploaded photos."
+                  className="form-textarea"
+                />
+              </div>
+            ) : null}
 
             {/* Signature Canvas */}
             <div>

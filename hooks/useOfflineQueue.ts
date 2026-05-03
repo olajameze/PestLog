@@ -24,6 +24,7 @@ export function useOfflineQueue() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [queueStats, setQueueStats] = useState({ pending: 0, syncing: 0 });
   const [userId, setUserId] = useState<string | null>(null);
+  const [syncingCount, setSyncingCount] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -59,12 +60,12 @@ export function useOfflineQueue() {
   useEffect(() => {
     const checkStats = async () => {
       const stats = await getQueueStats();
-      setQueueStats(stats);
+      setQueueStats({ ...stats, syncing: syncingCount });
     };
     checkStats();
     const interval = setInterval(checkStats, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [syncingCount]);
 
   const queueMutation = async (
     operation: OfflineOperation,
@@ -109,6 +110,7 @@ export function useOfflineQueue() {
     if (!isOnline || !userId) return;
     
     const pending = await getPendingQueue();
+    setSyncingCount(pending.length);
     for (const item of pending) {
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -127,8 +129,12 @@ export function useOfflineQueue() {
         }
       } catch {
         // Best-effort; leave queued for retry.
+      } finally {
+        setSyncingCount((prev) => Math.max(0, prev - 1));
       }
     }
+    const stats = await getQueueStats();
+    setQueueStats({ ...stats, syncing: 0 });
   };
 
   useEffect(() => {

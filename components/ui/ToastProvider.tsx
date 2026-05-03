@@ -31,12 +31,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed right-4 top-4 z-[100] flex w-[min(92vw,24rem)] flex-col gap-3">
+      <div className="fixed right-4 top-4 z-[100] flex w-[min(92vw,24rem)] flex-col gap-3" aria-live="polite" aria-atomic="false">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            role="status"
-            aria-live="polite"
+            role={toast.variant === 'error' ? 'alert' : 'status'}
+            aria-live={toast.variant === 'error' ? 'assertive' : 'polite'}
             className={`rounded-xl border px-4 py-3 shadow-soft ${
               toast.variant === 'success'
                 ? 'border-green-200 bg-green-50 text-green-900'

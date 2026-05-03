@@ -51,6 +51,17 @@ export interface UrgentAlert {
   };
 }
 
+export interface NextBestAction {
+  id: string;
+  title: string;
+  description: string;
+  action: {
+    type: 'open_reports' | 'open_technicians';
+    search?: string;
+    followUpOnly?: boolean;
+  };
+}
+
 export interface CustomerValue {
   clv: number;
   cac: number;
@@ -83,6 +94,7 @@ export interface DashboardData {
   };
   chemicalLog: ChemicalUsage[];
   urgentAlerts: UrgentAlert[];
+  nextBestActions: NextBestAction[];
   customerValue: CustomerValue;
   retention: RetentionData;
   csat: CSATData;
@@ -133,6 +145,20 @@ export async function fetchDashboardData(range: DashboardDateRangeOption): Promi
     { id: 'u2', title: 'Missed callback', description: 'Customer callback for Elm House is overdue.', severity: 'medium' },
     { id: 'u3', title: 'Inventory low', description: 'Permethrin stock is below the 15% safety threshold.', severity: 'low' },
   ];
+  const nextBestActions: DashboardData['nextBestActions'] = [
+    {
+      id: 'nba-1',
+      title: 'Resolve overdue follow-ups',
+      description: 'Open reports with follow-up filters to close overdue jobs first.',
+      action: { type: 'open_reports', followUpOnly: true },
+    },
+    {
+      id: 'nba-2',
+      title: 'Review expiring certifications',
+      description: 'Open technicians to renew certifications that may block scheduling.',
+      action: { type: 'open_technicians' },
+    },
+  ];
 
   const customerValue: DashboardData['customerValue'] = {
     clv: 12450,
@@ -160,6 +186,7 @@ export async function fetchDashboardData(range: DashboardDateRangeOption): Promi
     compliance,
     chemicalLog,
     urgentAlerts,
+    nextBestActions,
     customerValue,
     retention,
     csat,

@@ -13,6 +13,7 @@ import { useUserPlan } from '../../lib/auth/plan';
 import { useDateRange } from '../../lib/hooks/useDateRange';
 import { useDashboardData } from '../../lib/hooks/useDashboardData';
 import { useToast } from '../ui/ToastProvider';
+import type { NextBestAction } from '../../lib/api/mockDashboardData';
 
 interface DashboardEnhancementsProps {
   plan?: string;
@@ -52,6 +53,16 @@ export default function DashboardEnhancements({ plan }: DashboardEnhancementsPro
     const query: Record<string, string> = {};
     if (alert.action.search) query.search = alert.action.search;
     if (alert.action.followUpOnly) query.followUpOnly = '1';
+    openReports(query);
+  };
+  const handleNextBestAction = (action: NextBestAction['action']) => {
+    if (action.type === 'open_technicians') {
+      router.push('/dashboard?tab=technicians');
+      return;
+    }
+    const query: Record<string, string> = {};
+    if (action.search) query.search = action.search;
+    if (action.followUpOnly) query.followUpOnly = '1';
     openReports(query);
   };
 
@@ -104,6 +115,29 @@ export default function DashboardEnhancements({ plan }: DashboardEnhancementsPro
         <UrgentAlerts alerts={data?.urgentAlerts ?? []} loading={loading} onActionClick={handleUrgentAlertAction} />
         <TodaySchedule schedule={data?.todaySchedule} loading={loading} onMapClick={handleScheduleMapClick} />
       </div>
+
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-navy">Next best actions</h3>
+          <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Priority queue</span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {(data?.nextBestActions ?? []).map((item) => (
+            <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+              <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-3"
+                onClick={() => handleNextBestAction(item.action)}
+              >
+                Open action
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ComplianceMonitor compliance={data?.compliance} loading={loading} onTrendClick={handleComplianceDrilldown} />

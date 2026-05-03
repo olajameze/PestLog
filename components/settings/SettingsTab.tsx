@@ -8,6 +8,8 @@ type NotificationPreferences = {
   trialExpiry: boolean;
   renewal: boolean;
   certificationExpiry: boolean;
+  digestDaily?: boolean;
+  digestWeekly?: boolean;
   apiKey?: string;
   enterprise?: {
     accountManager?: {
@@ -93,6 +95,8 @@ export default function SettingsTab({
     trialExpiry: company.notificationPreferences?.trialExpiry ?? true,
     renewal: company.notificationPreferences?.renewal ?? true,
     certificationExpiry: company.notificationPreferences?.certificationExpiry ?? true,
+    digestDaily: company.notificationPreferences?.digestDaily ?? false,
+    digestWeekly: company.notificationPreferences?.digestWeekly ?? true,
     apiKey: company.notificationPreferences?.apiKey,
   });
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
@@ -270,6 +274,24 @@ export default function SettingsTab({
                 className="h-4 w-4 rounded border-zinc-300 text-primary-600 focus:ring-primary-500"
               />
               <span className="text-sm text-slate-700">Certification expiry warnings</span>
+            </label>
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+              <input
+                type="checkbox"
+                checked={Boolean(notificationPreferences.digestDaily)}
+                onChange={(e) => setNotificationPreferences((prev) => ({ ...prev, digestDaily: e.target.checked }))}
+                className="h-4 w-4 rounded border-zinc-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-slate-700">Daily digest email</span>
+            </label>
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+              <input
+                type="checkbox"
+                checked={Boolean(notificationPreferences.digestWeekly)}
+                onChange={(e) => setNotificationPreferences((prev) => ({ ...prev, digestWeekly: e.target.checked }))}
+                className="h-4 w-4 rounded border-zinc-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="text-sm text-slate-700">Weekly digest email</span>
             </label>
           </div>
         </div>

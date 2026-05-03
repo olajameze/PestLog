@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { forwardRef, ReactNode } from 'react';
 
 interface ButtonProps {
   children: ReactNode;
@@ -9,9 +9,10 @@ interface ButtonProps {
   onClick?: () => void;
   type?: 'button' | 'submit';
   className?: string;
+  ariaLabel?: string;
 }
 
-export default function Button({
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   children,
   variant = 'primary',
   size = 'md',
@@ -20,7 +21,8 @@ export default function Button({
   onClick,
   type = 'button',
   className = '',
-}: ButtonProps) {
+  ariaLabel,
+}: ButtonProps, ref) {
   const baseClasses = [
     'inline-flex items-center justify-center gap-2 text-center font-medium whitespace-normal break-words disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus-visible:ring-2 active:scale-[0.98] transition-[transform,box-shadow,background-color,border-color,color] duration-200',
     fullWidth ? 'w-full' : '',
@@ -37,13 +39,17 @@ export default function Button({
 
   return (
     <button
+      ref={ref}
       type={type}
       disabled={disabled}
       onClick={onClick}
+      aria-label={ariaLabel}
       className={`btn btn-${variant} ${size} ${baseClasses.join(' ')} ${variantClasses[variant]} ${className}`}
     >
       {children}
     </button>
   );
-}
+});
+
+export default Button;
 

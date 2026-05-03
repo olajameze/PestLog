@@ -13,6 +13,7 @@ interface FormInputProps {
   options?: { value: string; label: string }[];
   className?: string;
   readOnly?: boolean;
+  describedBy?: string;
 }
 
 export default function FormInput({
@@ -28,8 +29,13 @@ export default function FormInput({
   options,
   className = '',
   readOnly = false,
+  describedBy,
 }: FormInputProps) {
   const baseClasses = 'form-input w-full border border-zinc-300 rounded-xl px-4 py-3 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 focus:ring-offset-0 transition-all placeholder-slate-400 text-slate-900 bg-white';
+  const errorId = `${id}-error`;
+  const helpId = `${id}-help`;
+  const hasError = Boolean(error);
+  const ariaDescribedBy = [describedBy ? helpId : '', hasError ? errorId : ''].filter(Boolean).join(' ') || undefined;
 
   const Element = as === 'textarea' ? 'textarea' : as === 'select' ? 'select' : 'input';
 
@@ -46,6 +52,8 @@ export default function FormInput({
         placeholder={placeholder}
         required={required}
         readOnly={readOnly}
+        aria-invalid={hasError}
+        aria-describedby={ariaDescribedBy}
         className={`${baseClasses} ${className}`}
         rows={as === 'textarea' ? 4 : undefined}
       >
@@ -55,7 +63,16 @@ export default function FormInput({
           </option>
         ))}
       </Element>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {describedBy ? (
+        <p id={helpId} className="mt-1 text-xs text-zinc-500">
+          {describedBy}
+        </p>
+      ) : null}
+      {error ? (
+        <p id={errorId} className="mt-1 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

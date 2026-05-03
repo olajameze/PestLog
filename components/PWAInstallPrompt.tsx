@@ -22,6 +22,7 @@ export default function PWAInstallPrompt() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [showInstallInstructions, setShowInstallInstructions] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -122,13 +123,7 @@ export default function PWAInstallPrompt() {
         void error;
       }
     } else if (deviceInfo.isIOS || isMobileViewport) {
-      alert(
-        "To install Pest Trace on your iPhone:\n\n" +
-        "1. Tap the Share button (box with arrow)\n" +
-        "2. Scroll down and tap 'Add to Home Screen'\n" +
-        "3. Tap 'Add' to confirm\n\n" +
-        "The app will now appear on your home screen!"
-      );
+      setShowInstallInstructions(true);
     }
   };
 
@@ -140,7 +135,7 @@ export default function PWAInstallPrompt() {
   if (isInstalled || !isVisible) {
     if (!updateAvailable) return null;
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-[60] px-3 pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 z-[55] px-3 pb-safe" role="status" aria-live="polite">
         <div className="mx-auto mb-2 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="font-medium">A new version of Pest Trace is ready.</p>
@@ -158,7 +153,7 @@ export default function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[60] transform transition-transform duration-300">
+    <div className="fixed bottom-0 left-0 right-0 z-[55] transform transition-transform duration-300">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white shadow-2xl">
         {updateAvailable ? (
           <div className="border-b border-white/20 bg-blue-800/40 px-4 py-2 text-center text-sm text-blue-50">
@@ -196,6 +191,23 @@ export default function PWAInstallPrompt() {
             </button>
           </div>
         </div>
+        {showInstallInstructions ? (
+          <div className="border-t border-white/20 bg-blue-900/60 px-4 py-3 text-sm text-blue-50">
+            <p className="font-semibold">Install steps</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5">
+              <li>Tap the browser Share button.</li>
+              <li>Select Add to Home Screen.</li>
+              <li>Tap Add to confirm.</li>
+            </ol>
+            <button
+              type="button"
+              className="mt-3 rounded-lg bg-white/20 px-3 py-2 text-xs font-semibold hover:bg-white/30"
+              onClick={() => setShowInstallInstructions(false)}
+            >
+              Close instructions
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
