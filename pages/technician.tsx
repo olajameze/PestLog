@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import Sidebar from '../components/sidebar';
 import { useToast } from '../components/ui/ToastProvider';
 import Button from '../components/ui/Button';
+import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
 
 type TechnicianProfile = {
   id: string;
@@ -149,6 +150,7 @@ export default function TechnicianPage() {
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [certExpiryDate, setCertExpiryDate] = useState('');
   const [certUploading, setCertUploading] = useState(false);
+  const [overdueBanner, setOverdueBanner] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const isDrawing = useRef(false);
   const lastDraftKeyRef = useRef('');
@@ -348,11 +350,22 @@ export default function TechnicianPage() {
       });
       if (subRes.ok) {
         const subData = await subRes.json();
-        const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
-        if (subData.status !== 'active' && trialExpired) {
+        const hasAccess = hasSubscriptionAccess({
+          plan: subData.plan,
+          subscriptionStatus: subData.status,
+          trialEndsAt: subData.trialEndsAt,
+          paymentGraceEndsAt: subData.paymentGraceEndsAt,
+        });
+        if (!hasAccess) {
           router.replace('/upgrade');
           return;
         }
+        const daysLeft = getGraceDaysLeft({ paymentGraceEndsAt: subData.paymentGraceEndsAt });
+        setOverdueBanner(
+          daysLeft !== null
+            ? `Billing is overdue. Your company has ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining before service interruption.`
+            : null
+        );
       }
 
       setLoading(false);
@@ -814,6 +827,11 @@ export default function TechnicianPage() {
         {accessDeniedTarget ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Access to owner-only {accessDeniedTarget === 'upgrade' ? 'billing/upgrade' : 'dashboard'} sections is restricted for technician accounts.
+          </div>
+        ) : null}
+        {overdueBanner ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {overdueBanner}
           </div>
         ) : null}
         <div className="bg-white rounded-2xl shadow-md p-6">

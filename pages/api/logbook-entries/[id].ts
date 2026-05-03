@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { supabase } from '../../../lib/supabase';
+import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -21,17 +22,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, subscriptionStatus: true, trialEndsAt: true },
+    select: { id: true, subscriptionStatus: true, trialEndsAt: true, paymentGraceEndsAt: true, plan: true },
   });
   if (!company) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  const isSubscriptionValid =
-    company.subscriptionStatus === 'active' ||
-    (company.subscriptionStatus === 'trial' && company.trialEndsAt && company.trialEndsAt.getTime() > Date.now());
-
-  if (!isSubscriptionValid) {
+  if (!hasSubscriptionAccess(company)) {
     return res.status(403).json({ error: 'Subscription required or trial expired' });
   }
 

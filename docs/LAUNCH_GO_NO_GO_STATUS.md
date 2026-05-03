@@ -65,3 +65,50 @@ Last updated: 2026-05-03
   - DB connectivity/authentication anomalies.
 - Rollback trigger:
   - Repeated critical API failures or billing failures with no hotfix in <30 minutes.
+
+## OTP / 2FA Auth Readiness
+
+- Technician auth now uses OTP-only sign-in (`/auth/signin?role=technician`), with password login disabled for technician flow.
+- Business admin signup now requires OTP verification before registration is considered complete; normal admin signin remains password-based.
+- Supabase Auth SMTP must be configured to Resend for OTP delivery to work in production.
+- QA checklist:
+  - Technician: send code, resend cooldown, verify valid code, reject invalid/expired code.
+  - Admin signup: create account, receive OTP, verify OTP, confirm redirect to `/dashboard`.
+  - Admin signin: confirm normal password login still works without recurring OTP prompt.
+
+## Billing Grace Policy Readiness
+
+- New non-payment policy implemented from Stripe webhook events:
+  - Grace window begins on `invoice.payment_failed` and lasts 5 days.
+  - Access remains available during grace.
+  - If unresolved after grace, subscription is canceled and a one-time 7-day retrial is granted.
+  - After retrial is used, future missed-payment cancellations do not receive another retrial.
+- Recovery behavior:
+  - `invoice.paid` and active subscription recovery clear grace metadata.
+- Validation completed:
+  - `npm run lint`
+  - `npm run build`
+  - `npm run smoke-test`
+
+## Plan Entitlements Alignment
+
+- Plan technician allowances are now aligned across pricing UI and backend enforcement:
+  - Pro (`£25/month`): up to 3 technicians
+  - Business (`£40/month`): up to 10 technicians
+  - Enterprise: unlimited technicians
+- Backend enforcement now uses a centralized plan-limit policy utility and applies caps in `POST /api/technicians`.
+- Dashboard technician management now shows live usage versus plan allowance and explicit upgrade guidance when limits are reached.
+
+## Follow-up Ops Status
+
+- Production redeploy completed:
+  - `https://pest-trek-qleu4x2an-olajamezes-projects.vercel.app` (aliased to `https://www.pesttrace.com`)
+- Post-deploy health check:
+  - `curl https://www.pesttrace.com/api/health` returned `ok: true` with Stripe/Supabase/Prisma checks passing.
+- DB sync script execution:
+  - Attempted with `npx prisma db execute --file "prisma/sql/sync_company_columns.sql"`.
+  - Blocked in this environment by DB connectivity (`P1001` then `P1017`), so SQL application must be run from a network context that can reach the configured Supabase host.
+- Stripe webhook verification:
+  - Automated `npm run e2e:webhook` timed out waiting for Playwright web server startup in this environment.
+  - Direct Stripe CLI trigger attempt (`stripe trigger invoice.payment_failed`) failed due expired Stripe test API key (`api_key_expired`).
+  - Manual Stripe test-mode verification checklist remains required in `docs/STRIPE_WEBHOOK_QA.md` for final signoff of `invoice.payment_failed` and `invoice.paid` lifecycle.

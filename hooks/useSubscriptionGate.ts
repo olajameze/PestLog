@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
+import { hasSubscriptionAccess } from '../lib/subscriptionAccess';
 
 export type SubscriptionState = {
   status: string;
   trialEndsAt?: string;
+  paymentGraceEndsAt?: string;
+  plan?: string;
 };
 
 export function useSubscriptionGate() {
@@ -32,8 +35,14 @@ export function useSubscriptionGate() {
 
       const data = await res.json();
       setSubscription(data);
-      const trialExpired = !data.trialEndsAt || new Date(data.trialEndsAt).getTime() < Date.now();
-      if (data.status !== 'active' && trialExpired) {
+      if (
+        !hasSubscriptionAccess({
+          plan: data.plan,
+          subscriptionStatus: data.status,
+          trialEndsAt: data.trialEndsAt,
+          paymentGraceEndsAt: data.paymentGraceEndsAt,
+        })
+      ) {
         router.push('/upgrade');
         return;
       }

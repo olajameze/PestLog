@@ -4,6 +4,71 @@ import { prisma } from '../../../lib/prisma';
 import { logger } from '../../../lib/logger';
 import { sendSubscriptionUpgradeEmail } from '../subscription';
 
+const GRACE_PERIOD_DAYS = 5;
+const RETRIAL_PERIOD_DAYS = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function buildGraceEnd(fromDate: Date) {
+  return new Date(fromDate.getTime() + GRACE_PERIOD_DAYS * DAY_MS);
+}
+
+function buildRetrialEnd(fromDate: Date) {
+  return new Date(fromDate.getTime() + RETRIAL_PERIOD_DAYS * DAY_MS);
+}
+
+async function clearGraceMetadata(stripeCustomerId: string) {
+  await prisma.company.updateMany({
+    where: { stripeCustomerId },
+    data: {
+      paymentFailedAt: null,
+      paymentGraceEndsAt: null,
+      nonPaymentCanceledAt: null,
+    },
+  });
+}
+
+async function applyExpiredGracePolicy(stripeCustomerId: string, now = new Date()) {
+  const company = await prisma.company.findUnique({
+    where: { stripeCustomerId },
+    select: {
+      id: true,
+      paymentGraceEndsAt: true,
+      retrialGrantedAt: true,
+    },
+  });
+
+  if (!company?.paymentGraceEndsAt || company.paymentGraceEndsAt.getTime() > now.getTime()) {
+    return;
+  }
+
+  if (!company.retrialGrantedAt) {
+    await prisma.company.update({
+      where: { id: company.id },
+      data: {
+        subscriptionStatus: 'trial',
+        plan: 'trial',
+        trialEndsAt: buildRetrialEnd(now),
+        retrialGrantedAt: now,
+        nonPaymentCanceledAt: now,
+        paymentFailedAt: null,
+        paymentGraceEndsAt: null,
+      },
+    });
+    return;
+  }
+
+  await prisma.company.update({
+    where: { id: company.id },
+    data: {
+      subscriptionStatus: 'canceled',
+      nonPaymentCanceledAt: now,
+      trialEndsAt: null,
+      paymentFailedAt: null,
+      paymentGraceEndsAt: null,
+    },
+  });
+}
+
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
@@ -102,6 +167,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               subscriptionStatus: 'active',
               // Force clear trial dates upon successful checkout completion
               trialEndsAt: null,
+              paymentFailedAt: null,
+              paymentGraceEndsAt: null,
+              nonPaymentCanceledAt: null,
             },
           });
           
@@ -121,15 +189,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const validPlans = ['pro', 'business', 'enterprise'] as const;
         const resolvedPlan = validPlans.find(p => p === plan);
 
-        await prisma.company.update({
+        const updated = await prisma.company.updateMany({
           where: { stripeCustomerId },
           data: {
             subscriptionStatus: status,
             ...(resolvedPlan && { plan: resolvedPlan }),
             // If Stripe says the sub is active, we MUST clear our local trial restriction
-            ...(status === 'active' && { trialEndsAt: null }),
+            ...(status === 'active' && {
+              trialEndsAt: null,
+              paymentFailedAt: null,
+              paymentGraceEndsAt: null,
+              nonPaymentCanceledAt: null,
+            }),
           },
         });
+
+        if (!updated.count) {
+          break;
+        }
+
+        if (status !== 'active') {
+          await applyExpiredGracePolicy(stripeCustomerId);
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const stripeCustomerId = invoice.customer as string | null;
+        if (!stripeCustomerId) break;
+
+        const failedAt = new Date(event.created * 1000);
+        await prisma.company.updateMany({
+          where: { stripeCustomerId },
+          data: {
+            paymentFailedAt: failedAt,
+            paymentGraceEndsAt: buildGraceEnd(failedAt),
+          },
+        });
+        break;
+      }
+
+      case 'invoice.paid': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const stripeCustomerId = invoice.customer as string | null;
+        if (!stripeCustomerId) break;
+        await clearGraceMetadata(stripeCustomerId);
         break;
       }
 
@@ -137,12 +242,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const subscription = event.data.object as Stripe.Subscription;
         const stripeCustomerId = subscription.customer as string;
 
-        await prisma.company.update({
+        await applyExpiredGracePolicy(stripeCustomerId);
+
+        const company = await prisma.company.findUnique({
           where: { stripeCustomerId },
-          data: {
-            subscriptionStatus: 'canceled',
-          },
+          select: { subscriptionStatus: true },
         });
+
+        if (company?.subscriptionStatus !== 'trial') {
+          await prisma.company.updateMany({
+            where: { stripeCustomerId },
+            data: {
+              subscriptionStatus: 'canceled',
+            },
+          });
+        }
         break;
       }
     }

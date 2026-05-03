@@ -14,6 +14,8 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { Skeleton } from '../components/ui/Skeleton';
 import { checkPlan } from '../lib/planGuard';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
+import { formatTechnicianLimit, getTechnicianLimit } from '../lib/planLimits';
 
 const DashboardEnhancements = dynamic(() => import('../components/dashboard/DashboardEnhancements'));
 const OnboardingTour = dynamic(() => import('../components/onboarding/OnboardingTour'), { ssr: false });
@@ -66,6 +68,7 @@ interface Technician {
 interface Subscription {
   status: string;
   trialEndsAt?: string;
+  paymentGraceEndsAt?: string;
   stripeCustomerId?: string;
   plan?: string;
 }
@@ -276,6 +279,7 @@ export default function Dashboard() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [appError, setAppError] = useState<string | null>(null);
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
+  const [overdueBanner, setOverdueBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -519,15 +523,39 @@ export default function Dashboard() {
         const subData = await subRes.json();
         setSubscription(subData);
         const now = Date.now();
+        const hasAccess = hasSubscriptionAccess({
+          plan: subData.plan,
+          subscriptionStatus: subData.status,
+          trialEndsAt: subData.trialEndsAt,
+          paymentGraceEndsAt: subData.paymentGraceEndsAt,
+        });
         const trialExpiresAt = subData.trialEndsAt ? new Date(subData.trialEndsAt) : null;
-        const trialExpired = !trialExpiresAt || trialExpiresAt.getTime() < now;
+        const graceDaysLeft = getGraceDaysLeft(
+          {
+            paymentGraceEndsAt: subData.paymentGraceEndsAt,
+          },
+          now
+        );
 
-        if (subData.status !== 'active' && trialExpired) {
+        if (!hasAccess) {
           router.replace('/upgrade');
           return;
         }
 
-        if (subData.status !== 'active' && trialExpiresAt && trialExpiresAt.getTime() > now) {
+        if (graceDaysLeft !== null && subData.status !== 'active') {
+          setOverdueBanner(
+            `Payment is overdue. You have ${graceDaysLeft} day${graceDaysLeft === 1 ? '' : 's'} remaining before service interruption.`
+          );
+        } else {
+          setOverdueBanner(null);
+        }
+
+        if (
+          graceDaysLeft === null &&
+          subData.status !== 'active' &&
+          trialExpiresAt &&
+          trialExpiresAt.getTime() > now
+        ) {
           const daysLeft = Math.max(0, Math.ceil((trialExpiresAt.getTime() - now) / (1000 * 60 * 60 * 24)));
           if (daysLeft <= 3) {
             setTrialBanner(trialExpiresAt.toLocaleDateString());
@@ -1000,6 +1028,16 @@ if (!user || companyLoadState === 'loading') return (
                   </div>
                 </Card>
               ) : null}
+              {overdueBanner ? (
+                <Card className="mb-6 border-amber-200 bg-amber-50">
+                  <div className="flex flex-col gap-4 p-4 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+                    <div>{overdueBanner}</div>
+                    <Button variant="primary" onClick={() => router.push('/upgrade')}>
+                      Fix billing
+                    </Button>
+                  </div>
+                </Card>
+              ) : null}
               {appError && (
                 <Card className="mb-6 border-red-200 bg-red-50">
                   <div className="text-red-800 p-4">{appError}</div>
@@ -1009,6 +1047,7 @@ if (!user || companyLoadState === 'loading') return (
               <>
                 <TechniciansTab 
                   technicians={technicians} 
+                  plan={company.plan}
                   onAddTechnician={handleAddTechnician} 
                   onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
                   onInviteTechnician={handleInviteTechnician}
@@ -1272,8 +1311,9 @@ interface Certification {
   uploadedAt: string;
 }
 
-function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onInviteTechnician, onCopyInviteLink, inviteStatusByTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
+function TechniciansTab({ technicians, plan, onAddTechnician, onRemoveTechnician, onInviteTechnician, onCopyInviteLink, inviteStatusByTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
   technicians: Technician[];
+  plan?: string | null;
   onAddTechnician: (name: string, email: string) => Promise<boolean>;
   onRemoveTechnician: (id: string) => void;
   onInviteTechnician: (id: string) => Promise<void>;
@@ -1287,6 +1327,8 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onIn
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const limit = getTechnicianLimit(plan);
+  const limitReached = limit !== null && technicians.length >= limit;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1308,7 +1350,17 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onIn
         </div>
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           Workflow: add technician, then click <span className="font-semibold text-slate-800">Send Invite</span>.
-          They receive a setup link, create their password, and sign in via technician login.
+          They receive a setup link and sign in via technician one-time code.
+        </div>
+        <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <p className="font-semibold">Plan allowance: {formatTechnicianLimit(plan)}</p>
+          <p className="mt-1">
+            Usage: {technicians.length}
+            {limit === null ? ' technicians' : ` / ${limit} technicians`}
+          </p>
+          {limitReached ? (
+            <p className="mt-2 font-semibold">Technician limit reached for current plan. Upgrade to add more.</p>
+          ) : null}
         </div>
         <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-12">
           <div className="sm:col-span-5">
@@ -1318,7 +1370,7 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onIn
             <FormInput label="Email Address" id="tech-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email Address" required />
           </div>
           <div className="sm:col-span-2 flex items-end">
-            <Button type="submit" disabled={loading}>{loading ? 'Adding...' : 'Add Technician'}</Button>
+            <Button type="submit" disabled={loading || limitReached}>{loading ? 'Adding...' : 'Add Technician'}</Button>
           </div>
         </form>
       </Card>

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { randomUUID } from 'crypto';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { canAddTechnician, formatTechnicianLimit, getTechnicianLimit, normalizePlan } from '../../lib/planLimits';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -68,10 +69,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'No company found' });
       }
 
-      // Trial plan limit: max 2 technicians
-      if (company.plan === 'trial' && company.technicians.length >= 2) {
-        return res.status(403).json({ 
-          error: 'Your current plan allows up to 2 technicians. Upgrade to Pro or Business to add more.' 
+      const resolvedPlan = normalizePlan(company.plan);
+      if (!canAddTechnician(resolvedPlan, company.technicians.length)) {
+        const limit = getTechnicianLimit(resolvedPlan);
+        const limitLabel = formatTechnicianLimit(resolvedPlan);
+        return res.status(403).json({
+          error:
+            limit === null
+              ? 'Unable to add technician for this plan right now.'
+              : `Your ${resolvedPlan.toUpperCase()} plan supports ${limitLabel.toLowerCase()}. You currently have ${company.technicians.length}. Upgrade to add more.`,
         });
       }
 

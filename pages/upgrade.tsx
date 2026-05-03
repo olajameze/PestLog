@@ -205,13 +205,11 @@ export default function UpgradePage() {
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-navy">Pro</h2>
-            <p className="mt-2 text-2xl font-bold text-primary-600">£25<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <h2 className="text-xl font-bold text-navy">🟢 Pro</h2>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£25<span className="text-sm font-medium text-zinc-500">/month</span></p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Unlimited logbook entries</li>
-              <li>• PDF compliance reports</li>
-              <li>• Technician certifications</li>
-              <li>• PWA offline mode</li>
+              <li>• Up to 3 technicians</li>
+              <li>• Everything you already include</li>
             </ul>
             <button
               onClick={() => handleSubscribe('pro')}
@@ -223,13 +221,11 @@ export default function UpgradePage() {
           </div>
 
           <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-navy">Business</h2>
-            <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month per user</span></p>
+            <h2 className="text-xl font-bold text-navy">🟢 Business</h2>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month</span></p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Everything in Pro</li>
-              <li>• Multi-company support, advanced reporting &amp; API access</li>
-              <li>• Priority support</li>
-              <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
+              <li>• Up to 10 technicians</li>
+              <li>• Advanced features</li>
             </ul>
             <button
               onClick={() => handleSubscribe('business')}
@@ -241,13 +237,11 @@ export default function UpgradePage() {
           </div>
 
           <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm ring-1 ring-amber-100">
-            <h2 className="text-xl font-bold text-navy">Enterprise</h2>
+            <h2 className="text-xl font-bold text-navy">🔵 Enterprise</h2>
             <p className="mt-2 text-2xl font-bold text-primary-600">£340.00 GBP</p>
             <p className="mt-1 break-words text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
-              <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
-              <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
-              <li>• CSAT &amp; NPS with trend analysis</li>
+              <li>• Unlimited technicians</li>
               <li>• All Business capabilities plus bespoke integrations</li>
             </ul>
             <button

@@ -146,38 +146,21 @@ export default function Home() {
       <FadeIn>
         <header className="mx-auto max-w-5xl px-4 pb-24 pt-20 text-center sm:px-6">
           <h1 className="mb-8 text-4xl font-black leading-[1.08] tracking-tight sm:text-5xl lg:text-7xl xl:text-8xl">
-            Stay audit-ready. <br />
-            <span className="text-emerald-600">Eliminate paperwork.</span>
+            Stay Audit-Ready. Prove Every Job. Eliminate Paperwork.
           </h1>
           <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-slate-500 sm:text-xl md:text-2xl">
-            PestTrace is the compliance and job tracking platform built specifically for UK pest control businesses to meet strict regulations.
+            PestTrace is the compliance and job tracking platform built for UK pest control businesses. Log jobs, store certifications, and generate audit-ready reports — all in one place.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
             <Link href="/auth/signup" className="rounded-2xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow-xl shadow-emerald-200 transition-all hover:-translate-y-1 hover:bg-emerald-600 sm:px-10 sm:py-5 sm:text-xl">
               Start Free Trial
             </Link>
-            <button className="rounded-2xl bg-slate-50 px-6 py-4 text-lg font-bold text-slate-900 transition hover:bg-slate-100 sm:px-10 sm:py-5 sm:text-xl">
+            <a href="#features" className="rounded-2xl bg-slate-50 px-6 py-4 text-lg font-bold text-slate-900 transition hover:bg-slate-100 sm:px-10 sm:py-5 sm:text-xl">
               See How It Works
-            </button>
+            </a>
           </div>
-          <div className="mt-5 flex flex-col sm:flex-row justify-center gap-3">
-            <Link href="/auth/signin?role=admin" className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">
-              Continue as Business Admin
-            </Link>
-            <Link href="/auth/signin?role=technician" className="rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition">
-              Continue as Technician
-            </Link>
-          </div>
-          <div className="mt-4 max-w-3xl mx-auto rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-            <span className="font-semibold text-slate-800">Admin</span> accounts manage team members, billing, plans, and reports.
-            {' '}
-            <span className="font-semibold text-slate-800">Technician</span> accounts are for field work: logging jobs, uploading certificates, and viewing assigned reports.
-          </div>
-          <div className="mt-4 max-w-3xl mx-auto rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm text-emerald-900">
-            <p className="font-semibold">How sign-up works</p>
-            <p className="mt-1">1) Business owners sign up normally and add technicians in dashboard.</p>
-            <p>2) Technicians receive an invite email and set their own password.</p>
-            <p>3) Technicians then sign in via Technician Login to access only their technician workspace.</p>
+          <div className="mt-6 text-sm font-medium text-slate-500">
+            ✔ 7-day free trial • ✔ No contracts • ✔ Built for UK compliance
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-medium text-slate-400 sm:gap-6">
             {trustMicrocopy.map(item => <span key={item} className="flex items-center gap-1.5"><span className="text-emerald-500">✓</span> {item}</span>)}
@@ -188,25 +171,22 @@ export default function Home() {
       {/* Urgency Section */}
       <section className="bg-amber-50 border-y border-amber-100 py-16 px-6">
         <FadeIn>
-          <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-10">
-            <div className="flex-1">
+          <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl font-extrabold text-amber-900 mb-4">{regulationUrgency.title}</h2>
-              <p className="text-lg text-amber-800 leading-relaxed opacity-90">{regulationUrgency.body}</p>
-            </div>
-            <Link 
-              href={regulationUrgency.href} 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl bg-amber-900 px-8 py-4 text-center font-bold text-amber-50 transition hover:bg-amber-950"
-            >
-              {regulationUrgency.cta}
-            </Link>
+              {regulationUrgency.body.split('\n\n').map((paragraph) => (
+                <p key={paragraph} className="mb-4 text-lg text-amber-800 leading-relaxed opacity-90">
+                  {paragraph}
+                </p>
+              ))}
           </div>
         </FadeIn>
       </section>
 
       {/* Features (Alternating Layout) */}
       <section id="features" className="py-32 px-6 space-y-40 max-w-7xl mx-auto">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="mb-4 text-3xl font-extrabold sm:text-5xl">Everything you need to stay compliant and in control</h2>
+        </div>
         {featureCards.map((feature, idx) => (
           <div key={feature.title} className={`flex flex-col md:flex-row items-center gap-16 ${idx % 2 !== 0 ? 'md:flex-row-reverse' : ''}`}>
             <div className="flex-1">
@@ -224,12 +204,26 @@ export default function Home() {
         ))}
       </section>
 
+      <section className="px-6 pb-24">
+        <FadeIn>
+          <div className="mx-auto max-w-5xl rounded-3xl border border-slate-200 bg-slate-50 p-8 text-center sm:p-12">
+            <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">Built for real pest control businesses</h2>
+            <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-slate-600">
+              PestTrace is designed for how pest control teams actually work — in the field, on the move, and under pressure to stay compliant.
+            </p>
+            <p className="mx-auto mt-4 max-w-3xl text-lg leading-relaxed text-slate-600">
+              Whether you&apos;re an independent technician or managing a growing team, PestTrace gives you the tools to operate more efficiently and professionally.
+            </p>
+          </div>
+        </FadeIn>
+      </section>
+
       {/* Testimonial */}
       <section className="py-24 px-6">
         <FadeIn>
           <div className="text-center mb-12">
             <h2 className="text-xl font-bold text-slate-400 uppercase tracking-widest">
-              Trusted by pest control professionals across the UK
+              Trusted by pest control professionals
             </h2>
           </div>
           <div className="max-w-3xl mx-auto bg-slate-900 rounded-[2.5rem] p-10 md:p-14 text-center text-white relative overflow-hidden shadow-2xl">
@@ -270,8 +264,8 @@ export default function Home() {
       <section id="pricing" className="py-32 px-6 bg-slate-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="mb-4 text-3xl font-extrabold sm:text-5xl">Simple, fair pricing</h2>
-            <p className="text-lg text-slate-500 sm:text-xl">Scale your pest control business without hidden costs.</p>
+            <h2 className="mb-4 text-3xl font-extrabold sm:text-5xl">Simple, transparent pricing</h2>
+            <p className="text-lg text-slate-500 sm:text-xl">Choose a plan that fits your business and scale as you grow. All plans include a 7-day free trial — no contracts, no risk.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {pricingPlans.map((plan) => (
@@ -289,6 +283,26 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="px-6 py-24">
+        <FadeIn>
+          <div className="mx-auto max-w-5xl rounded-3xl bg-slate-900 p-8 text-center text-white sm:p-12">
+            <h2 className="text-3xl font-extrabold sm:text-5xl">Get compliant. Stay organised. Grow your business.</h2>
+            <p className="mx-auto mt-5 max-w-3xl text-lg leading-relaxed text-slate-300">
+              Join pest control professionals who are moving to a smarter, digital way of working.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
+              <Link href="/auth/signup" className="rounded-2xl bg-emerald-500 px-8 py-4 text-lg font-bold text-white transition hover:bg-emerald-600">
+                Start Free Trial
+              </Link>
+              <Link href="/contact" className="rounded-2xl bg-slate-100 px-8 py-4 text-lg font-bold text-slate-900 transition hover:bg-white">
+                Get Early Access
+              </Link>
+            </div>
+            <p className="mt-8 text-xs font-bold tracking-[0.35em] text-emerald-300">VERIFY. RECORD. COMPLY.</p>
+          </div>
+        </FadeIn>
       </section>
 
       <LandingFooter />

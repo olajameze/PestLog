@@ -1,17 +1,27 @@
 export const featureCards = [
   {
-    title: 'Generate audit-ready reports instantly',
-    body: 'Automatically generate detailed compliance reports that meet the specific requirements of UK regulators. No more manual collation at the end of the month.',
+    title: 'Log jobs in real-time',
+    body: 'Capture every job on-site with full details, photos, and timestamps.',
     visual: 'report-preview'
   },
   {
-    title: 'Never lose proof of work again',
-    body: 'Technicians capture high-resolution photos, treatment notes, and digital e-signatures on-site. Everything is synced to the cloud before they even leave the property.',
+    title: 'Store certifications securely',
+    body: 'Keep technician qualifications organised and accessible at all times.',
     visual: 'mobile-app-ui'
   },
   {
-    title: 'Track every technician and job in real-time',
-    body: 'Instant visibility into your field operations. Monitor chemical usage, track technician efficiency, and see job completion statuses as they happen.',
+    title: 'Capture proof of work',
+    body: 'Collect photos and e-signatures instantly for complete job verification.',
+    visual: 'dashboard-view'
+  },
+  {
+    title: 'Generate audit-ready reports',
+    body: 'Create professional reports in seconds — ready when you need them.',
+    visual: 'report-preview'
+  },
+  {
+    title: 'Track performance and activity',
+    body: 'Monitor technicians, jobs, and business performance in one dashboard.',
     visual: 'dashboard-view'
   },
 ];
@@ -24,31 +34,31 @@ export const howItWorksSteps = [
 
 export const pricingPlans = [
   {
-    name: 'Pro',
+    name: '🟢 Pro',
     bestFor: 'Startups & independent technicians',
     price: '25',
-    cadence: '/month per user',
-    features: ['Basic compliance logbook', 'Digital job logs', 'Mobile app for technicians', 'Basic reporting'],
+    cadence: '/month',
+    features: ['Up to 3 technicians', 'Everything you already include'],
     cta: 'Start Free Trial',
     href: '/auth/signup',
     isPopular: false,
   },
   {
-    name: 'Business',
+    name: '🟢 Business',
     bestFor: 'Small to medium-sized teams',
     price: '40',
-    cadence: '/month per user',
-    features: ['Advanced reporting & analytics', 'Route optimization', 'Technician performance tracking', 'Customer Lifetime Value (CLV) tracking with CLV/CAC ratio'],
+    cadence: '/month',
+    features: ['Up to 10 technicians', 'Advanced features'],
     cta: 'Start Free Trial',
     href: '/auth/signup',
     isPopular: true,
   },
   {
-    name: 'Enterprise',
+    name: '🔵 Enterprise',
     bestFor: 'Large operations with multi-site management',
     price: '340',
     cadence: '/month',
-    features: ['All Pro & Business features', 'Custom API access', 'Dedicated account manager', 'Advanced security & compliance', 'Retention & Churn analytics', 'NPS with trend analysis'],
+    features: ['Unlimited technicians', 'All Pro and Business capabilities', 'Dedicated account manager', 'Advanced security & compliance'],
     cta: 'Start Free Trial',
     href: '/auth/signup',
     isPopular: false,
@@ -58,21 +68,19 @@ export const pricingPlans = [
 export const trustMicrocopy = [
   '7-day free trial',
   'No contracts',
-  'Cancel anytime'
+  'Built for UK compliance',
 ];
 
 export const regulationUrgency = {
-  title: 'Is your business ready for June 2025?',
-  body: 'The UK Rodenticide Stewardship Regime (CRRU) update in June 2025 requires stricter proof of treatment competency and point-of-sale verification. PestTrace ensures your records are permanent, accurate, and 100% compliant.',
-  cta: 'View Compliance Guide',
-  href: "https://www.knw.co.uk/understanding-the-new-uk-rodenticide-legislation/#:~:text=As%20of%201%20January%202025,courses%20consistent%20with%20CRRU's%20requirements."
+  title: 'New compliance standards are changing pest control',
+  body: 'With increasing regulatory requirements, pest control businesses are expected to maintain accurate, verifiable records for every job.\n\nPaper logs, spreadsheets, and scattered records are no longer enough.\n\nPestTrace helps you stay compliant, organised, and ready for audits — without the stress.',
 };
 
 export const testimonials = [
   {
-    quote: "PestTrace transformed how we handle audits. What used to take hours of paperwork now happens automatically in the background.",
+    quote: "PestTrace helped us move from paper logs to fully digital, audit-ready records in under a week. It's saved us hours of admin and made our business far more professional to clients.",
     author: "Weathers' Pest Solutions",
-    role: "Operations Director",
+    role: 'Customer Testimonial',
     company: "Weathers' Pest Solutions",
     logo: "/weathers-logo.png"
   }

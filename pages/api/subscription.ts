@@ -36,6 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: {
         subscriptionStatus: true,
         trialEndsAt: true,
+        paymentGraceEndsAt: true,
+        paymentFailedAt: true,
         stripeCustomerId: true,
         plan: true,
       },
@@ -44,7 +46,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!company) {
       const technician = await prisma.technician.findFirst({
         where: { email: user.email! },
-        include: { company: { select: { subscriptionStatus: true, trialEndsAt: true, stripeCustomerId: true, plan: true } } },
+        include: {
+          company: {
+            select: {
+              subscriptionStatus: true,
+              trialEndsAt: true,
+              paymentGraceEndsAt: true,
+              paymentFailedAt: true,
+              stripeCustomerId: true,
+              plan: true,
+            },
+          },
+        },
       });
 
       if (!technician || !technician.company) {
@@ -57,6 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       status: company.subscriptionStatus,
       trialEndsAt: company.trialEndsAt,
+      paymentGraceEndsAt: company.paymentGraceEndsAt,
+      paymentFailedAt: company.paymentFailedAt,
       stripeCustomerId: company.stripeCustomerId,
       plan: company.plan,
     });

@@ -7,6 +7,7 @@ import Sidebar from '../components/sidebar';
 import Card from '../components/ui/Card';
 import FormInput from '../components/ui/FormInput';
 import { useToast } from '../components/ui/ToastProvider';
+import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
 
 type Company = {
   id: string;
@@ -395,6 +396,7 @@ export default function ReportsPage() {
   const [savingView, setSavingView] = useState(false);
   const [selectedEntryIds, setSelectedEntryIds] = useState<string[]>([]);
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [overdueBanner, setOverdueBanner] = useState<string | null>(null);
 
   useEffect(() => {
     const loadUserData = async () => {
@@ -439,11 +441,23 @@ export default function ReportsPage() {
                 ? queryPlan
                 : subData.plan || 'trial'
             );
-            const trialExpired = !subData.trialEndsAt || new Date(subData.trialEndsAt).getTime() < Date.now();
-            if (subData.status !== 'active' && trialExpired) {
+            if (
+              !hasSubscriptionAccess({
+                plan: subData.plan,
+                subscriptionStatus: subData.status,
+                trialEndsAt: subData.trialEndsAt,
+                paymentGraceEndsAt: subData.paymentGraceEndsAt,
+              })
+            ) {
               router.replace('/upgrade');
               return;
             }
+            const daysLeft = getGraceDaysLeft({ paymentGraceEndsAt: subData.paymentGraceEndsAt });
+            setOverdueBanner(
+              daysLeft !== null
+                ? `Payment is overdue. You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining before service interruption.`
+                : null
+            );
           } else {
             const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
             if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
@@ -1345,6 +1359,12 @@ export default function ReportsPage() {
             <p className="text-sm text-gray-600">Generate and review compliance reports for technician work and certifications.</p>
           </div>
         </div>
+        {overdueBanner ? (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 shadow-sm">
+            <p className="font-semibold">{overdueBanner}</p>
+            <p className="mt-1">Update payment details from billing to avoid interruption.</p>
+          </div>
+        ) : null}
 
         {upgradeConfirmedPlan ? (
           <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900 shadow-sm">

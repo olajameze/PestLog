@@ -4,6 +4,7 @@ type AccessSnapshot = {
   plan?: string | null;
   subscriptionStatus?: string | null;
   trialEndsAt?: string | Date | null;
+  paymentGraceEndsAt?: string | Date | null;
 };
 
 function parseTrialEnd(value: AccessSnapshot['trialEndsAt']): number | null {
@@ -23,6 +24,19 @@ export function hasSubscriptionAccess(snapshot: AccessSnapshot, nowMs = Date.now
   }
 
   const trialEndMs = parseTrialEnd(snapshot.trialEndsAt);
-  return trialEndMs !== null && trialEndMs > nowMs;
+  if (trialEndMs !== null && trialEndMs > nowMs) {
+    return true;
+  }
+
+  const graceEndMs = parseTrialEnd(snapshot.paymentGraceEndsAt);
+  return graceEndMs !== null && graceEndMs > nowMs;
+}
+
+export function getGraceDaysLeft(snapshot: AccessSnapshot, nowMs = Date.now()): number | null {
+  const graceEndMs = parseTrialEnd(snapshot.paymentGraceEndsAt);
+  if (graceEndMs === null || graceEndMs <= nowMs) {
+    return null;
+  }
+  return Math.max(1, Math.ceil((graceEndMs - nowMs) / (1000 * 60 * 60 * 24)));
 }
 

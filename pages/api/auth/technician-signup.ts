@@ -13,20 +13,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const rawEmail = typeof req.body?.email === 'string' ? req.body.email : '';
-  const rawPassword = typeof req.body?.password === 'string' ? req.body.password : '';
   const rawFullName = typeof req.body?.fullName === 'string' ? req.body.fullName : '';
 
   const email = rawEmail.trim().toLowerCase();
-  const password = rawPassword.trim();
   const fullName = rawFullName.trim();
 
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'Enter a valid email address.' });
   }
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
-  }
-
   const techRecord = await prisma.technician.findFirst({
     where: { email },
     select: { id: true, name: true, companyId: true },
@@ -44,7 +38,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const created = await admin.auth.admin.createUser({
     email,
-    password,
     email_confirm: true,
     user_metadata: {
       role: 'technician',
@@ -57,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (created.error) {
     if ((created.error.message || '').toLowerCase().includes('already')) {
       return res.status(409).json({
-        error: 'This technician account already exists. Please sign in or reset your password.',
+        error: 'This technician account already exists. Please sign in using one-time code.',
       });
     }
     return res.status(400).json({ error: created.error.message || 'Unable to create technician account.' });
