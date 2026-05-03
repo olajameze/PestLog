@@ -262,9 +262,14 @@ export default function SettingsTab({
         </section>
 
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
-          <h4 className="text-lg font-semibold text-navy">Notification preferences</h4>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h4 className="text-lg font-semibold text-navy">Notification preferences</h4>
+            <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+              Delivery controls
+            </span>
+          </div>
           <div className="grid gap-4 mt-4 sm:grid-cols-2">
-            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow">
               <input
                 type="checkbox"
                 checked={notificationPreferences.trialExpiry}
@@ -273,7 +278,7 @@ export default function SettingsTab({
               />
               <span className="text-sm text-slate-700">Trial expiry reminders</span>
             </label>
-            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow">
               <input
                 type="checkbox"
                 checked={notificationPreferences.renewal}
@@ -282,7 +287,7 @@ export default function SettingsTab({
               />
               <span className="text-sm text-slate-700">Subscription renewal alerts</span>
             </label>
-            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow">
               <input
                 type="checkbox"
                 checked={notificationPreferences.certificationExpiry}
@@ -291,7 +296,7 @@ export default function SettingsTab({
               />
               <span className="text-sm text-slate-700">Certification expiry warnings</span>
             </label>
-            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow">
               <input
                 type="checkbox"
                 checked={Boolean(notificationPreferences.digestDaily)}
@@ -300,7 +305,7 @@ export default function SettingsTab({
               />
               <span className="text-sm text-slate-700">Daily digest email</span>
             </label>
-            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow">
               <input
                 type="checkbox"
                 checked={Boolean(notificationPreferences.digestWeekly)}

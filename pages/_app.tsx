@@ -6,7 +6,6 @@ import '../styles/globals.css';
 import { ToastProvider } from '../components/ui/ToastProvider';
 
 const PWAInstallPrompt = dynamic(() => import('../components/PWAInstallPrompt'), { ssr: false });
-const GlobalQuickSearch = dynamic(() => import('../components/search/GlobalQuickSearch'), { ssr: false });
 const NotificationCenter = dynamic(() => import('../components/notifications/NotificationCenter'), { ssr: false });
 const OfflineBanner = dynamic(() => import('../components/offline/OfflineBanner'), { ssr: false });
 
@@ -31,7 +30,6 @@ export default function App({ Component, pageProps }: AppProps) {
       </ToastProvider>
       <OfflineBanner />
       <NotificationCenter />
-      <GlobalQuickSearch />
       <PWAInstallPrompt />
     </>
   );
