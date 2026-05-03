@@ -22,6 +22,7 @@ export default function GlobalQuickSearch() {
     const blocked = ['/', '/contact', '/privacy', '/terms', '/maintenance'];
     return !blocked.includes(router.pathname);
   }, [router.pathname]);
+  const showFloatingLauncher = router.pathname !== '/reports';
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -37,6 +38,20 @@ export default function GlobalQuickSearch() {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [canUsePalette]);
+
+  useEffect(() => {
+    const handleExternalOpen = (event: Event) => {
+      const custom = event as CustomEvent<{ query?: string }>;
+      if (custom.detail?.query) {
+        setQuery(custom.detail.query);
+      }
+      setOpen(true);
+    };
+    window.addEventListener('pesttrace:open-quick-search', handleExternalOpen as EventListener);
+    return () => {
+      window.removeEventListener('pesttrace:open-quick-search', handleExternalOpen as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -79,14 +94,16 @@ export default function GlobalQuickSearch() {
 
   return (
     <>
-      <button
-        type="button"
-        aria-label="Open quick search"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-[75] rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-md hover:bg-slate-50"
-      >
-        Search
-      </button>
+      {showFloatingLauncher ? (
+        <button
+          type="button"
+          aria-label="Open quick search"
+          onClick={() => setOpen(true)}
+          className="fixed bottom-4 right-4 z-[75] rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-md hover:bg-slate-50"
+        >
+          Search
+        </button>
+      ) : null}
       {open ? (
         <div className="fixed inset-0 z-[95] bg-black/35 p-4" onClick={() => setOpen(false)}>
           <div

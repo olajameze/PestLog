@@ -42,14 +42,6 @@ type ReportEntry = {
   recommendation?: string;
 };
 
-type SearchHit = {
-  type: 'logbook_entry';
-  id: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-};
-
 function isRenderableImageSrc(value: string): boolean {
   return (
     value.startsWith('http://') ||
@@ -622,9 +614,6 @@ export default function ReportsPage() {
   };
 
   const [search, setSearch] = useState('');
-  const [quickSearchMode, setQuickSearchMode] = useState(false);
-  const [quickSearchLoading, setQuickSearchLoading] = useState(false);
-  const [quickSearchResults, setQuickSearchResults] = useState<SearchHit[]>([]);
   const [jobFilter, setJobFilter] = useState<'all' | 'follow-up'>('all');
 
   useEffect(() => {
@@ -901,33 +890,13 @@ export default function ReportsPage() {
     setFetching(false);
   };
 
-  const runQuickSearch = async () => {
-    const term = search.trim();
-    if (!term) {
-      showToast('Search required', 'Enter a client name or address.', 'error');
-      return;
-    }
-    setQuickSearchLoading(true);
-    setQuickSearchResults([]);
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      router.push('/auth/signin');
-      return;
-    }
-
-    const res = await fetch(`/api/search?q=${encodeURIComponent(term)}`, {
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Search failed' }));
-      showToast('Search failed', err.error || 'Unable to run quick search.', 'error');
-      setQuickSearchLoading(false);
-      return;
-    }
-    const hits = (await res.json()) as SearchHit[];
-    setQuickSearchResults(Array.isArray(hits) ? hits : []);
-    setQuickSearchLoading(false);
+  const openQuickSearch = () => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('pesttrace:open-quick-search', {
+        detail: { query: search.trim() },
+      }),
+    );
   };
 
   const deleteReportEntry = async (entryId: string) => {
@@ -1372,19 +1341,16 @@ export default function ReportsPage() {
                 placeholder="Client or address..."
                 className="form-input"
               />
-            </div>
-            <div className="form-group flex items-end sm:col-span-2 xl:col-span-1">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700 pb-3">
-                <input
-                  type="checkbox"
-                  checked={quickSearchMode}
-                  onChange={(e) => {
-                    setQuickSearchMode(e.target.checked);
-                    setQuickSearchResults([]);
-                  }}
-                />
-                Quick search (logbook + report records)
-              </label>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={openQuickSearch}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Quick Search (Ctrl/Cmd+K)
+                </button>
+                <p className="text-xs text-slate-500">Keyboard-first search across logbook records.</p>
+              </div>
             </div>
             <div className="form-group">
                 <label htmlFor="start-date" className="form-label">Start Date (optional)</label>
@@ -1422,16 +1388,6 @@ export default function ReportsPage() {
                   'Fetch Report'
                 )}
               </button>
-              {quickSearchMode ? (
-                <button
-                  type="button"
-                  onClick={runQuickSearch}
-                  className="btn btn-secondary mt-2"
-                  disabled={quickSearchLoading}
-                >
-                  {quickSearchLoading ? 'Searching...' : 'Quick Search'}
-                </button>
-              ) : null}
             </div>
           </div>
           {isOwner ? (
@@ -1480,23 +1436,6 @@ export default function ReportsPage() {
                   ))}
                 </div>
               ) : null}
-            </div>
-          ) : null}
-          {quickSearchMode ? (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-semibold text-slate-800">Quick results ({quickSearchResults.length})</p>
-              {quickSearchResults.length === 0 ? (
-                <p className="mt-2 text-sm text-slate-500">Run quick search to find matching client names, addresses, and treatments.</p>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  {quickSearchResults.map((hit) => (
-                    <div key={hit.id} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
-                      <p className="text-sm font-medium text-slate-900">{hit.title}</p>
-                      <p className="text-xs text-slate-500">{hit.subtitle}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           ) : null}
         </div>
