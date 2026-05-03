@@ -52,16 +52,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(404).json({ error: 'Technician not found for this company' });
   }
 
+  const appUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'http://localhost:3000';
+  const inviteLink = `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(
+    technician.email,
+  )}`;
+
   try {
     await sendTechnicianInviteEmail({
       email: technician.email,
       technicianName: technician.name,
       companyName: company.name || undefined,
     });
-    return res.status(200).json({ success: true });
+    return res.status(200).json({
+      success: true,
+      inviteLink,
+    });
   } catch (sendError) {
     console.error('Technician invite email failed:', sendError);
-    return res.status(500).json({ error: 'Failed to send technician invite email' });
+    return res.status(200).json({
+      success: false,
+      warning:
+        'Invite email service is unavailable. Share the invite link manually with the technician.',
+      inviteLink,
+    });
   }
 }
 

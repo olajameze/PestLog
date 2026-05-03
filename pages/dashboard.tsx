@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
 import Sidebar from '../components/sidebar';
@@ -7,15 +8,16 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import FormInput from '../components/ui/FormInput';
 import SettingsTab from '../components/settings/SettingsTab';
-import DashboardEnhancements from '../components/dashboard/DashboardEnhancements';
 import { useToast } from '../components/ui/ToastProvider';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import OfflineBanner from '../components/offline/OfflineBanner';
-import OnboardingTour from '../components/onboarding/OnboardingTour';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { Skeleton } from '../components/ui/Skeleton';
 import { checkPlan } from '../lib/planGuard';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
+
+const DashboardEnhancements = dynamic(() => import('../components/dashboard/DashboardEnhancements'));
+const OnboardingTour = dynamic(() => import('../components/onboarding/OnboardingTour'), { ssr: false });
 
 interface User {
   id: string;
@@ -249,6 +251,8 @@ const PlanModal = ({
 export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
+  const [companyLoadState, setCompanyLoadState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
+  const [refreshKey, setRefreshKey] = useState(0);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [activeTab, setActiveTab] = useState<'technicians' | 'logbook' | 'settings'>('technicians');
@@ -417,6 +421,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const getUser = async () => {
+      setCompanyLoadState('loading');
       if (isPreviewMode) {
         setUser({ id: 'preview-user', email: 'preview@pesttrace.local' });
         setCompany({
@@ -437,6 +442,7 @@ export default function Dashboard() {
           { id: 'tech-2', name: 'Sarah Johnson', email: 'sarah@preview.local' },
         ]);
         setSubscription({ status: 'active' });
+        setCompanyLoadState('ready');
         return;
       }
 
@@ -456,59 +462,66 @@ export default function Dashboard() {
         return;
       }
       setUser(session.user);
-      const res = await fetch('/api/company', {
+      const companyPromise = fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const companyData = await res.json();
-      if (!res.ok) {
-        if (res.status === 403 && companyData?.code === 'ROLE_TECHNICIAN') {
+      const techniciansPromise = fetch('/api/technicians', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const subscriptionPromise = fetch('/api/subscription', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      const companyRes = await companyPromise;
+      const companyData = await companyRes.json().catch(() => null);
+      if (!companyRes.ok) {
+        if (companyRes.status === 403 && companyData?.code === 'ROLE_TECHNICIAN') {
           router.replace('/technician?accessDenied=dashboard');
           return;
         }
         setAppError(companyData?.error || 'Unable to load company details.');
         showToast('Load failed', companyData?.error || 'Unable to load company details.', 'error');
-      } else {
-        setCompany(companyData);
+        setCompanyLoadState('error');
+        return;
       }
-      if (companyData) {
-        const [techRes, subRes] = await Promise.all([
-          fetch('/api/technicians', {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          }),
-          fetch('/api/subscription', {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          }),
-        ]);
+      if (!companyData) {
+        setCompanyLoadState('missing');
+        return;
+      }
 
-        const techData = await techRes.json().catch(() => []);
-        setTechnicians(Array.isArray(techData) ? techData : []);
-        if (!techRes.ok) {
-          setAppError(techData?.error || 'Unable to load technicians.');
-          showToast('Load failed', techData?.error || 'Unable to load technicians.', 'error');
+      setCompany(companyData);
+      setCompanyLoadState('ready');
+
+      const [techRes, subRes] = await Promise.all([techniciansPromise, subscriptionPromise]);
+
+      const techData = await techRes.json().catch(() => []);
+      setTechnicians(Array.isArray(techData) ? techData : []);
+      if (!techRes.ok) {
+        setAppError(techData?.error || 'Unable to load technicians.');
+        showToast('Load failed', techData?.error || 'Unable to load technicians.', 'error');
+      }
+
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        setSubscription(subData);
+        const now = Date.now();
+        const trialExpiresAt = subData.trialEndsAt ? new Date(subData.trialEndsAt) : null;
+        const trialExpired = !trialExpiresAt || trialExpiresAt.getTime() < now;
+
+        if (subData.status !== 'active' && trialExpired) {
+          router.replace('/upgrade');
+          return;
         }
 
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          setSubscription(subData);
-          const now = Date.now();
-          const trialExpiresAt = subData.trialEndsAt ? new Date(subData.trialEndsAt) : null;
-          const trialExpired = !trialExpiresAt || trialExpiresAt.getTime() < now;
-
-          if (subData.status !== 'active' && trialExpired) {
-            router.replace('/upgrade');
-            return;
-          }
-
-          if (subData.status !== 'active' && trialExpiresAt && trialExpiresAt.getTime() > now) {
-            const daysLeft = Math.max(0, Math.ceil((trialExpiresAt.getTime() - now) / (1000 * 60 * 60 * 24)));
-            if (daysLeft <= 3) {
-              setTrialBanner(trialExpiresAt.toLocaleDateString());
-            } else {
-              setTrialBanner(null);
-            }
+        if (subData.status !== 'active' && trialExpiresAt && trialExpiresAt.getTime() > now) {
+          const daysLeft = Math.max(0, Math.ceil((trialExpiresAt.getTime() - now) / (1000 * 60 * 60 * 24)));
+          if (daysLeft <= 3) {
+            setTrialBanner(trialExpiresAt.toLocaleDateString());
           } else {
             setTrialBanner(null);
           }
+        } else {
+          setTrialBanner(null);
         }
       }
 
@@ -539,7 +552,7 @@ export default function Dashboard() {
       }
     };
     getUser();
-  }, [isPreviewMode, router, showToast, router.query.session_id, router.query.upgradedPlan]);
+  }, [isPreviewMode, router, showToast, router.query.session_id, router.query.upgradedPlan, refreshKey]);
 
   const tabQuery = router.query.tab;
   const currentTab: Tab =
@@ -746,15 +759,27 @@ export default function Dashboard() {
           body: JSON.stringify({ technicianId: newTech.id }),
         });
         if (inviteRes.ok) {
-          setInviteStatusByTechnician((prev) => ({
-            ...prev,
-            [newTech.id]: new Date().toISOString(),
-          }));
-          showToast(
-            'Invite sent',
-            `Setup email sent to ${newTech.email}. They can set a password and sign in as technician.`,
-            'success',
-          );
+          const inviteBody = await inviteRes.json().catch(() => ({} as { success?: boolean; inviteLink?: string; warning?: string }));
+          if (inviteBody.success) {
+            setInviteStatusByTechnician((prev) => ({
+              ...prev,
+              [newTech.id]: new Date().toISOString(),
+            }));
+            showToast(
+              'Invite sent',
+              `Setup email sent to ${newTech.email}. They can set a password and sign in as technician.`,
+              'success',
+            );
+          } else {
+            if (inviteBody.inviteLink && typeof navigator !== 'undefined' && navigator.clipboard) {
+              await navigator.clipboard.writeText(inviteBody.inviteLink).catch(() => undefined);
+            }
+            showToast(
+              'Technician added',
+              `${newTech.name} was added. Email sending is unavailable, so the invite link has been generated${inviteBody.inviteLink ? ' and copied (if browser allowed).' : '.'}`,
+              'info',
+            );
+          }
         } else {
           const inviteErr = await inviteRes.json().catch(() => ({ error: 'Invite not sent' }));
           showToast(
@@ -820,23 +845,51 @@ export default function Dashboard() {
       body: JSON.stringify({ technicianId }),
     });
     if (res.ok) {
+      const body = await res.json().catch(() => ({} as { success?: boolean; inviteLink?: string }));
       const tech = technicians.find((item) => item.id === technicianId);
-      setInviteStatusByTechnician((prev) => ({
-        ...prev,
-        [technicianId]: new Date().toISOString(),
-      }));
-      showToast(
-        'Invite sent',
-        `Invite email sent${tech?.email ? ` to ${tech.email}` : ''}.`,
-        'success',
-      );
+      if (body.success) {
+        setInviteStatusByTechnician((prev) => ({
+          ...prev,
+          [technicianId]: new Date().toISOString(),
+        }));
+        showToast(
+          'Invite sent',
+          `Invite email sent${tech?.email ? ` to ${tech.email}` : ''}.`,
+          'success',
+        );
+      } else {
+        if (body.inviteLink && typeof navigator !== 'undefined' && navigator.clipboard) {
+          await navigator.clipboard.writeText(body.inviteLink).catch(() => undefined);
+        }
+        showToast(
+          'Invite link ready',
+          `Email service is unavailable, so you can share the invite link manually${body.inviteLink ? ' (copied if browser allowed).' : '.'}`,
+          'info',
+        );
+      }
       return;
     }
     const err = await res.json().catch(() => ({ error: 'Invite failed' }));
     showToast('Invite failed', err.error || 'Unable to send technician invite.', 'error');
   };
 
-if (!user) return (
+  const handleCopyInviteLink = async (technicianId: string) => {
+    const tech = technicians.find((item) => item.id === technicianId);
+    if (!tech?.email) {
+      showToast('Copy failed', 'Technician email is missing.', 'error');
+      return;
+    }
+    const base = typeof window !== 'undefined' ? window.location.origin : '';
+    const inviteLink = `${base}/auth/signup?role=technician&email=${encodeURIComponent(tech.email)}`;
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      showToast('Copy unavailable', 'Clipboard is not available in this browser.', 'info');
+      return;
+    }
+    await navigator.clipboard.writeText(inviteLink);
+    showToast('Invite link copied', `Share the setup link with ${tech.email}.`, 'success');
+  };
+
+if (!user || companyLoadState === 'loading') return (
   <div className="min-h-screen flex items-center justify-center p-8">
     <Skeleton className="h-12 w-64 mb-4" />
     <div className="animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 p-8 rounded-2xl shadow-sm">
@@ -850,7 +903,7 @@ if (!user) return (
 );
 
   return (
-    <div className="min-h-screen bg-offwhite page-fade-in">
+    <div className="min-h-screen overflow-x-hidden bg-offwhite page-fade-in">
       <OnboardingTour />
       <div className="flex min-w-0 lg:pl-0">
         <Sidebar 
@@ -861,7 +914,24 @@ if (!user) return (
         <OfflineBanner />
         <main className="min-w-0 flex-1 p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
           <ErrorBoundary>
-            {company ? (
+            {companyLoadState === 'error' && !company ? (
+              <Card className="mx-auto max-w-2xl border-red-200 bg-red-50">
+                <div className="space-y-3 p-5 text-red-900">
+                  <p className="text-lg font-semibold">Unable to load your dashboard data</p>
+                  <p className="text-sm">{appError || 'Please retry. If this keeps happening, check API/DB environment settings.'}</p>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setAppError(null);
+                      setCompanyLoadState('loading');
+                      setRefreshKey((prev) => prev + 1);
+                    }}
+                  >
+                    Retry loading dashboard
+                  </Button>
+                </div>
+              </Card>
+            ) : company ? (
               <>
                 <div className="mb-6 rounded-2xl border border-zinc-200 bg-white px-6 py-5 shadow-sm">
                   <h1 className="text-4xl font-bold text-navy">
@@ -912,6 +982,7 @@ if (!user) return (
                   onAddTechnician={handleAddTechnician} 
                   onRemoveTechnician={(id) => setConfirmRemoveId(id)} 
                   onInviteTechnician={handleInviteTechnician}
+                  onCopyInviteLink={handleCopyInviteLink}
                   inviteStatusByTechnician={inviteStatusByTechnician}
                   isPro={isPro}
                   setSelectedTechId={setSelectedTechId}
@@ -941,9 +1012,9 @@ if (!user) return (
                 />
               )}
             </>
-          ) : (
+          ) : companyLoadState === 'missing' ? (
             <CompanySetupTab />
-          )}
+          ) : null}
           </ErrorBoundary>
         </main>
       </div>
@@ -1156,11 +1227,12 @@ interface Certification {
   uploadedAt: string;
 }
 
-function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onInviteTechnician, inviteStatusByTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
+function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onInviteTechnician, onCopyInviteLink, inviteStatusByTechnician, isPro, setSelectedTechId, setShowCertModal, onLoadTechCerts }: {
   technicians: Technician[];
   onAddTechnician: (name: string, email: string) => Promise<boolean>;
   onRemoveTechnician: (id: string) => void;
   onInviteTechnician: (id: string) => Promise<void>;
+  onCopyInviteLink: (id: string) => Promise<void>;
   inviteStatusByTechnician: Record<string, string>;
   isPro: boolean;
   setSelectedTechId: (id: string) => void;
@@ -1225,7 +1297,7 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onIn
                   <p className="mt-1 text-xs text-zinc-500">No invite sent yet</p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button 
                   variant="secondary" 
                   size="sm" 
@@ -1241,6 +1313,9 @@ function TechniciansTab({ technicians, onAddTechnician, onRemoveTechnician, onIn
                 <Button variant="danger" size="sm" onClick={() => onRemoveTechnician(tech.id)}>Remove</Button>
                 <Button variant="secondary" size="sm" onClick={() => void onInviteTechnician(tech.id)}>
                   {inviteStatusByTechnician[tech.id] ? 'Resend Invite' : 'Send Invite'}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => void onCopyInviteLink(tech.id)}>
+                  Copy Invite Link
                 </Button>
               </div>
             </Card>
@@ -1260,6 +1335,7 @@ function LogbookEntries({ companyId, technicians, allowCreate }: { companyId: st
   const [filteredEntries, setFilteredEntries] = useState<LogbookEntry[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   useEffect(() => {
     const fetchEntries = async () => {
@@ -1284,6 +1360,10 @@ function LogbookEntries({ companyId, technicians, allowCreate }: { companyId: st
       entry.address.toLowerCase().includes(lowerSearch)
     ));
   }, [search, entries]);
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [search, entries.length]);
 
   const fetchImageAsBase64 = async (url: string): Promise<string> => {
     try {
@@ -1414,47 +1494,70 @@ function LogbookEntries({ companyId, technicians, allowCreate }: { companyId: st
           </div>
         </Card>
       )}
-      {entries.length === 0 ? (
+      {filteredEntries.length === 0 ? (
         <Card className="text-center py-12">
           <p className="text-zinc-600 text-lg">No logbook entries yet.</p>
         </Card>
       ) : (
-        <Card>
-          <div className="divide-y divide-zinc-200">
-            {entries.map((entry) => (
-              <div key={entry.id} className="p-6 hover:bg-zinc-50">
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-navy">{entry.clientName}</h3>
-                    <p className="text-zinc-600 mt-1">{entry.address}</p>
-                    <p className="text-sm text-zinc-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
+        <details className="rounded-2xl border border-zinc-200 bg-white shadow-sm" open>
+          <summary className="cursor-pointer list-none rounded-2xl px-5 py-4 transition hover:bg-zinc-50">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-sm font-semibold uppercase tracking-wide text-zinc-500">Saved logs</span>
+              <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
+                {filteredEntries.length} records
+              </span>
+            </div>
+          </summary>
+          <div className="max-h-[70vh] overflow-y-auto px-5 pb-5">
+            <div className="space-y-4">
+              {filteredEntries.slice(0, visibleCount).map((entry) => {
+                const photoUrls = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
+                return (
+                <details key={entry.id} className="rounded-2xl border border-zinc-200 bg-zinc-50/40 p-4" open={false}>
+                  <summary className="cursor-pointer list-none">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-navy">{entry.clientName}</h3>
+                        <p className="mt-1 text-sm text-zinc-600">{entry.address}</p>
+                        <p className="mt-1 text-xs text-zinc-500">{new Date(entry.date).toLocaleDateString()}</p>
+                      </div>
+                      <span className="inline-flex w-fit rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-800">
+                        {entry.treatment}
+                      </span>
+                    </div>
+                  </summary>
+                  <div className="mt-4 border-t border-zinc-200 pt-4">
+                    {renderRoomDetails(entry.rooms)}
+                    {entry.notes && <p className="mt-3 text-sm text-zinc-700">{entry.notes}</p>}
+                    {photoUrls.length > 0 && (
+                      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {photoUrls.map((url) => (
+                          <Image
+                            key={url}
+                            loader={supabaseImageLoader}
+                            src={url}
+                            alt="Job photo"
+                            width={600}
+                            height={300}
+                            className="h-auto max-h-[400px] w-full rounded-2xl border object-contain shadow-sm transition-shadow hover:shadow-md"
+                            unoptimized
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <span className="inline-flex px-3 py-1 bg-primary-100 text-primary-800 rounded-full text-sm font-medium">
-                    {entry.treatment}
-                  </span>
-                </div>
-                {renderRoomDetails(entry.rooms)}
-                {entry.notes && <p className="mt-3 text-zinc-700">{entry.notes}</p>}
-                {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 && (
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
-<Image
-                        key={url}
-                        loader={supabaseImageLoader}
-                        src={url}
-                        alt="Job photo"
-                        width={600}
-                        height={300}
-                        className="w-full h-auto max-h-[400px] object-contain rounded-2xl border shadow-sm hover:shadow-md transition-shadow"
-                        unoptimized
-                      />
-                    ))}
-                  </div>
-                )}
+                </details>
+              )})}
+            </div>
+            {filteredEntries.length > visibleCount ? (
+              <div className="mt-4 flex justify-center">
+                <Button variant="secondary" onClick={() => setVisibleCount((prev) => prev + 20)}>
+                  Load more logs
+                </Button>
               </div>
-            ))}
+            ) : null}
           </div>
-        </Card>
+        </details>
       )}
     </div>
   );

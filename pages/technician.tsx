@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import Sidebar from '../components/sidebar';
 import { useToast } from '../components/ui/ToastProvider';
+import Button from '../components/ui/Button';
 
 type TechnicianProfile = {
   id: string;
@@ -125,6 +126,7 @@ export default function TechnicianPage() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TechnicianProfile | null>(null);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
+  const [visibleEntries, setVisibleEntries] = useState(20);
   const [date, setDate] = useState('');
   const [clientName, setClientName] = useState('');
   const [address, setAddress] = useState('');
@@ -620,7 +622,7 @@ export default function TechnicianPage() {
   const photoCoverageCount = entries.filter((entry) => parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0).length;
 
   return (
-    <div className="min-h-screen bg-offwhite">
+    <div className="min-h-screen overflow-x-hidden bg-offwhite">
       <div className="flex min-w-0">
         <Sidebar role="technician" activeTab="logbook" onSignOut={async () => {
           if (isPreviewMode) {
@@ -630,7 +632,7 @@ export default function TechnicianPage() {
           await supabase.auth.signOut();
           router.push('/auth/signin');
         }} />
-        <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="min-w-0 flex-1 px-4 pb-6 pt-20 sm:px-6 sm:pb-8 sm:pt-24 lg:px-8">
       <div className="min-w-0 max-w-5xl space-y-6">
         {accessDeniedTarget ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -958,68 +960,92 @@ export default function TechnicianPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {entries.map((entry) => (
-            <div key={entry.id} className="bg-white rounded-2xl shadow-md p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-semibold text-navy">{entry.clientName}</h3>
-                  <p className="text-sm text-gray-500">{new Date(entry.date).toLocaleDateString()}</p>
+        <details className="rounded-2xl border border-gray-200 bg-white shadow-md" open>
+          <summary className="cursor-pointer list-none rounded-2xl px-6 py-4 transition hover:bg-gray-50">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-[0.15em] text-gray-500">Saved log entries</span>
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{entries.length} logs</span>
+            </div>
+          </summary>
+          <div className="max-h-[70vh] overflow-y-auto px-5 pb-5">
+            <div className="space-y-4">
+              {entries.slice(0, visibleEntries).map((entry) => {
+                const photoUrls = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
+                return (
+                <details key={entry.id} className="rounded-2xl border border-gray-200 bg-gray-50/50 p-4" open={false}>
+                  <summary className="cursor-pointer list-none">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-navy">{entry.clientName}</h3>
+                        <p className="text-sm text-gray-500">{new Date(entry.date).toLocaleDateString()}</p>
+                      </div>
+                      <span className="inline-flex max-w-full break-words rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">{entry.treatment}</span>
+                    </div>
+                  </summary>
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <p className="text-gray-700">{entry.address}</p>
+                    {entry.rooms && entry.rooms.length > 0 ? (
+                      <p className="mt-2 text-sm text-gray-600">
+                        Rooms: {entry.rooms.map((room) => (typeof room === 'string' ? room : room.name)).join(', ')}
+                      </p>
+                    ) : null}
+                    {entry.followUpDate ? (
+                      <p className="mt-1 text-sm font-medium text-amber-700">
+                        Follow-up: {new Date(entry.followUpDate).toLocaleDateString()}
+                      </p>
+                    ) : null}
+                    {entry.baitBoxesPlaced ? <p className="mt-1 text-sm text-gray-600">Bait boxes: {entry.baitBoxesPlaced}</p> : null}
+                    {entry.poisonUsed ? <p className="mt-1 text-sm text-gray-600">Poison used: {entry.poisonUsed}</p> : null}
+                    {entry.notes && <p className="mt-2 whitespace-pre-line text-gray-600">{entry.notes}</p>}
+                    {photoUrls.length > 0 ? (
+                      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {photoUrls.map((url) => (
+                          <Image
+                            key={url}
+                            loader={supabaseImageLoader}
+                            src={url}
+                            alt="Logged job photo"
+                            width={800}
+                            height={400}
+                            className="max-h-52 w-full rounded-2xl border border-gray-200 object-cover"
+                            unoptimized
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    {entry.signature && (
+                      <div className="mt-4">
+                        <p className="mb-2 text-sm text-gray-500">Signature</p>
+                        <Image
+                          src={entry.signature}
+                          alt="Job signature"
+                          width={1200}
+                          height={400}
+                          className="max-h-40 w-full rounded-2xl border border-gray-200 object-contain"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                  </div>
+                </details>
+              )})}
+
+              {entries.length > visibleEntries ? (
+                <div className="flex justify-center pt-2">
+                  <Button type="button" variant="secondary" onClick={() => setVisibleEntries((prev) => prev + 20)}>
+                    Load more logs
+                  </Button>
                 </div>
-                <span className="inline-flex max-w-full rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 break-words">{entry.treatment}</span>
-              </div>
-              <p className="mt-4 text-gray-700">{entry.address}</p>
-              {entry.rooms && entry.rooms.length > 0 ? (
-                <p className="mt-2 text-sm text-gray-600">
-                  Rooms: {entry.rooms.map((room) => (typeof room === 'string' ? room : room.name)).join(', ')}
-                </p>
               ) : null}
-              {entry.followUpDate ? (
-                <p className="mt-1 text-sm text-amber-700 font-medium">
-                  Follow-up: {new Date(entry.followUpDate).toLocaleDateString()}
-                </p>
-              ) : null}
-              {entry.baitBoxesPlaced ? <p className="mt-1 text-sm text-gray-600">Bait boxes: {entry.baitBoxesPlaced}</p> : null}
-              {entry.poisonUsed ? <p className="mt-1 text-sm text-gray-600">Poison used: {entry.poisonUsed}</p> : null}
-              {entry.notes && <p className="mt-2 text-gray-600 whitespace-pre-line">{entry.notes}</p>}
-              {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length > 0 ? (
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  {parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).map((url) => (
-              <Image
-                        key={url}
-                        loader={supabaseImageLoader}
-                        src={url}
-                        alt="Logged job photo"
-                        width={800}
-                        height={400}
-                        className="max-h-52 w-full object-cover rounded-2xl border border-gray-200"
-                        unoptimized
-                      />
-                  ))}
-                </div>
-              ) : null}
-              {entry.signature && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500 mb-2">Signature</p>
-                  <Image
-                    src={entry.signature}
-                    alt="Job signature"
-                    width={1200}
-                    height={400}
-                    className="w-full max-h-40 object-contain rounded-2xl border border-gray-200"
-                    unoptimized
-                  />
+
+              {entries.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-6 text-center text-gray-600">
+                  No logbook entries yet. Add the first entry above.
                 </div>
               )}
             </div>
-          ))}
-
-          {entries.length === 0 && (
-            <div className="bg-white rounded-2xl shadow-md p-6 text-center text-gray-600">
-              No logbook entries yet. Add the first entry above.
-            </div>
-          )}
-        </div>
+          </div>
+        </details>
       </div>
         </div>
       </div>

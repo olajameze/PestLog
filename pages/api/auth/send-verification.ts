@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { sendVerificationReminderEmail } from '../../../lib/email';
+import { sendVerificationActionEmail, sendVerificationReminderEmail } from '../../../lib/email';
 
 function validEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -36,6 +36,45 @@ async function resendSupabaseSignupEmail(email: string): Promise<{ ok: boolean; 
   return { ok: false, message };
 }
 
+async function generateSupabaseSignupLink(email: string): Promise<{ ok: boolean; actionLink?: string; message?: string }> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const redirectTo = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  if (!supabaseUrl || !serviceKey) {
+    return { ok: false, message: 'Auth service is not configured.' };
+  }
+
+  const res = await fetch(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/admin/generate_link`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      type: 'signup',
+      email,
+      options: redirectTo ? { redirectTo } : undefined,
+    }),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as {
+    action_link?: string;
+    msg?: string;
+    error_description?: string;
+    error?: string;
+  };
+
+  if (res.ok && data.action_link) {
+    return { ok: true, actionLink: data.action_link };
+  }
+
+  return {
+    ok: false,
+    message: data.msg || data.error_description || data.error || 'Unable to generate verification link.',
+  };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -51,6 +90,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const supabaseResult = await resendSupabaseSignupEmail(trimmed);
   if (supabaseResult.ok) {
     return res.status(200).json({ success: true });
+  }
+
+  const generated = await generateSupabaseSignupLink(trimmed);
+  if (generated.ok && generated.actionLink) {
+    try {
+      await sendVerificationActionEmail(trimmed, generated.actionLink);
+      return res.status(200).json({
+        success: true,
+        warning: 'Auth provider resend failed, but we sent a direct verification link instead.',
+      });
+    } catch (emailError) {
+      console.error('Generated verification link email failed', emailError);
+    }
   }
 
   console.warn('Supabase resend failed, falling back to reminder-only email:', supabaseResult.message);

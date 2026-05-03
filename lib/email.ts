@@ -49,12 +49,15 @@ async function sendMail(payload: {
     throw new Error('Email service is not configured. Set RESEND_API_KEY.');
   }
 
+  const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
   return resend.emails.send({
-    from: `Pest Trace <${supportEmail}>`,
+    from: `Pest Trace <${fromAddress}>`,
     to: payload.to,
     subject: payload.subject,
     html: payload.html,
     text: payload.text,
+    replyTo: supportEmail,
   });
 }
 
@@ -121,6 +124,36 @@ The Pest Trace team`;
     to: [email],
     subject: 'Verify your Pest Trace account',
     html: brandEmailHtml('Verify your Pest Trace account', inner),
+    text,
+  });
+}
+
+export async function sendVerificationActionEmail(email: string, actionLink: string) {
+  const safeActionLink = escapeHtml(actionLink);
+  const safeEmail = escapeHtml(email);
+  const inner = `
+    <p>Hi there,</p>
+    <p>Use the button below to verify the email address for <strong>${safeEmail}</strong>.</p>
+    <p style="text-align:center;">
+      <a href="${safeActionLink}" style="background-color:#2563eb;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;display:inline-block;">
+        Verify email address
+      </a>
+    </p>
+    <p>If the button does not work, copy and paste this URL into your browser:</p>
+    <p><a href="${safeActionLink}">${safeActionLink}</a></p>
+    <p>If you did not create a Pest Trace account, you can ignore this message.</p>
+  `;
+  const text = `Hi there,
+
+Use this link to verify ${email}:
+${actionLink}
+
+If you did not create a Pest Trace account, you can ignore this message.`;
+
+  await sendMail({
+    to: [email],
+    subject: 'Verify your Pest Trace email',
+    html: brandEmailHtml('Verify your Pest Trace email', inner),
     text,
   });
 }

@@ -1110,7 +1110,7 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-offwhite">
+    <div className="min-h-screen overflow-x-hidden bg-offwhite">
       <div className="flex min-w-0">
         <Sidebar role={isOwner ? 'owner' : 'technician'} activeTab="reports" onSignOut={async () => {
           if (isPreviewMode) {
@@ -1120,7 +1120,7 @@ export default function ReportsPage() {
           await supabase.auth.signOut();
           router.push('/auth/signin');
         }} />
-        <div className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="min-w-0 flex-1 px-4 pb-6 pt-20 sm:px-6 sm:pb-8 sm:pt-24 lg:px-8">
       <div className="min-w-0 max-w-6xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="text-center mb-6">
