@@ -168,11 +168,25 @@ export default function SettingsTab({
   const trialEndsAtLabel = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString() : 'Not available';
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl sm:text-3xl font-bold text-navy">Settings</h2>
-      <Card className="space-y-6 p-8">
-        <h3 className="text-xl font-bold text-navy">Company & Billing</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-8">
+      <div className="rounded-3xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-navy sm:text-3xl">Settings</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Manage company profile, compliance defaults, notifications, and billing controls.
+            </p>
+          </div>
+          <div className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">
+            Plan: {currentPlanLabel}
+          </div>
+        </div>
+      </div>
+      <Card className="space-y-8 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:p-8">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+          <h3 className="text-lg font-bold text-navy sm:text-xl">Company profile</h3>
+          <p className="mt-1 text-sm text-slate-600">Keep your billing and business details up to date.</p>
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
           <FormInput
             label="Company Name"
             id="settings-company-name"
@@ -221,7 +235,8 @@ export default function SettingsTab({
             value={String(defaultReportRangeDays)}
             onChange={(e) => setDefaultReportRangeDays(Number(e.target.value) || 0)}
           />
-          <div className="flex flex-col justify-between gap-4">
+          <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Compliance defaults</p>
             <div className="space-y-3">
               <label className="inline-flex items-center gap-2">
                 <input
@@ -244,8 +259,9 @@ export default function SettingsTab({
             </div>
           </div>
         </div>
+        </section>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
           <h4 className="text-lg font-semibold text-navy">Notification preferences</h4>
           <div className="grid gap-4 mt-4 sm:grid-cols-2">
             <label className="inline-flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
@@ -294,10 +310,10 @@ export default function SettingsTab({
               <span className="text-sm text-slate-700">Weekly digest email</span>
             </label>
           </div>
-        </div>
+        </section>
 
         {subscription?.plan === 'enterprise' ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
             <h4 className="text-lg font-semibold text-navy">Enterprise success & security</h4>
             <p className="mt-2 text-sm text-slate-600">
               Configure your dedicated account manager contact and security/compliance controls.
@@ -361,33 +377,37 @@ export default function SettingsTab({
               className="mt-2 w-full rounded-xl border border-zinc-300 px-4 py-3 text-sm text-slate-800"
               rows={4}
             />
-          </div>
+          </section>
         ) : null}
 
-        <div className="flex flex-wrap gap-3 items-center">
-          <Button onClick={handleSaveSettings} disabled={savingSettings}>
+        <div className="sticky bottom-3 z-10 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur">
+          <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={handleSaveSettings} disabled={savingSettings} className="min-w-[170px]">
             {savingSettings ? 'Saving settings...' : 'Save settings'}
           </Button>
           <span className="text-sm text-slate-500">Your changes will apply immediately to company account settings.</span>
+          </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3 mt-6">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Subscription status</p>
             <p className="mt-2 font-semibold text-slate-900">{subscription?.status || 'Unknown'}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Current plan</p>
             <p className="mt-2 font-semibold text-slate-900">{currentPlanLabel}</p>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Trial ends</p>
             <p className="mt-2 font-semibold text-slate-900">{trialEndsAtLabel}</p>
           </div>
         </div>
+        </section>
 
         {subscription?.plan === 'enterprise' && (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
+          <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
             <h3 className="text-xl font-semibold text-navy">Enterprise API Access</h3>
             <p className="mt-2 text-sm text-slate-600">Generate a dedicated API key for secure custom integrations and enterprise automation.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -434,14 +454,14 @@ export default function SettingsTab({
               </p>
               {accountManagerPhone ? <p className="mt-1">Phone: {accountManagerPhone}</p> : null}
             </div>
-          </div>
+          </section>
         )}
 
-        <div className="text-sm text-slate-600">
-          Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+          <p className="text-sm text-slate-600">
+            Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
+          </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Button onClick={onSubscribe} disabled={checkoutLoading} className="w-full whitespace-normal bg-gradient-to-r from-blue-500 to-purple-600 sm:w-auto">
             {checkoutLoading ? 'Loading...' : 'Choose Plan & Upgrade'}
           </Button>
@@ -451,18 +471,19 @@ export default function SettingsTab({
             </Button>
           )}
         </div>
+        </section>
 
-        <div className="mt-8 pt-6 border-t border-slate-200">
+        <section className="rounded-2xl border border-red-200 bg-red-50/70 p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-semibold text-slate-900">Delete account</p>
-              <p className="text-sm text-slate-500">Permanently delete this account, cancel your subscription, and remove all company data.</p>
+              <p className="text-sm font-semibold text-red-900">Delete account</p>
+              <p className="text-sm text-red-700">Permanently delete this account, cancel your subscription, and remove all company data.</p>
             </div>
             <Button variant="danger" onClick={onDeleteAccount} disabled={deletingAccount}>
               {deletingAccount ? 'Deleting...' : 'Delete account'}
             </Button>
           </div>
-        </div>
+        </section>
       </Card>
     </div>
   );
