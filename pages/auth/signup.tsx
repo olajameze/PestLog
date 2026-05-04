@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/router';
@@ -9,7 +10,39 @@ import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
 import { authCallbackUrl } from '../../lib/authRedirect';
 
-export default function SignUp() {
+export type SignUpPageProps = {
+  initialRole: 'admin' | 'technician';
+  initialInviteEmail: string;
+};
+
+function firstQueryValue(value: string | string[] | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export const getServerSideProps: GetServerSideProps<SignUpPageProps> = async (context) => {
+  const roleParam = firstQueryValue(context.query.role);
+  const initialRole: SignUpPageProps['initialRole'] = roleParam === 'technician' ? 'technician' : 'admin';
+
+  let initialInviteEmail = '';
+  const emailParam = firstQueryValue(context.query.email);
+  if (emailParam?.trim()) {
+    try {
+      initialInviteEmail = decodeURIComponent(emailParam.trim());
+    } catch {
+      initialInviteEmail = emailParam.trim();
+    }
+  }
+
+  return {
+    props: {
+      initialRole,
+      initialInviteEmail,
+    },
+  };
+};
+
+export default function SignUp({ initialRole, initialInviteEmail }: SignUpPageProps) {
   const [businessName, setBusinessName] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,10 +60,19 @@ export default function SignUp() {
   const { showToast } = useToast();
   const otpCooldownRaw = Number(process.env.NEXT_PUBLIC_OTP_RESEND_COOLDOWN_SECONDS ?? '30');
   const otpCooldownSeconds = Number.isFinite(otpCooldownRaw) && otpCooldownRaw > 0 ? otpCooldownRaw : 30;
-  const role = typeof router.query.role === 'string' ? router.query.role : 'admin';
+  const roleFromRouter =
+    router.isReady && typeof router.query.role === 'string' ? router.query.role : undefined;
+  const role =
+    roleFromRouter === 'technician' || (roleFromRouter === undefined && initialRole === 'technician')
+      ? 'technician'
+      : 'admin';
   const isTechnicianSignup = role === 'technician';
+  const emailFromRouter =
+    router.isReady && typeof router.query.email === 'string'
+      ? decodeURIComponent(router.query.email)
+      : undefined;
   const prefilledInviteEmail =
-    typeof router.query.email === 'string' ? decodeURIComponent(router.query.email) : '';
+    emailFromRouter !== undefined ? emailFromRouter : initialInviteEmail;
   const resolvedEmail = isTechnicianSignup && prefilledInviteEmail ? prefilledInviteEmail : email;
 
   useEffect(() => {

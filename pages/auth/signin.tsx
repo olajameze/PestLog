@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'next/router';
@@ -9,11 +10,55 @@ import PasswordField from '../../components/ui/PasswordField';
 import { useToast } from '../../components/ui/ToastProvider';
 import { authCallbackUrl } from '../../lib/authRedirect';
 
-export default function SignIn() {
+export type SignInPageProps = {
+  initialRole: 'admin' | 'technician';
+  initialInviteEmail: string;
+};
+
+function firstQueryValue(value: string | string[] | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export const getServerSideProps: GetServerSideProps<SignInPageProps> = async (context) => {
+  const roleParam = firstQueryValue(context.query.role);
+  const initialRole: SignInPageProps['initialRole'] = roleParam === 'technician' ? 'technician' : 'admin';
+
+  let initialInviteEmail = '';
+  const emailParam = firstQueryValue(context.query.email);
+  if (emailParam?.trim()) {
+    try {
+      initialInviteEmail = decodeURIComponent(emailParam.trim());
+    } catch {
+      initialInviteEmail = emailParam.trim();
+    }
+  }
+
+  return {
+    props: {
+      initialRole,
+      initialInviteEmail,
+    },
+  };
+};
+
+export default function SignIn({ initialRole, initialInviteEmail }: SignInPageProps) {
   const router = useRouter();
-  const role = typeof router.query.role === 'string' ? router.query.role : 'admin';
+  const roleFromRouter =
+    router.isReady && typeof router.query.role === 'string' ? router.query.role : undefined;
+  const role =
+    roleFromRouter === 'technician' || (roleFromRouter === undefined && initialRole === 'technician')
+      ? 'technician'
+      : 'admin';
+
+  const emailFromRouter =
+    router.isReady && typeof router.query.email === 'string'
+      ? decodeURIComponent(router.query.email)
+      : undefined;
+  const inviteEmail =
+    emailFromRouter !== undefined ? emailFromRouter : initialInviteEmail;
+
   const isTechnicianFlow = role === 'technician';
-  const inviteEmail = typeof router.query.email === 'string' ? decodeURIComponent(router.query.email) : '';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -165,7 +210,10 @@ export default function SignIn() {
         {isTechnicianFlow ? (
           <>
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-              Technician login uses one-time passcode only. Password sign-in is disabled for technicians.
+              <p className="m-0">Technician login uses one-time passcode only. Password sign-in is disabled for technicians.</p>
+              <p className="mt-2 mb-0">
+                On this device you stay signed in until you choose sign out; you&apos;ll only need a new code when starting a fresh sign-in (new device or after signing out).
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <Button
