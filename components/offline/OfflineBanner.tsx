@@ -6,7 +6,7 @@ export default function OfflineBanner() {
   const router = useRouter();
   const { isOnline, queueStats } = useOfflineQueue();
   const hiddenRoutes =
-    router.pathname === '/' ||
+    router.pathname === '/home' ||
     router.pathname.startsWith('/auth') ||
     router.pathname === '/contact' ||
     router.pathname === '/privacy' ||

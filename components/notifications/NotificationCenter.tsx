@@ -16,7 +16,7 @@ export default function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const isHiddenRoute =
-    router.pathname === '/' ||
+    router.pathname === '/home' ||
     router.pathname.startsWith('/auth') ||
     router.pathname === '/contact' ||
     router.pathname === '/privacy' ||

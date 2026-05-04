@@ -14,7 +14,7 @@ export default function AuthLayout({
     <div className="min-h-screen bg-offwhite">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex min-h-14 w-full max-w-6xl items-center justify-between gap-3 px-4 py-2 sm:px-6">
-          <Link href="/" className="flex items-center gap-2 text-2xl font-semibold text-navy sm:text-3xl">
+          <Link href="/auth/signin" className="flex items-center gap-2 text-2xl font-semibold text-navy sm:text-3xl">
             <Image
               src="/pest-trace.png"
               alt="Pest Trace logo"
@@ -40,8 +40,8 @@ export default function AuthLayout({
           <p className="break-words text-base text-zinc-600 sm:text-xl">{subtitle}</p>
         </div>
         <div className="w-full max-w-md min-w-0 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">{children}</div>
-        <Link href="/" className="mt-8 text-sm text-zinc-600 transition hover:text-navy">
-          ← Back to home
+        <Link href="/home" className="mt-8 text-sm text-zinc-600 transition hover:text-navy">
+          ← Product information
         </Link>
       </main>
     </div>

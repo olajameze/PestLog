@@ -1,11 +1,18 @@
 // Enhanced Service Worker for Pest Trace with Background Sync
-const CACHE_NAME = 'pesttrace-v3';
+const CACHE_NAME = 'pesttrace-v4';
 const urlsToCache = [
-  '/',
+  '/auth/signin',
+  '/home',
   '/offline.html',
   '/_offline',
   '/manifest.json',
 ];
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -1365,7 +1365,7 @@ export default function ReportsPage() {
       <div className="flex min-w-0">
         <Sidebar role={isOwner ? 'owner' : 'technician'} activeTab="reports" onSignOut={async () => {
           if (isPreviewMode) {
-            router.push('/');
+            router.push('/auth/signin');
             return;
           }
           await supabase.auth.signOut();

@@ -18,7 +18,24 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') return;
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
-    void navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      void navigator.serviceWorker.getRegistration().then((reg) => reg?.update());
+    };
+
+    void navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        void reg.update();
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return reg;
+      })
+      .catch(() => null);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   return (

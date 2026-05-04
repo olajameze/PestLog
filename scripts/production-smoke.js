@@ -4,7 +4,7 @@
  */
 const base = (process.env.BASE_URL || 'https://www.pesttrace.com').replace(/\/$/, '');
 
-const paths = ['/', '/auth/signin', '/auth/signup', '/upgrade', '/reports', '/api/health'];
+const paths = ['/', '/home', '/auth/signin', '/auth/signup', '/upgrade', '/reports', '/api/health'];
 
 async function check(path) {
   const url = `${base}${path}`;

@@ -621,11 +621,11 @@ export default function Dashboard() {
 
   const handleSignOut = async () => {
     if (isPreviewMode) {
-      router.push('/');
+      router.push('/auth/signin');
       return;
     }
     await supabase.auth.signOut();
-    router.push('/');
+    router.push('/auth/signin');
   };
 
   const handleSubscribe = async (plan: 'pro' | 'business' | 'enterprise') => {

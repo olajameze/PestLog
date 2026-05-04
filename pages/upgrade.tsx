@@ -290,7 +290,7 @@ export default function UpgradePage() {
                 });
                 if (res.ok) {
                   showToast('Deleted', 'Account, data, and subscription permanently removed.', 'success');
-                  router.push('/');
+                  router.push('/auth/signin');
                 } else {
                   const err = await res.json();
                   showToast('Failed', err.error || 'Delete failed', 'error');

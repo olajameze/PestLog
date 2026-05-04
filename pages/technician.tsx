@@ -816,7 +816,7 @@ export default function TechnicianPage() {
       <div className="flex min-w-0">
         <Sidebar role="technician" activeTab="logbook" onSignOut={async () => {
           if (isPreviewMode) {
-            router.push('/');
+            router.push('/auth/signin');
             return;
           }
           await supabase.auth.signOut();

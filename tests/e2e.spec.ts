@@ -5,8 +5,8 @@ test.describe('Pest Trace E2E smoke', () => {
     page,
     request,
   }) => {
-    await page.goto('/');
-    await expect(page.locator('body')).toBeVisible();
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/auth\/signin/);
 
     await page.goto('/auth/signin');
     await expect(page.locator('body')).toBeVisible();

@@ -78,7 +78,8 @@ function waitForServer(url, timeout = 30000) {
 
 async function runHttpChecks(baseUrl) {
   const checks = [
-    { path: '/', method: 'GET', expected: 200 },
+    { path: '/', method: 'GET', expected: [307, 308] },
+    { path: '/home', method: 'GET', expected: 200 },
     { path: '/auth/signin', method: 'GET', expected: 200 },
     { path: '/auth/signup', method: 'GET', expected: 200 },
     { path: '/upgrade', method: 'GET', expected: 200 },
