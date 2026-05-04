@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { authCallbackUrl } from '../../../lib/authRedirect';
 import { sendVerificationActionEmail, sendVerificationReminderEmail } from '../../../lib/email';
 
 function validEmail(email: string) {
@@ -39,7 +40,11 @@ async function resendSupabaseSignupEmail(email: string): Promise<{ ok: boolean; 
 async function generateSupabaseSignupLink(email: string): Promise<{ ok: boolean; actionLink?: string; message?: string }> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const redirectTo = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || '').replace(
+    /\/$/,
+    ''
+  );
+  const redirectTo = baseUrl ? authCallbackUrl(baseUrl, '/dashboard') : undefined;
   if (!supabaseUrl || !serviceKey) {
     return { ok: false, message: 'Auth service is not configured.' };
   }
@@ -54,7 +59,7 @@ async function generateSupabaseSignupLink(email: string): Promise<{ ok: boolean;
     body: JSON.stringify({
       type: 'signup',
       email,
-      options: redirectTo ? { redirectTo } : undefined,
+      ...(redirectTo ? { redirect_to: redirectTo } : {}),
     }),
   });
 

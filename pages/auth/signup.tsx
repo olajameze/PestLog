@@ -7,6 +7,7 @@ import FormInput from '../../components/ui/FormInput';
 import PasswordField from '../../components/ui/PasswordField';
 import Button from '../../components/ui/Button';
 import { useToast } from '../../components/ui/ToastProvider';
+import { authCallbackUrl } from '../../lib/authRedirect';
 
 export default function SignUp() {
   const [businessName, setBusinessName] = useState('');
@@ -101,7 +102,7 @@ export default function SignUp() {
       email: resolvedEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        emailRedirectTo: authCallbackUrl(window.location.origin, '/dashboard'),
         data: {
           role: 'admin',
           businessName,

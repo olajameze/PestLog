@@ -55,14 +55,23 @@ export default function VerifyPage() {
   };
 
   return (
-    <AuthLayout title="Verify your email" subtitle="Check your inbox to confirm your account.">
+    <AuthLayout
+      title="Verify your email"
+      subtitle="Check your inbox — use the confirmation link or your one-time code on the sign-up page."
+    >
       <div className="space-y-6">
         <p className="text-sm text-zinc-600">
-          A verification email has been sent to <strong>{email.trim() ? email.trim() : 'your email'}</strong>.
-          Please click the link in that email to complete sign up.
+          We sent a message to <strong>{email.trim() ? email.trim() : 'your email'}</strong>.{' '}
+          <strong>Open the link</strong> in that email — you should land in the app and go to your dashboard. If you are
+          finishing <strong>business sign-up</strong>, you may also have a <strong>second email</strong> with a{' '}
+          <strong>one-time code</strong>: enter it on{' '}
+          <Link href="/auth/signup" className="font-semibold text-primary-600 hover:text-primary-700">
+            Sign up
+          </Link>{' '}
+          to complete registration.
         </p>
         <div className="rounded-2xl border border-zinc-200 bg-slate-50 p-5">
-          <p className="text-sm text-zinc-700">Wrong address or no email in the link?</p>
+          <p className="text-sm text-zinc-700">Wrong address or need a new link?</p>
           <p className="mt-2 text-sm text-zinc-600">Enter the email you registered with, then resend the verification message.</p>
           <div className="mt-4">
             <FormInput

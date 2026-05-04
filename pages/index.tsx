@@ -133,7 +133,7 @@ export default function Home() {
           <a href="#features" className="hover:text-slate-900 transition">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition">Pricing</a>
         </div>
-        <div className="ml-auto flex w-full max-w-full flex-col items-end gap-1 sm:w-auto">
+        <div className="ml-auto flex w-full max-w-full flex-col items-stretch gap-1.5 sm:w-auto sm:max-w-none sm:items-end">
           <div className="flex w-full flex-wrap justify-end gap-2 sm:flex-nowrap">
             <Link
               href="/auth/signin?role=admin"
@@ -150,12 +150,12 @@ export default function Home() {
               Technician Login
             </Link>
           </div>
-          <p className="hidden max-w-md text-right text-[11px] leading-snug text-slate-500 sm:block">
+          <p className="hidden max-w-[min(100%,20rem)] text-balance text-right text-[11px] leading-snug text-slate-500 sm:block">
             <span className="font-semibold text-slate-600">Business</span> — owner or office admin, email + password.
             <span className="mx-1.5 text-slate-300">|</span>
             <span className="font-semibold text-slate-600">Technician</span> — invited field staff, one-time email code.
           </p>
-          <p className="px-1 text-center text-[11px] leading-snug text-slate-500 sm:hidden w-full">
+          <p className="w-full max-w-[min(100%,20rem)] self-center px-1 text-center text-[11px] leading-snug text-balance text-slate-500 break-words sm:hidden">
             <span className="font-semibold text-slate-600">Business</span>: email + password.
             {' '}
             <span className="font-semibold text-slate-600">Technician</span>: one-time email code.
