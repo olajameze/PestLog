@@ -13,6 +13,23 @@ Add at least:
 
 No matter which email template you edit, links in those emails only work if their **`redirect_to` / post-click URL** matches an entry in **Redirect URLs**.
 
+### Technician OTP (`signInWithOtp`) and magic-link fallback
+
+The technician sign-in page ([`signin`](../pages/auth/signin.tsx)) passes **`emailRedirectTo`** to **`/auth/callback?next=/technician`**, so if Supabase sends a **magic link** instead of only a code, clicking the link completes the session and lands on the technician workspace. Ensure these URLs are allowlisted:
+
+| Environment | Add to Redirect URLs |
+|-------------|----------------------|
+| Production | `https://www.pesttrace.com/auth/callback` (and your exact production origin if different) |
+| Local | `http://localhost:3000/auth/callback` |
+
+If your Supabase version supports wildcards, `https://your-domain/**` can cover query strings on `/auth/callback`. See [Supabase redirect URL docs](https://supabase.com/docs/guides/auth/redirect-urls).
+
+**Dashboard checklist**
+
+1. **Authentication → Providers → Email** — enable **Email OTP** / email one-time passwords if your project shows the option, so Supabase emails include a **numeric code** for [`verifyOtp`](../pages/auth/signin.tsx) (`type: 'email'`). If OTP is off, Supabase may send a **magic link** only; the template should still include `{{ .Token }}` for users who type the code (see the table below).
+2. **Authentication → URL configuration** — set **Site URL** to your live app origin (e.g. `https://www.pesttrace.com`).
+3. **Redirect URLs** — include every origin you use plus `/auth/callback` paths as above.
+
 The app sends users to [`/auth/callback`](../pages/auth/callback.tsx) after they click the confirmation link from **`signUp`** (see [`authCallbackUrl`](../lib/authRedirect.ts) for `emailRedirectTo`). The callback reads the session from the URL, then redirects to `/dashboard` (or a safe `next` query param).
 
 **Important:** `NEXT_PUBLIC_SITE_URL` / `NEXT_PUBLIC_APP_URL` in [.env.local](../.env.example) must match the origin you use in the browser. If they point at production while you test on `localhost`, generated links in [`send-verification`](../pages/api/auth/send-verification.ts) will open the wrong site.

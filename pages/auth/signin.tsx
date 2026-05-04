@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import FormInput from '../../components/ui/FormInput';
 import PasswordField from '../../components/ui/PasswordField';
 import { useToast } from '../../components/ui/ToastProvider';
+import { authCallbackUrl } from '../../lib/authRedirect';
 
 export default function SignIn() {
   const router = useRouter();
@@ -89,6 +90,7 @@ export default function SignIn() {
       email: normalizedEmail,
       options: {
         shouldCreateUser: false,
+        emailRedirectTo: authCallbackUrl(window.location.origin, '/technician'),
       },
     });
 

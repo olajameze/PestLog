@@ -49,6 +49,7 @@ export default function SignUp() {
       email: normalizedEmail,
       options: {
         shouldCreateUser: false,
+        emailRedirectTo: authCallbackUrl(window.location.origin, '/dashboard'),
       },
     });
 

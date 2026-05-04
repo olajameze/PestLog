@@ -225,14 +225,14 @@ export async function sendTechnicianInviteEmail(params: {
   const inner = `
     <p>Hi ${safeName},</p>
     <p>You were invited to join <strong>${safeCompany}</strong> on Pest Trace as a technician.</p>
-    <p>Use the button below to create your technician password and activate your account.</p>
+    <p>Use the button below to complete technician setup and activate your account.</p>
     <p style="text-align:center;">
       <a href="${inviteLink}" style="background-color:#10b981;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;display:inline-block;">
-        Set up technician account
+        Complete technician setup
       </a>
     </p>
-    <p>After setup, sign in any time at <a href="${signinLink}">${signinLink}</a>.</p>
-    <p>If your account already exists, use “Forgot password” on the technician sign-in page.</p>
+    <p>After setup, sign in any time at <a href="${signinLink}">${signinLink}</a> — tap <strong>Send code</strong> and enter the one-time code from your email (technicians sign in with a code, not a password).</p>
+    <p>If your account already exists, use that technician sign-in link and request a new code.</p>
     <p>Need help? Contact <a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>.</p>
     <p>Thanks,<br />The Pest Trace team</p>
   `;
@@ -241,13 +241,14 @@ export async function sendTechnicianInviteEmail(params: {
 
 You were invited to join ${params.companyName ?? 'your team'} on Pest Trace as a technician.
 
-Set up your technician account:
+Complete technician setup:
 ${inviteLink}
 
 After setup, sign in at:
 ${signinLink}
+Tap Send code and enter the one-time code from your email.
 
-If your account already exists, use "Forgot password" on technician sign-in.
+If your account already exists, open the technician sign-in link and request a new code.
 
 Need help? Contact ${supportEmail}.
 
