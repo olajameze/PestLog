@@ -11,6 +11,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "migrate": "prisma migrate deploy",
+    "db:sync-company-columns": "prisma db execute --file prisma/sql/sync_company_columns.sql",
     "smoke-test": "node scripts/run-smoke-test.js",
     "smoke:production": "node scripts/production-smoke.js",
     "load:health": "node scripts/concurrent-health-smoke.js",

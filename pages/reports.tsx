@@ -474,9 +474,20 @@ export default function ReportsPage() {
           const techRes = await fetch('/api/technicians', {
             headers: { Authorization: `Bearer ${session.access_token}` },
           });
-          const techData = await techRes.json();
-          setTechnicians(techData);
-          setSelectedTechnician(techData[0]?.id ?? '');
+          const techData: unknown = await techRes.json().catch(() => null);
+          const techList = Array.isArray(techData) ? techData : [];
+          setTechnicians(techList);
+          setSelectedTechnician(techList[0]?.id ?? '');
+          if (!techRes.ok) {
+            const msg =
+              techData &&
+              typeof techData === 'object' &&
+              'error' in techData &&
+              typeof (techData as { error?: string }).error === 'string'
+                ? (techData as { error: string }).error
+                : 'Unable to load technicians.';
+            showToast('Load failed', msg, 'error');
+          }
           setIsOwner(true);
           setLoading(false);
           return;
@@ -522,7 +533,7 @@ export default function ReportsPage() {
     };
 
     loadUserData();
-  }, [isPreviewMode, router]);
+  }, [isPreviewMode, router, showToast]);
 
   useEffect(() => {
     if (!router.isReady) return;

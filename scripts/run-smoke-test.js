@@ -83,6 +83,7 @@ async function runHttpChecks(baseUrl) {
     { path: '/auth/signup', method: 'GET', expected: 200 },
     { path: '/upgrade', method: 'GET', expected: 200 },
     { path: '/api/subscription', method: 'GET', expected: [401, 400] },
+    { path: '/api/technicians', method: 'GET', expected: [401, 400] },
     { path: '/api/create-checkout-session', method: 'GET', expected: [401, 405] },
     { path: '/api/technicians/certifications', method: 'GET', expected: [401, 405] },
     { path: '/api/reports', method: 'GET', expected: [401, 405] },
