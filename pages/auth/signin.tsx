@@ -201,7 +201,7 @@ export default function SignIn({ initialRole, initialInviteEmail }: SignInPagePr
 
   return (
     <AuthLayout
-      title={isTechnicianFlow ? 'Technician sign in' : 'Business admin sign in'}
+      title={isTechnicianFlow ? 'Technician sign in' : 'Business login'}
       subtitle={
         isTechnicianFlow
           ? 'Sign in to access technician logbook and reports.'
@@ -301,7 +301,7 @@ export default function SignIn({ initialRole, initialInviteEmail }: SignInPagePr
             <>
               Technician access: use the exact email your admin added in the Technicians tab.{' '}
               <Link href="/auth/signin?role=admin" className="font-semibold text-primary-700 hover:text-primary-800">
-                Admin sign in
+                Business login
               </Link>
             </>
           ) : (
