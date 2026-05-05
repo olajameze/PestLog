@@ -39,7 +39,7 @@ export const pricingPlans = [
   {
     name: '🟢 Business',
     bestFor: 'Growing teams that need revenue and performance visibility',
-    price: '40',
+    price: '50',
     cadence: '/month',
     features: [...MARKETING_PLAN_FEATURES.business],
     cta: 'Start Free Trial',
@@ -49,7 +49,7 @@ export const pricingPlans = [
   {
     name: '🔵 Enterprise',
     bestFor: 'Larger fleets, multi-site, and stricter governance',
-    price: '340',
+    price: '100',
     cadence: '/month',
     features: [...MARKETING_PLAN_FEATURES.enterprise],
     cta: 'Start Free Trial',

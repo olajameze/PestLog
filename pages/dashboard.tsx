@@ -216,7 +216,7 @@ const PlanModal = ({
         {/* Business */}
         <div className="flex h-full flex-col rounded-xl border-2 border-gray-200 p-6 transition-all hover:border-gray-300 hover:shadow-lg">
           <h3 className="text-xl font-bold text-navy mb-2">Business</h3>
-          <div className="text-3xl font-bold text-primary-600 mb-4">£40<span className="text-xl">/month</span></div>
+          <div className="text-3xl font-bold text-primary-600 mb-4">£50<span className="text-xl">/month</span></div>
           <ul className="mb-6 space-y-2 text-sm text-zinc-600">
             <li>• Everything in Pro</li>
             <li>• Multi-company support</li>
@@ -232,13 +232,13 @@ const PlanModal = ({
             }}
             className="mt-auto w-full whitespace-normal text-center leading-tight"
           >
-            Choose Business (£40/mo)
+            Choose Business (£50/mo)
           </Button>
         </div>
         {/* Enterprise */}
         <div className="flex h-full flex-col rounded-xl border-2 border-amber-200 p-6 transition-all hover:border-amber-300 hover:shadow-lg">
           <h3 className="text-xl font-bold text-navy mb-2">Enterprise</h3>
-          <div className="mb-4 text-3xl font-bold text-primary-600">£340.00 GBP</div>
+          <div className="mb-4 text-3xl font-bold text-primary-600">£100<span className="text-xl">/month</span></div>
           <ul className="mb-6 space-y-2 text-sm text-zinc-600">
             <li>• Customer Lifetime Value (CLV) tracking with CLV/CAC ratio</li>
             <li>• Retention &amp; Churn analytics (Retention Rate + cancellation reasons)</li>
@@ -252,7 +252,7 @@ const PlanModal = ({
             }}
             className="mt-auto w-full whitespace-normal text-center leading-tight"
           >
-            Choose Enterprise (£340/mo)
+            Choose Enterprise (£100/mo)
           </Button>
         </div>
       </div>

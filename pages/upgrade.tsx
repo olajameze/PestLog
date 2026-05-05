@@ -227,7 +227,7 @@ export default function UpgradePage() {
 
           <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm">
             <h2 className="text-xl font-bold text-navy">🟢 Business</h2>
-            <p className="mt-2 text-2xl font-bold text-primary-600">£40<span className="text-sm font-medium text-zinc-500">/month</span></p>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£50<span className="text-sm font-medium text-zinc-500">/month</span></p>
             <p className="mt-2 text-xs font-medium text-zinc-500">Growing teams that need revenue and performance visibility</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
               {MARKETING_PLAN_FEATURES.business.map((line) => (
@@ -245,7 +245,7 @@ export default function UpgradePage() {
 
           <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm ring-1 ring-amber-100">
             <h2 className="text-xl font-bold text-navy">🔵 Enterprise</h2>
-            <p className="mt-2 text-2xl font-bold text-primary-600">£340.00 GBP</p>
+            <p className="mt-2 text-2xl font-bold text-primary-600">£100<span className="text-sm font-medium text-zinc-500">/month</span></p>
             <p className="mt-1 break-words text-xs text-zinc-500">Requires <code className="rounded bg-zinc-100 px-1">STRIPE_PRICE_ID_ENTERPRISE</code> in environment.</p>
             <p className="mt-2 text-xs font-medium text-zinc-500">Larger fleets, multi-site, and stricter governance</p>
             <ul className="mt-4 space-y-2 text-sm text-zinc-600">
