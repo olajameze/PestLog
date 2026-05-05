@@ -299,12 +299,6 @@ export default function SignIn({ initialRole, initialInviteEmail }: SignInPagePr
             </>
           )}
         </div>
-        <div className="text-center text-xs text-zinc-500">
-          Platform operator?{' '}
-          <Link href="/auth/super-admin" className="font-semibold text-primary-600 hover:text-primary-700">
-            Super admin login
-          </Link>
-        </div>
       </form>
     </AuthLayout>
   );
