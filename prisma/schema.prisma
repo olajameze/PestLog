@@ -36,6 +36,21 @@ model Company {
   @@schema("public")
 }
 
+model PushSubscription {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  email     String   @map("email")
+  endpoint  String   @unique @map("endpoint")
+  p256dh    String   @map("p256dh")
+  auth      String   @map("auth")
+  userAgent String?  @map("userAgent")
+  createdAt DateTime @default(now()) @map("createdAt") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updatedAt") @db.Timestamptz(6)
+
+  @@index([email], map: "PushSubscription_email_idx")
+  @@map("PushSubscription")
+  @@schema("public")
+}
+
 model Technician {
   id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   name                    String                   @map("name")

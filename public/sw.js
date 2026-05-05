@@ -1,5 +1,5 @@
 // Enhanced Service Worker for Pest Trace with Background Sync
-const CACHE_NAME = 'pesttrace-v4';
+const CACHE_NAME = 'pesttrace-v5';
 const urlsToCache = [
   '/auth/signin',
   '/home',
@@ -95,13 +95,53 @@ async function syncOfflineQueue() {
   }
 }
 
-// Push notifications (existing)
+// Push notifications (Web Push / PWA — works on Android Chrome, desktop browsers, iOS 16.4+ when installed)
 self.addEventListener('push', (event) => {
-  const data = event.data?.json();
+  let payload = {
+    title: 'Pest Trace',
+    body: 'You have a new notification',
+    url: '/dashboard',
+    tag: 'pesttrace-notification',
+  };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      if (parsed && typeof parsed === 'object') {
+        payload = { ...payload, ...parsed };
+      }
+    }
+  } catch (_) {
+    try {
+      const text = event.data?.text();
+      if (text) payload = { ...payload, body: text };
+    } catch (_) {}
+  }
   event.waitUntil(
-    self.registration.showNotification(data?.title || 'Pest Trace', {
-      body: data?.body || 'You have a new notification',
-      icon: '/icon-192.png',
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/pest-trace.png',
+      badge: '/pest-trace.png',
+      tag: payload.tag,
+      data: { url: payload.url || '/dashboard' },
     })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/dashboard';
+  const url = new URL(targetUrl, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(url);
+      }
+    }),
   );
 });

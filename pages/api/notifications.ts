@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { AppNotification, parseNotifications } from '../../lib/notifications';
+import { getCompanyRecipientEmailsNormalized } from '../../lib/push/companyRecipients';
+import { sendWebPushToEmails } from '../../lib/push/sendWebPush';
 
 function withNotificationPrefs(raw: unknown, notifications: AppNotification[]) {
   const base = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
@@ -98,6 +100,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           notificationPreferences: withNotificationPrefs(company.notificationPreferences, next) as Prisma.InputJsonValue,
         },
       });
+      void getCompanyRecipientEmailsNormalized(company.id)
+        .then((emails) =>
+          sendWebPushToEmails(emails, {
+            title: nextItem.title,
+            body: nextItem.message || 'Open Pest Trace for details.',
+            url: '/dashboard',
+            tag: `inapp-${nextItem.id}`,
+          }),
+        )
+        .catch((e) => console.error('notifications web push', e));
       return res.status(201).json(nextItem);
     }
     return res.status(400).json({ error: 'Unsupported action.' });

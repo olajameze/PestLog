@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
+import WebPushSettings from '../push/WebPushSettings';
 
 type NotificationItem = {
   id: string;
@@ -108,6 +109,9 @@ export default function NotificationCenter() {
                 </button>
               ))
             )}
+          </div>
+          <div className="mt-3 border-t border-slate-200 pt-3">
+            <WebPushSettings />
           </div>
         </div>
       ) : null}

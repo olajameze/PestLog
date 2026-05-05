@@ -10,6 +10,8 @@ import {
   parseEnterpriseSettings,
 } from '../../lib/enterpriseFeatures';
 import { parseNotifications } from '../../lib/notifications';
+import { getCompanyRecipientEmailsNormalized } from '../../lib/push/companyRecipients';
+import { sendWebPushToEmails } from '../../lib/push/sendWebPush';
 import { canUseEnterprisePreview } from '../../lib/trialEnterprisePreview';
 
 async function resolveOwnerCompanyForUser(token: string) {
@@ -110,9 +112,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existing = parseNotifications(company.notificationPreferences);
     const bySource = new Map(existing.map((item) => [item.sourceId, item]));
     let changed = false;
+    const newAlertsForPush: { title: string }[] = [];
     for (const alert of data.urgentAlerts) {
       const sourceId = `urgent:${alert.id}`;
       if (bySource.has(sourceId)) continue;
+      newAlertsForPush.push({ title: alert.title });
       existing.unshift({
         id: `${Date.now()}-${Math.random()}`,
         title: alert.title,
@@ -138,6 +142,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         },
       });
+
+      if (newAlertsForPush.length > 0) {
+        void getCompanyRecipientEmailsNormalized(company.id)
+          .then((emails) => {
+            const title = 'New Pest Trace alert';
+            const body =
+              newAlertsForPush.length === 1
+                ? newAlertsForPush[0].title
+                : `${newAlertsForPush.length} new alerts — open the app for details`;
+            return sendWebPushToEmails(emails, { title, body, url: '/dashboard', tag: 'dashboard-alerts' });
+          })
+          .catch((e) => console.error('dashboard-insights web push', e));
+      }
     }
     return res.status(200).json(data);
   } catch (error) {

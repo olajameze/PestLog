@@ -3,6 +3,7 @@ import { getClientSupportEmail } from '../../lib/supportEmail';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import FormInput from '../ui/FormInput';
+import WebPushSettings from '../push/WebPushSettings';
 
 type NotificationPreferences = {
   trialExpiry: boolean;
@@ -298,6 +299,7 @@ export default function SettingsTab({
               <span className="text-sm text-slate-700">Weekly digest email</span>
             </label>
           </div>
+          <WebPushSettings />
         </section>
 
         {subscription?.plan === 'enterprise' ? (

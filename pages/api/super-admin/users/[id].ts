@@ -77,6 +77,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    if (authEmail) {
+      await prisma.pushSubscription.deleteMany({
+        where: { email: authEmail.trim().toLowerCase() },
+      });
+    }
+
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (error) return res.status(500).json({ error: error.message });
     await writeAuditLog({

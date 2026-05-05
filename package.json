@@ -12,6 +12,7 @@
     "postinstall": "prisma generate",
     "migrate": "prisma migrate deploy",
     "db:sync-company-columns": "prisma db execute --file prisma/sql/sync_company_columns.sql",
+    "db:sync-push-subscriptions": "prisma db execute --file prisma/sql/sync_push_subscription.sql",
     "smoke-test": "node scripts/run-smoke-test.js",
     "smoke:production": "node scripts/production-smoke.js",
     "load:health": "node scripts/concurrent-health-smoke.js",
@@ -35,7 +36,8 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.0",
-    "stripe": "^22.0.0"
+    "stripe": "^22.0.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -44,6 +46,7 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.27",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",

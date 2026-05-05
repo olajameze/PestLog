@@ -51,6 +51,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const techList = await prisma.technician.findMany({
+      where: { companyId: company.id },
+      select: { email: true },
+    });
+    const pushEmails = [
+      company.email.trim().toLowerCase(),
+      ...techList.map((t) => t.email.trim().toLowerCase()),
+    ];
+    await prisma.pushSubscription.deleteMany({
+      where: { email: { in: [...new Set(pushEmails)] } },
+    });
+
     if (company.stripeCustomerId) {
       const subResult = await cancelAllSubscriptionsForStripeCustomer(company.stripeCustomerId);
       if (!subResult.ok) {
