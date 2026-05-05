@@ -1,5 +1,7 @@
 import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import { Analytics } from '@vercel/analytics/react';
 import { Inter } from 'next/font/google';
 import dynamic from 'next/dynamic';
 import '../styles/globals.css';
@@ -15,6 +17,8 @@ const inter = Inter({
 });
 
 export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
+
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') return;
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -48,6 +52,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <OfflineBanner />
       <NotificationCenter />
       <PWAInstallPrompt />
+      <Analytics path={router.asPath} route={router.pathname} />
     </>
   );
 }
