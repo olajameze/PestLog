@@ -131,6 +131,20 @@ export default function SignIn({ initialRole, initialInviteEmail }: SignInPagePr
     setError('');
     setSuccessMessage('');
 
+    const eligibilityRes = await fetch('/api/auth/technician-otp-eligibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail }),
+    });
+    const eligibilityBody = (await eligibilityRes.json().catch(() => ({}))) as { error?: string };
+    if (!eligibilityRes.ok) {
+      const message = eligibilityBody.error || 'Unable to send sign-in code.';
+      setError(message);
+      showToast('Sign in not available', message, 'error');
+      setSendingOtp(false);
+      return;
+    }
+
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {

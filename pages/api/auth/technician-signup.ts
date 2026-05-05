@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { TECHNICIAN_EMAIL_NOT_ON_ROSTER } from '../../../lib/auth/technicianGate';
 import { prisma } from '../../../lib/prisma';
 import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 
@@ -27,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
   if (!techRecord) {
     return res.status(403).json({
-      error: 'This email is not registered as a technician. Ask your business admin to add you first.',
+      error: TECHNICIAN_EMAIL_NOT_ON_ROSTER,
     });
   }
 
