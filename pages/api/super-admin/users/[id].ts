@@ -1,7 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { writeAuditLog } from '../../../../lib/audit/log';
+import { prisma } from '../../../../lib/prisma';
+import { cancelAllSubscriptionsForStripeCustomer } from '../../../../lib/stripe/cancelCustomerSubscriptions';
 import { getSupabaseAdmin } from '../../../../lib/supabase-admin';
 import { getSuperAdminCookieName, verifySuperAdminToken } from '../../../../lib/superAdminAuth';
-import { writeAuditLog } from '../../../../lib/audit/log';
 
 type ActionBody =
   | { action: 'disable' }
@@ -56,6 +58,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (isProtectedUser) {
       return res.status(403).json({ error: 'Protected super admin account cannot be deleted.' });
     }
+
+    const authEmail = (currentUser.data.user.email ?? '').trim();
+    let stripeSubscriptionsCancelled: number | undefined;
+    if (authEmail) {
+      const company = await prisma.company.findFirst({
+        where: { email: { equals: authEmail, mode: 'insensitive' } },
+        select: { stripeCustomerId: true },
+      });
+      if (company?.stripeCustomerId) {
+        const subResult = await cancelAllSubscriptionsForStripeCustomer(company.stripeCustomerId);
+        if (!subResult.ok) {
+          return res.status(502).json({
+            error: `Could not cancel Stripe subscription(s): ${subResult.error}. User was not deleted.`,
+          });
+        }
+        stripeSubscriptionsCancelled = subResult.cancelledCount;
+      }
+    }
+
     const { error } = await admin.auth.admin.deleteUser(userId);
     if (error) return res.status(500).json({ error: error.message });
     await writeAuditLog({
@@ -66,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       oldValues: {
         email: currentUser.data.user.email ?? '',
         role: currentUser.data.user.user_metadata?.role ?? 'unknown',
+        ...(stripeSubscriptionsCancelled !== undefined ? { stripeSubscriptionsCancelled } : {}),
       },
       ipAddress,
     });

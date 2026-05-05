@@ -1,13 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Stripe from 'stripe';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 import { sendAccountDeletionEmail } from '../../../lib/email';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+import { cancelAllSubscriptionsForStripeCustomer } from '../../../lib/stripe/cancelCustomerSubscriptions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
@@ -55,14 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Cancel Stripe subscription
     if (company.stripeCustomerId) {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: company.stripeCustomerId,
-        status: 'active',
-      });
-      for (const sub of subscriptions.data) {
-        await stripe.subscriptions.cancel(sub.id);
+      const subResult = await cancelAllSubscriptionsForStripeCustomer(company.stripeCustomerId);
+      if (!subResult.ok) {
+        return res.status(500).json({
+          error: `Failed to cancel subscription: ${subResult.error}`,
+        });
       }
     }
 
