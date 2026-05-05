@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Linkedin } from 'lucide-react';
 import { getClientSupportEmail } from '../../lib/supportEmail';
 
 export default function LandingFooter() {
@@ -12,6 +13,15 @@ export default function LandingFooter() {
           <p className="mt-3 max-w-sm text-sm leading-6 text-slate-400">
             A modern pest control compliance platform for technicians and teams.
           </p>
+          <a
+            href="https://www.linkedin.com/company/pesttrace"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex rounded-md text-slate-400 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+            aria-label="Pest Trace on LinkedIn (opens in a new tab)"
+          >
+            <Linkedin className="size-6 shrink-0" aria-hidden />
+          </a>
         </div>
 
         <div className="sm:col-span-4">
