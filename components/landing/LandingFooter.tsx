@@ -14,7 +14,7 @@ export default function LandingFooter() {
           </p>
           <div className="mt-4 flex items-center gap-4">
             <a
-              href="https://www.linkedin.com/company/pesttrace"
+              href="https://www.linkedin.com/company/pesttrace/?viewAsMember=true"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex rounded-md text-slate-400 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
