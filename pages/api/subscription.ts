@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { sendUpgradeNotificationEmail } from '../../lib/email';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
 
 /** Called from the Stripe webhook when checkout activates a paid plan for a company. */
 export async function sendSubscriptionUpgradeEmail(companyId: string, plan: string): Promise<void> {
@@ -28,11 +29,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (error || !user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
+  if (!user.email) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
   if (req.method === 'GET') {
+    const authEmail = normalizeAuthEmail(user.email);
+
     // Get company and return subscription status directly from Company model
     let company = await prisma.company.findUnique({
-      where: { email: user.email! },
+      where: { email: authEmail },
       select: {
         subscriptionStatus: true,
         trialEndsAt: true,
@@ -45,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!company) {
       const technician = await prisma.technician.findFirst({
-        where: { email: user.email! },
+        where: { email: authEmail },
         include: {
           company: {
             select: {

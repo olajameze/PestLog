@@ -27,6 +27,13 @@ async function clearGraceMetadata(stripeCustomerId: string) {
   });
 }
 
+/** Persist `active` for Stripe paid states so UI matches Checkout (Stripe uses `trialing` during sub trials). */
+function subscriptionStatusForDb(stripeStatus: string): string {
+  const s = String(stripeStatus).toLowerCase();
+  if (s === 'active' || s === 'trialing') return 'active';
+  return s;
+}
+
 async function applyExpiredGracePolicy(stripeCustomerId: string, now = new Date()) {
   const company = await prisma.company.findUnique({
     where: { stripeCustomerId },
@@ -183,7 +190,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         const stripeCustomerId = subscription.customer as string;
-        const status = subscription.status;
+        const rawStatus = subscription.status;
+        const dbStatus = subscriptionStatusForDb(rawStatus);
         const plan = subscription.metadata.plan;
 
         const validPlans = ['pro', 'business', 'enterprise'] as const;
@@ -192,10 +200,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const updated = await prisma.company.updateMany({
           where: { stripeCustomerId },
           data: {
-            subscriptionStatus: status,
+            subscriptionStatus: dbStatus,
             ...(resolvedPlan && { plan: resolvedPlan }),
-            // If Stripe says the sub is active, we MUST clear our local trial restriction
-            ...(status === 'active' && {
+            // Paid subscription (including Stripe `trialing`) — clear app trial / grace noise
+            ...(dbStatus === 'active' && {
               trialEndsAt: null,
               paymentFailedAt: null,
               paymentGraceEndsAt: null,
@@ -208,7 +216,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           break;
         }
 
-        if (status !== 'active') {
+        if (dbStatus !== 'active') {
           await applyExpiredGracePolicy(stripeCustomerId);
         }
         break;

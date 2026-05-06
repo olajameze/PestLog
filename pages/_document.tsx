@@ -9,8 +9,18 @@ export default function Document() {
         <meta name="theme-color" content="#2563EB" />
         <meta name="mobile-web-app-capable" content="yes" />
 
-        {/* Web App Manifest - MUST be in head for PWA */}
-        <link rel="manifest" href="/manifest.json" />
+        {/* Web App Manifest: use canonical origin when set (avoids preview-host PWA + protected preview 401s). */}
+        <link
+          rel="manifest"
+          href={
+            (() => {
+              const base = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, '') ?? '';
+              return base && /^https?:\/\//i.test(base)
+                ? `${base}/manifest.json`
+                : '/manifest.json';
+            })()
+          }
+        />
         <link rel="canonical" href="https://pesttrace.com" />
         <meta property="og:url" content="https://pesttrace.com" />
         <meta property="og:site_name" content="Pest Trace" />

@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import Stripe from 'stripe';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
+import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 
 type Plan = 'pro' | 'business' | 'enterprise';
 
@@ -44,13 +45,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid session id' });
   }
 
+  const authEmail = normalizeAuthEmail(user.email);
+
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: { id: true, stripeCustomerId: true },
   });
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: { email: authEmail },
       select: { id: true },
     });
     if (technician) {
@@ -87,7 +90,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? session.customer
         : (session.customer as Stripe.Customer | null)?.id;
 
-    const status = subscription?.status === 'active' ? 'active' : 'active';
+    // Always mark as active after successful Checkout; Stripe may report `trialing` during price trial.
+    const status = 'active';
 
     const updated = await prisma.company.update({
       where: { id: company.id },
