@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { TECHNICIAN_EMAIL_NOT_ON_ROSTER } from '../../../lib/auth/technicianGate';
+import { TECHNICIAN_EMAIL_NOT_ON_ROSTER, technicianEmailWhere } from '../../../lib/auth/technicianGate';
 import { prisma } from '../../../lib/prisma';
 
 function validEmail(email: string) {
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const techRecord = await prisma.technician.findFirst({
-    where: { email },
+    where: technicianEmailWhere(email),
     select: { id: true },
   });
 

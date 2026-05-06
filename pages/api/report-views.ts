@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 type SavedViewFilters = {
   technicianId?: string;
@@ -46,14 +48,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user?.email) return res.status(401).json({ error: 'Unauthorized' });
 
+  const authEmail = normalizeAuthEmail(user.email);
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: { id: true, notificationPreferences: true },
   });
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: technicianEmailWhere(authEmail),
       select: { id: true },
     });
     if (technician) {

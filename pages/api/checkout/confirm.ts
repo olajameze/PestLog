@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 
 type Plan = 'pro' | 'business' | 'enterprise';
 
@@ -53,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: authEmail },
+      where: technicianEmailWhere(authEmail),
       select: { id: true },
     });
     if (technician) {

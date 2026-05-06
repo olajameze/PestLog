@@ -6,6 +6,8 @@ import { prisma } from '../../lib/prisma';
 import { AppNotification, parseNotifications } from '../../lib/notifications';
 import { getCompanyRecipientEmailsNormalized } from '../../lib/push/companyRecipients';
 import { sendWebPushToEmails } from '../../lib/push/sendWebPush';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 function withNotificationPrefs(raw: unknown, notifications: AppNotification[]) {
   const base = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
@@ -23,15 +25,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user?.email) return res.status(401).json({ error: 'Unauthorized' });
 
+  const authEmail = normalizeAuthEmail(user.email);
   const ownerCompany = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: { id: true, notificationPreferences: true },
   });
 
   let company = ownerCompany;
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: technicianEmailWhere(authEmail),
       select: {
         id: true,
         companyId: true,

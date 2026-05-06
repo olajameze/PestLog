@@ -3,7 +3,8 @@ import { randomUUID } from 'crypto';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { canAddTechnician, formatTechnicianLimit, getTechnicianLimit, normalizePlan } from '../../lib/planLimits';
-import { isDedicatedTechnicianSession, normalizeAuthEmail } from '../../lib/auth/userSession';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -28,10 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       if (!company) {
         const technician = await prisma.technician.findFirst({
-          where: { email: ownerEmail },
+          where: technicianEmailWhere(ownerEmail),
           select: { id: true },
         });
-        if (technician && isDedicatedTechnicianSession(user)) {
+        if (technician) {
           return res.status(403).json({
             error: 'Technician accounts cannot manage company technicians.',
             code: 'ROLE_TECHNICIAN',
@@ -60,10 +61,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       if (!company) {
         const technician = await prisma.technician.findFirst({
-          where: { email: ownerEmail },
+          where: technicianEmailWhere(ownerEmail),
           select: { id: true },
         });
-        if (technician && isDedicatedTechnicianSession(user)) {
+        if (technician) {
           return res.status(403).json({
             error: 'Technician accounts cannot add technicians.',
             code: 'ROLE_TECHNICIAN',
@@ -87,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const existingForCompany = await prisma.technician.findFirst({
         where: {
           companyId: company.id,
-          email,
+          ...technicianEmailWhere(email),
         },
         select: { id: true },
       });
@@ -116,10 +117,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       if (!company) {
         const technician = await prisma.technician.findFirst({
-          where: { email: ownerEmail },
+          where: technicianEmailWhere(ownerEmail),
           select: { id: true },
         });
-        if (technician && isDedicatedTechnicianSession(user)) {
+        if (technician) {
           return res.status(403).json({
             error: 'Technician accounts cannot remove technicians.',
             code: 'ROLE_TECHNICIAN',

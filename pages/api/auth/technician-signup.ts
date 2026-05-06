@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { TECHNICIAN_EMAIL_NOT_ON_ROSTER } from '../../../lib/auth/technicianGate';
+import { TECHNICIAN_EMAIL_NOT_ON_ROSTER, technicianEmailWhere } from '../../../lib/auth/technicianGate';
 import { authCallbackUrl } from '../../../lib/authRedirect';
 import { prisma } from '../../../lib/prisma';
 import { getSupabaseAdmin } from '../../../lib/supabase-admin';
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Enter a valid email address.' });
   }
   const techRecord = await prisma.technician.findFirst({
-    where: { email },
+    where: technicianEmailWhere(email),
     select: { id: true, name: true, companyId: true },
   });
   if (!techRecord) {

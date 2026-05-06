@@ -3,7 +3,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
-import { isDedicatedTechnicianSession, normalizeAuthEmail } from '../../lib/auth/userSession';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 /** Walk nested Prisma/pg-adapter errors so 23502 responses name the failing column. */
 function extractPostgresViolation(err: unknown):
@@ -101,7 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (!company) {
         const technicianWithCompany = await prisma.technician.findFirst({
-          where: { email: ownerEmail },
+          where: technicianEmailWhere(ownerEmail),
           include: {
             company: {
               select: {
@@ -124,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
           },
         });
-        if (technicianWithCompany?.company && isDedicatedTechnicianSession(user)) {
+        if (technicianWithCompany?.company) {
           company = technicianWithCompany.company;
         }
       }
@@ -172,11 +173,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Company name is required' });
       }
 
-      const technician = await prisma.technician.findFirst({
+      const existing = await prisma.company.findUnique({
         where: { email: ownerEmail },
         select: { id: true },
       });
-      if (technician && isDedicatedTechnicianSession(user)) {
+
+      const technician = await prisma.technician.findFirst({
+        where: technicianEmailWhere(ownerEmail),
+        select: { id: true },
+      });
+      if (technician && !existing) {
         return res.status(403).json({
           error: 'Technician accounts cannot create or update billing company settings.',
           code: 'ROLE_TECHNICIAN',
@@ -192,11 +198,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         defaultReportRangeDays > 0
           ? Math.round(defaultReportRangeDays)
           : 30;
-
-      const existing = await prisma.company.findUnique({
-        where: { email: ownerEmail },
-        select: { id: true },
-      });
 
       const sharedScalars = {
         name: trimmedName,
@@ -258,10 +259,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (!company) {
         const technician = await prisma.technician.findFirst({
-          where: { email: ownerEmail },
+          where: technicianEmailWhere(ownerEmail),
           select: { id: true },
         });
-        if (technician && isDedicatedTechnicianSession(user)) {
+        if (technician) {
           return res.status(403).json({
             error: 'Technician accounts cannot update owner company settings.',
             code: 'ROLE_TECHNICIAN',

@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 import { listStripePortalReturnUrlCandidates } from '../../lib/siteOrigin';
 
 function stripeReturnHostLog(returnUrl: string): string {
@@ -117,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: authEmail },
+      where: technicianEmailWhere(authEmail),
       select: { id: true },
     });
     if (technician) {

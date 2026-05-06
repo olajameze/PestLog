@@ -13,6 +13,8 @@ import { parseNotifications } from '../../lib/notifications';
 import { getCompanyRecipientEmailsNormalized } from '../../lib/push/companyRecipients';
 import { sendWebPushToEmails } from '../../lib/push/sendWebPush';
 import { canUseEnterprisePreview } from '../../lib/trialEnterprisePreview';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 async function resolveOwnerCompanyForUser(token: string) {
   const {
@@ -21,8 +23,9 @@ async function resolveOwnerCompanyForUser(token: string) {
   } = await supabase.auth.getUser(token);
   if (error || !user?.email) return null;
 
+  const authEmail = normalizeAuthEmail(user.email);
   const direct = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: {
       id: true,
       requirePhotos: true,
@@ -55,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!company) {
     if (user?.email) {
       const technician = await prisma.technician.findFirst({
-        where: { email: user.email },
+        where: technicianEmailWhere(normalizeAuthEmail(user.email)),
         select: { id: true },
       });
       if (technician) {

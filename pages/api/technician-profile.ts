@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization;
@@ -15,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const technician = await prisma.technician.findFirst({
-    where: { email: user.email },
+    where: technicianEmailWhere(normalizeAuthEmail(user.email)),
     include: { company: true },
   });
 

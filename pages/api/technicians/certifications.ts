@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
+import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 
 export const config = {
   api: {
@@ -31,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
-    if (error || !user) {
+    if (error || !user?.email) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -56,12 +58,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
     }
 
+    const authEmail = normalizeAuthEmail(user.email);
     const ownerCompany = await prisma.company.findUnique({
-      where: { email: user.email },
+      where: { email: authEmail },
       select: { id: true },
     });
     const actingTechnician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: technicianEmailWhere(authEmail),
       select: { id: true, companyId: true },
     });
 

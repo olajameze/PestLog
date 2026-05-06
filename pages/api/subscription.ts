@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { sendUpgradeNotificationEmail } from '../../lib/email';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 import { reconcileCompanyBillingFromStripe } from '../../lib/stripe/reconcileCompanyBilling';
 
 /** Called from the Stripe webhook when checkout activates a paid plan for a company. */
@@ -57,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!company) {
       const technician = await prisma.technician.findFirst({
-        where: { email: authEmail },
+        where: technicianEmailWhere(authEmail),
         include: {
           company: {
             select: subscriptionSelect,

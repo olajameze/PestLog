@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { supabase } from '../../../lib/supabase';
 import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 
 type CompanyForAccess = {
   id: string;
@@ -28,7 +29,7 @@ async function resolveCompanyForEntryAccess(userEmail: string): Promise<CompanyF
   if (asOwner) return asOwner;
 
   const tech = await prisma.technician.findFirst({
-    where: { email },
+    where: technicianEmailWhere(email),
     select: {
       companyId: true,
       company: {

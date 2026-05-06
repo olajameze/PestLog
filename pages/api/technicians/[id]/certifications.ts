@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../../lib/prisma';
 import { checkPlan } from '../../../../lib/planGuard';
 import { supabase } from '../../../../lib/supabase';
+import { normalizeAuthEmail } from '../../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../../lib/auth/technicianGate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -22,13 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const authEmail = normalizeAuthEmail(user.email);
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: { id: true, plan: true, subscriptionStatus: true },
   });
 
   const technicianActor = await prisma.technician.findFirst({
-    where: { email: user.email },
+    where: technicianEmailWhere(authEmail),
     select: { id: true, companyId: true },
   });
 

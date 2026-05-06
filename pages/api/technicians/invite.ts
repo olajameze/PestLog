@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { sendTechnicianInviteEmail } from '../../../lib/email';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -29,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: ownerEmail },
+      where: technicianEmailWhere(ownerEmail),
       select: { id: true },
     });
     if (technician) {

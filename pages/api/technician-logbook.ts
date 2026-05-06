@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-admin';
 import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
@@ -78,8 +80,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const authEmail = normalizeAuthEmail(user.email);
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: technicianEmailWhere(authEmail),
       include: {
         company: {
           select: {

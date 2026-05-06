@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 import { sendAccountDeletionEmail } from '../../../lib/email';
 import { cancelAllSubscriptionsForStripeCustomer } from '../../../lib/stripe/cancelCustomerSubscriptions';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
@@ -31,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: authEmail },
+      where: technicianEmailWhere(authEmail),
       select: { id: true },
     });
     if (technician) {

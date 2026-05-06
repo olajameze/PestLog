@@ -3,6 +3,8 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { searchAll } from '../../lib/search/fullText';
 import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -23,8 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const q = typeof req.query.q === 'string' ? req.query.q : '';
   if (!q.trim()) return res.status(200).json([]);
 
+  const authEmail = normalizeAuthEmail(user.email);
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: { id: true, plan: true, subscriptionStatus: true, trialEndsAt: true },
   });
 
@@ -37,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const technician = await prisma.technician.findFirst({
-    where: { email: user.email },
+    where: technicianEmailWhere(authEmail),
     select: {
       id: true,
       companyId: true,

@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
+import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 
 type BulkAction = 'set_status' | 'delete';
 
@@ -17,13 +19,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user?.email) return res.status(401).json({ error: 'Unauthorized' });
 
+  const authEmail = normalizeAuthEmail(user.email);
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
     select: { id: true },
   });
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: technicianEmailWhere(authEmail),
       select: { id: true },
     });
     if (technician) {
