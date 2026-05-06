@@ -337,12 +337,12 @@ export default function TechnicianPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (!res.ok) {
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok || !result.technician) {
         router.push('/dashboard');
         return;
       }
 
-      const result = await res.json();
       setProfile(result.technician);
 
       const subRes = await fetch('/api/subscription', {

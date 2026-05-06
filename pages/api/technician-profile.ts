@@ -20,7 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   if (!technician) {
-    return res.status(403).json({ error: 'Access denied' });
+    // Authenticated, but no Technician row — normal for business owners. Use 200 so
+    // clients can probe role without DevTools “failed request” noise.
+    return res.status(200).json({ technician: null });
   }
 
   return res.status(200).json({

@@ -118,11 +118,14 @@ export default function SignIn({ initialRole, initialInviteEmail }: SignInPagePr
           headers: { Authorization: `Bearer ${data.session.access_token}` },
         });
         if (techCheck.ok) {
-          setSuccessMessage('Signed in successfully. Redirecting to technician workspace...');
-          showToast('Signed in', 'Redirecting to technician workspace', 'success');
-          setLoading(false);
-          await router.push('/technician');
-          return;
+          const techPayload = await techCheck.json().catch(() => null) as { technician?: unknown } | null;
+          if (techPayload?.technician) {
+            setSuccessMessage('Signed in successfully. Redirecting to technician workspace...');
+            showToast('Signed in', 'Redirecting to technician workspace', 'success');
+            setLoading(false);
+            await router.push('/technician');
+            return;
+          }
         }
       }
       setSuccessMessage('Signed in successfully. Redirecting to dashboard...');

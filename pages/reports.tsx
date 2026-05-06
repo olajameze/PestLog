@@ -432,53 +432,55 @@ export default function ReportsPage() {
       });
       if (technicianProfileRes.ok) {
         const techData = await technicianProfileRes.json();
-        setCompany({
-          id: techData.technician.companyId,
-          name: techData.technician.companyName,
-          email: techData.technician.companyId,
-        });
-        const subRes = await fetch('/api/subscription', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (subRes.ok) {
-          const subData = await subRes.json();
-          const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
-          setPlan(
-            queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
-              ? queryPlan
-              : subData.plan || 'trial',
-          );
-          setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
-          if (
-            !hasSubscriptionAccess({
-              plan: subData.plan,
-              subscriptionStatus: subData.status,
-              trialEndsAt: subData.trialEndsAt,
-              paymentGraceEndsAt: subData.paymentGraceEndsAt,
-            })
-          ) {
-            router.replace('/upgrade');
-            return;
+        if (techData.technician) {
+          setCompany({
+            id: techData.technician.companyId,
+            name: techData.technician.companyName,
+            email: techData.technician.companyId,
+          });
+          const subRes = await fetch('/api/subscription', {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (subRes.ok) {
+            const subData = await subRes.json();
+            const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+            setPlan(
+              queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
+                ? queryPlan
+                : subData.plan || 'trial',
+            );
+            setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
+            if (
+              !hasSubscriptionAccess({
+                plan: subData.plan,
+                subscriptionStatus: subData.status,
+                trialEndsAt: subData.trialEndsAt,
+                paymentGraceEndsAt: subData.paymentGraceEndsAt,
+              })
+            ) {
+              router.replace('/upgrade');
+              return;
+            }
+            const daysLeft = getGraceDaysLeft({ paymentGraceEndsAt: subData.paymentGraceEndsAt });
+            setOverdueBanner(
+              daysLeft !== null
+                ? `Payment is overdue. You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining before service interruption.`
+                : null,
+            );
+          } else {
+            const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+            if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
+              setPlan(queryPlan);
+            }
           }
-          const daysLeft = getGraceDaysLeft({ paymentGraceEndsAt: subData.paymentGraceEndsAt });
-          setOverdueBanner(
-            daysLeft !== null
-              ? `Payment is overdue. You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining before service interruption.`
-              : null,
-          );
-        } else {
-          const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
-          if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
-            setPlan(queryPlan);
-          }
+          setTechnicians([
+            { id: techData.technician.id, name: techData.technician.name, email: techData.technician.email },
+          ]);
+          setSelectedTechnician(techData.technician.id);
+          setIsOwner(false);
+          setLoading(false);
+          return;
         }
-        setTechnicians([
-          { id: techData.technician.id, name: techData.technician.name, email: techData.technician.email },
-        ]);
-        setSelectedTechnician(techData.technician.id);
-        setIsOwner(false);
-        setLoading(false);
-        return;
       }
 
       // Business owner path

@@ -492,8 +492,11 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (technicianProfileRes.ok) {
-        router.replace('/technician');
-        return;
+        const rolePayload: { technician?: unknown } = await technicianProfileRes.json().catch(() => ({}));
+        if (rolePayload.technician) {
+          router.replace('/technician');
+          return;
+        }
       }
 
       setUser(session.user);
