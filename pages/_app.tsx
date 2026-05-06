@@ -52,9 +52,9 @@ export default function App({ Component, pageProps }: AppProps) {
       <OfflineBanner />
       <NotificationCenter />
       <PWAInstallPrompt />
-      {process.env.NEXT_PUBLIC_DISABLE_VERCEL_ANALYTICS === 'true' ? null : (
+      {process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED === 'true' ? (
         <Analytics path={router.asPath} route={router.pathname} />
-      )}
+      ) : null}
     </>
   );
 }

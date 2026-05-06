@@ -129,39 +129,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const prefs = notificationPreferencesSafe(notificationPreferences);
       const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      const rowNow = new Date();
 
-      const company = await prisma.company.upsert({
+      const existing = await prisma.company.findUnique({
         where: { email: ownerEmail },
-        create: {
-          name: trimmedName,
-          phone: typeof phone === 'string' ? phone.trim() : undefined,
-          address: typeof address === 'string' ? address.trim() : undefined,
-          website: typeof website === 'string' ? website.trim() : undefined,
-          vatNumber: typeof vatNumber === 'string' ? vatNumber.trim() : undefined,
-          requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
-          requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
-          defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
-          ...(prefs !== undefined ? { notificationPreferences: prefs } : {}),
-          email: ownerEmail,
-          subscriptionStatus: 'trial',
-          plan: 'trial',
-          trialEndsAt: trialEnd,
-          createdAt: rowNow,
-          updatedAt: rowNow,
-        },
-        update: {
-          name: trimmedName,
-          phone: typeof phone === 'string' ? phone.trim() : undefined,
-          address: typeof address === 'string' ? address.trim() : undefined,
-          website: typeof website === 'string' ? website.trim() : undefined,
-          vatNumber: typeof vatNumber === 'string' ? vatNumber.trim() : undefined,
-          requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
-          requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
-          defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
-          ...(prefs !== undefined ? { notificationPreferences: prefs } : {}),
-        },
+        select: { id: true },
       });
+
+      const sharedScalars = {
+        name: trimmedName,
+        phone:
+          typeof phone === 'string' && phone.trim().length > 0 ? phone.trim() : undefined,
+        address:
+          typeof address === 'string' && address.trim().length > 0 ? address.trim() : undefined,
+        website:
+          typeof website === 'string' && website.trim().length > 0 ? website.trim() : undefined,
+        vatNumber:
+          typeof vatNumber === 'string' && vatNumber.trim().length > 0
+            ? vatNumber.trim()
+            : undefined,
+        requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
+        requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
+        defaultReportRangeDays:
+          typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
+      };
+
+      const company = existing
+        ? await prisma.company.update({
+            where: { id: existing.id },
+            data: {
+              ...sharedScalars,
+              ...(prefs !== undefined ? { notificationPreferences: prefs } : {}),
+            },
+          })
+        : await prisma.company.create({
+            data: {
+              ...sharedScalars,
+              ...(prefs !== undefined ? { notificationPreferences: prefs } : {}),
+              email: ownerEmail,
+              subscriptionStatus: 'trial',
+              plan: 'trial',
+              trialEndsAt: trialEnd,
+            },
+          });
+
       return res.status(200).json(company);
     }
 
@@ -256,6 +266,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (error) {
     console.error('API error:', error);
-    return res.status(500).json({ error: 'Internal server error', details: String(error) });
+    const payload: {
+      error: string;
+      details: string;
+      prismaCode?: string;
+      prismaMeta?: unknown;
+    } = {
+      error: 'Internal server error',
+      details: String(error),
+    };
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string'
+    ) {
+      const pe = error as { code: string; meta?: unknown };
+      payload.prismaCode = pe.code;
+      payload.prismaMeta = pe.meta;
+      console.error('[company] Prisma', pe.code, pe.meta);
+    }
+    return res.status(500).json(payload);
   }
 }
