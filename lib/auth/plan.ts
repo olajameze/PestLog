@@ -8,6 +8,6 @@ export function useUserPlan(plan?: string): UserPlan {
       return plan;
     }
 
-    return process.env.NODE_ENV === 'development' ? 'enterprise' : 'trial';
+    return 'trial';
   }, [plan]);
 }

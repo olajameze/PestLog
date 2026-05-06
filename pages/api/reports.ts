@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { createSignedPhotoUrl, createSignedPhotoUrls, getPublicPhotoUrl } from '../../lib/supabase-admin';
-import { checkPlan } from '../../lib/planGuard';
+import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
 
 type LogbookEntryWhereInput = Prisma.LogbookEntryWhereInput;
@@ -78,7 +78,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const company = await prisma.company.findUnique({
     where: { email: user.email },
-    select: { id: true, name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true, notificationPreferences: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      plan: true,
+      subscriptionStatus: true,
+      trialEndsAt: true,
+      paymentGraceEndsAt: true,
+      notificationPreferences: true,
+    },
   });
 
   let technician = null;
@@ -89,7 +98,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { email: user.email },
       include: {
         company: {
-          select: { name: true, email: true, plan: true, subscriptionStatus: true, trialEndsAt: true, notificationPreferences: true }
+          select: {
+            name: true,
+            email: true,
+            plan: true,
+            subscriptionStatus: true,
+            trialEndsAt: true,
+            paymentGraceEndsAt: true,
+            notificationPreferences: true,
+          },
         }
       }
     });
@@ -104,9 +121,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: 'Company not found for plan check' });
   }
 
-  const hasPremiumAccess = companyForPlan.plan
-    ? checkPlan(companyForPlan.plan, ['pro', 'business', 'enterprise'])
-    : companyForPlan.subscriptionStatus === 'active';
+  const hasPremiumAccess = hasSubscriptionAccess({
+    plan: companyForPlan.plan,
+    subscriptionStatus: companyForPlan.subscriptionStatus,
+    trialEndsAt: companyForPlan.trialEndsAt,
+    paymentGraceEndsAt: companyForPlan.paymentGraceEndsAt ?? null,
+  });
+
+  if (!hasPremiumAccess) {
+    return res.status(403).json({
+      error: 'Upgrade to Pro+ plan required for reports. Trial expired or subscription inactive.',
+    });
+  }
+
   const enterpriseSettings = parseEnterpriseSettings((companyForPlan as { notificationPreferences?: unknown }).notificationPreferences);
 
   if (companyForPlan.plan === 'enterprise') {
@@ -120,18 +147,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!isIpAllowed(ip, enterpriseSettings.security.allowedIps)) {
         return res.status(403).json({ error: 'Your IP is not allowed by enterprise security policy.' });
       }
-    }
-  }
-
-  // If they have premium access via a plan string or 'active' status, bypass trial checks entirely
-  if (hasPremiumAccess) {
-    // Access granted
-  } else {
-    const trialEndsAt = companyForPlan.trialEndsAt;
-    const trialExpired = trialEndsAt ? new Date(trialEndsAt).getTime() < Date.now() : true;
-
-    if (trialExpired) {
-      return res.status(403).json({ error: 'Upgrade to Pro+ plan required for reports. Trial expired.' });
     }
   }
 

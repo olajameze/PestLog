@@ -14,7 +14,11 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import { Skeleton } from '../components/ui/Skeleton';
 import { checkPlan } from '../lib/planGuard';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
-import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
+import {
+  formatOwnerBillingPlanLabel,
+  getGraceDaysLeft,
+  hasSubscriptionAccess,
+} from '../lib/subscriptionAccess';
 import { formatTechnicianLimit, getTechnicianLimit } from '../lib/planLimits';
 import { canUseEnterprisePreview, trialFullDaysRemaining } from '../lib/trialEnterprisePreview';
 
@@ -897,13 +901,18 @@ export default function Dashboard() {
           'success',
         );
       } else {
+        setInviteStatusByTechnician((prev) => {
+          const next = { ...prev };
+          delete next[technicianId];
+          return next;
+        });
         if (body.inviteLink && typeof navigator !== 'undefined' && navigator.clipboard) {
           await navigator.clipboard.writeText(body.inviteLink).catch(() => undefined);
         }
         showToast(
-          'Invite link ready',
-          `Email service is unavailable, so you can share the invite link manually${body.inviteLink ? ' (copied if browser allowed).' : '.'}`,
-          'info',
+          'Invite email failed',
+          `Transactional email could not send (ensure RESEND_API_KEY and RESEND_FROM_EMAIL are set on Vercel). Invite link copied to clipboard when possible.`,
+          'error',
         );
       }
       return;
@@ -993,7 +1002,12 @@ if (!user || companyLoadState === 'loading') return (
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Plan</p>
-                    <p className="mt-1 text-sm font-semibold text-emerald-900">{(company.plan || 'trial').toUpperCase()}</p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-900">
+                      {formatOwnerBillingPlanLabel({
+                        plan: company.plan,
+                        subscriptionStatus: company.subscriptionStatus,
+                      }).toUpperCase()}
+                    </p>
                   </div>
                   <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-blue-700">Team Size</p>

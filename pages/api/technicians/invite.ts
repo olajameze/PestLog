@@ -65,6 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: technician.email,
       technicianName: technician.name,
       companyName: company.name || undefined,
+      inviteLink,
     });
     return res.status(200).json({
       success: true,

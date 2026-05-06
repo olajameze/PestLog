@@ -216,8 +216,12 @@ export async function sendTechnicianInviteEmail(params: {
   email: string;
   technicianName?: string;
   companyName?: string;
+  /** When omitted, falls back to SITE_URL-derived signup link using `params.email`. */
+  inviteLink?: string;
 }) {
-  const inviteLink = `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(params.email)}`;
+  const inviteLink =
+    params.inviteLink ??
+    `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(params.email)}`;
   const signinLink = `${appUrl}/auth/signin?role=technician`;
   const safeName = params.technicianName ? escapeHtml(params.technicianName) : 'there';
   const safeCompany = params.companyName ? escapeHtml(params.companyName) : 'your team';

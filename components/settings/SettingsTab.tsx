@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatOwnerBillingPlanLabel } from '../../lib/subscriptionAccess';
 import { getClientSupportEmail } from '../../lib/supportEmail';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -37,6 +38,8 @@ type Company = {
   requirePhotos: boolean;
   defaultReportRangeDays?: number | null;
   notificationPreferences?: Partial<NotificationPreferences> | null;
+  plan?: string | null;
+  subscriptionStatus?: string | null;
 };
 
 type Subscription = {
@@ -148,7 +151,10 @@ export default function SettingsTab({
     });
   };
 
-  const currentPlanLabel = subscription?.plan ? subscription.plan.toUpperCase() : 'TRIAL';
+  const currentPlanLabel = formatOwnerBillingPlanLabel({
+    plan: subscription?.plan ?? company.plan,
+    subscriptionStatus: subscription?.status ?? company.subscriptionStatus,
+  }).toUpperCase();
   const trialEndsAtLabel = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString() : 'Not available';
 
   return (

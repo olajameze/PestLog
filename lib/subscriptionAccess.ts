@@ -15,11 +15,17 @@ function parseTrialEnd(value: AccessSnapshot['trialEndsAt']): number | null {
 }
 
 export function hasSubscriptionAccess(snapshot: AccessSnapshot, nowMs = Date.now()): boolean {
-  if (snapshot.plan && checkPlan(snapshot.plan, ['pro', 'business', 'enterprise'])) {
+  const status = snapshot.subscriptionStatus ? String(snapshot.subscriptionStatus).toLowerCase() : '';
+  const planNorm = snapshot.plan ? String(snapshot.plan).toLowerCase().trim() : '';
+  const hasPaidTierName =
+    planNorm !== '' && checkPlan(planNorm, ['pro', 'business', 'enterprise']);
+
+  // Paid SKU in DB alone must not unlock access (avoids orphaned plan values / webhook drift).
+  if (hasPaidTierName && status === 'active') {
     return true;
   }
 
-  if (snapshot.subscriptionStatus === 'active') {
+  if (status === 'active') {
     return true;
   }
 
@@ -30,6 +36,31 @@ export function hasSubscriptionAccess(snapshot: AccessSnapshot, nowMs = Date.now
 
   const graceEndMs = parseTrialEnd(snapshot.paymentGraceEndsAt);
   return graceEndMs !== null && graceEndMs > nowMs;
+}
+
+/** Billing badge: paid tiers show only when Stripe subscription status is active. */
+export function formatOwnerBillingPlanLabel(
+  snapshot: Pick<AccessSnapshot, 'plan' | 'subscriptionStatus'>,
+): string {
+  const plan = String(snapshot.plan ?? 'trial').toLowerCase().trim();
+  const status = snapshot.subscriptionStatus
+    ? String(snapshot.subscriptionStatus).toLowerCase().trim()
+    : '';
+
+  const isPaidTier = checkPlan(plan, ['pro', 'business', 'enterprise']);
+  if (status === 'active' && isPaidTier) {
+    return plan;
+  }
+
+  if (isPaidTier && status !== 'active') {
+    return 'free trial';
+  }
+
+  if (plan === 'free') {
+    return 'free';
+  }
+
+  return 'free trial';
 }
 
 export function getGraceDaysLeft(snapshot: AccessSnapshot, nowMs = Date.now()): number | null {
