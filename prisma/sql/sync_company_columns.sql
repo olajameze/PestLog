@@ -15,3 +15,7 @@ ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "paymentGraceEndsAt" TIMESTAMPTZ(
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "nonPaymentCanceledAt" TIMESTAMPTZ(6);
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "retrialGrantedAt" TIMESTAMPTZ(6);
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "plan" TEXT DEFAULT 'trial';
+
+-- Stable defaults for TIMESTAMP columns when INSERT omits them (helps Prisma/pg-adapter paths).
+ALTER TABLE "Company" ALTER COLUMN "createdAt" SET DEFAULT now();
+ALTER TABLE "Company" ALTER COLUMN "updatedAt" SET DEFAULT now();

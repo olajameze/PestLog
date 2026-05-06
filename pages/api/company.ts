@@ -5,6 +5,41 @@ import { prisma } from '../../lib/prisma';
 import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
 import { isDedicatedTechnicianSession, normalizeAuthEmail } from '../../lib/auth/userSession';
 
+/** Walk nested Prisma/pg-adapter errors so 23502 responses name the failing column. */
+function extractPostgresViolation(err: unknown):
+  | { detail?: string; column?: string; constraint?: string; code?: string }
+  | undefined {
+  const acc: { detail?: string; column?: string; constraint?: string; code?: string } = {};
+  const stack: unknown[] = [err];
+  const seen = new Set<unknown>();
+  while (stack.length > 0) {
+    const cur = stack.pop();
+    if (!cur || typeof cur !== 'object') continue;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    const o = cur as Record<string, unknown>;
+    if (typeof o.detail === 'string' && acc.detail === undefined) acc.detail = o.detail;
+    if (typeof o.column === 'string' && acc.column === undefined) acc.column = o.column;
+    if (typeof o.column_name === 'string' && acc.column === undefined) acc.column = o.column_name;
+    if (typeof o.constraint_name === 'string' && acc.constraint === undefined) {
+      acc.constraint = o.constraint_name;
+    }
+    if (typeof o.originalCode === 'string' && acc.code === undefined) acc.code = o.originalCode;
+
+    const push = (v: unknown) => {
+      if (v && typeof v === 'object') stack.push(v);
+    };
+    push(o.cause);
+    push(o.meta);
+    const da = o.driverAdapterError;
+    if (da && typeof da === 'object') {
+      push(da);
+      push((da as Record<string, unknown>).cause);
+    }
+  }
+  return acc.detail || acc.column || acc.constraint || acc.code ? acc : undefined;
+}
+
 function notificationPreferencesSafe(raw: unknown): Prisma.InputJsonValue | undefined {
   if (raw === undefined || raw === null) return undefined;
   if (typeof raw !== 'object' || Array.isArray(raw)) return undefined;
@@ -129,6 +164,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const prefs = notificationPreferencesSafe(notificationPreferences);
       const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const rowNow = new Date();
+      const rangeDays =
+        typeof defaultReportRangeDays === 'number' &&
+        Number.isFinite(defaultReportRangeDays) &&
+        defaultReportRangeDays > 0
+          ? Math.round(defaultReportRangeDays)
+          : 30;
 
       const existing = await prisma.company.findUnique({
         where: { email: ownerEmail },
@@ -149,8 +191,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             : undefined,
         requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
         requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
-        defaultReportRangeDays:
-          typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
+        defaultReportRangeDays: rangeDays,
       };
 
       const company = existing
@@ -169,6 +210,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               subscriptionStatus: 'trial',
               plan: 'trial',
               trialEndsAt: trialEnd,
+              createdAt: rowNow,
+              updatedAt: rowNow,
             },
           });
 
@@ -271,10 +314,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       details: string;
       prismaCode?: string;
       prismaMeta?: unknown;
+      postgresViolation?: {
+        detail?: string;
+        column?: string;
+        constraint?: string;
+        code?: string;
+      };
     } = {
       error: 'Internal server error',
       details: String(error),
     };
+    const pgViolation = extractPostgresViolation(error);
+    if (pgViolation) payload.postgresViolation = pgViolation;
     if (
       typeof error === 'object' &&
       error !== null &&
@@ -284,7 +335,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const pe = error as { code: string; meta?: unknown };
       payload.prismaCode = pe.code;
       payload.prismaMeta = pe.meta;
-      console.error('[company] Prisma', pe.code, pe.meta);
+      console.error('[company] Prisma', pe.code, pe.meta, pgViolation ?? '');
     }
     return res.status(500).json(payload);
   }
