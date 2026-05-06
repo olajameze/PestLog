@@ -224,6 +224,63 @@ The Pest Trace team`;
   });
 }
 
+function formatPlanLabelForEmail(plan: string): string {
+  const p = plan.toLowerCase();
+  if (p === 'business') return 'Business';
+  if (p === 'enterprise') return 'Enterprise';
+  if (p === 'pro') return 'Pro';
+  return plan;
+}
+
+/** Sent when Stripe reports cancel_at_period_end (customer cancelled renewal; access continues until period end). */
+export async function sendSubscriptionCancellationScheduledEmail(params: {
+  email: string;
+  companyName?: string | null;
+  plan: string;
+  accessEndsAt: Date | null;
+}): Promise<void> {
+  const planLabel = formatPlanLabelForEmail(params.plan);
+  const safeCompany = params.companyName?.trim() ? escapeHtml(params.companyName.trim()) : null;
+  const endText = params.accessEndsAt
+    ? params.accessEndsAt.toLocaleDateString('en-GB', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })
+    : null;
+  const accessLine = endText
+    ? `You keep full access to your <strong>${escapeHtml(planLabel)}</strong> features until <strong>${escapeHtml(endText)}</strong>. After that, your workspace moves to the free trial limits (or trial expired flow) unless you subscribe again.`
+    : `You keep full access to your <strong>${escapeHtml(planLabel)}</strong> features until the end of your current billing period. After that, your workspace moves to the free trial limits unless you subscribe again.`;
+
+  const inner = `
+    <p>Hi${safeCompany ? ` from <strong>${safeCompany}</strong>` : ''},</p>
+    <p>We&apos;ve received your request to cancel your Pest Trace subscription renewal.</p>
+    <p>${accessLine}</p>
+    <p>You can double-check dates or reactivate any time in your billing portal: <a href="${appUrl}/upgrade">${escapeHtml(appUrl)}/upgrade</a></p>
+    <p>Questions? Email <a href="mailto:${escapeHtml(supportEmail)}">${escapeHtml(supportEmail)}</a>.</p>
+    <p>Thanks,<br />The Pest Trace team</p>
+  `;
+  const text = `Hi${params.companyName?.trim() ? ` (${params.companyName.trim()})` : ''},
+
+We've received your request to cancel your Pest Trace subscription renewal.
+${endText ? `Full ${planLabel} access continues until ${endText}.` : `Full ${planLabel} access continues until the end of your current billing period.`}
+After that, your account returns to free trial limits unless you subscribe again.
+
+Manage billing: ${appUrl}/upgrade
+Support: ${supportEmail}
+
+Thanks,
+The Pest Trace team`;
+
+  await sendMail({
+    to: [params.email.trim()],
+    subject: `Your Pest Trace subscription renewal is cancelled`,
+    html: brandEmailHtml('Subscription renewal cancelled', inner),
+    text,
+  });
+}
+
 export async function sendTechnicianInviteEmail(params: {
   email: string;
   technicianName?: string;

@@ -17,6 +17,8 @@ type Subscription = {
   trialEndsAt?: string;
   stripeCustomerId?: string;
   plan?: string;
+  subscriptionPeriodEndAt?: string | null;
+  subscriptionCancelAtPeriodEnd?: boolean;
 };
 
 export default function UpgradePage() {
@@ -219,6 +221,12 @@ export default function UpgradePage() {
       stripeCustomerId: subscription?.stripeCustomerId,
     });
 
+  const cancelScheduled = Boolean(subscription?.subscriptionCancelAtPeriodEnd);
+  const paidAccessEnds =
+    subscription?.subscriptionPeriodEndAt && !Number.isNaN(new Date(subscription.subscriptionPeriodEndAt).getTime())
+      ? new Date(subscription.subscriptionPeriodEndAt)
+      : null;
+
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl min-w-0 space-y-6">
@@ -247,6 +255,25 @@ export default function UpgradePage() {
               <p className="text-base sm:text-lg text-gray-800">
                 Status: <span className="font-bold text-navy">{subscription?.status || 'None'}</span>
               </p>
+              {cancelScheduled ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                  <p className="font-semibold">Renewal cancelled</p>
+                  <p className="mt-1">
+                    Full plan access until{' '}
+                    <strong>
+                      {paidAccessEnds
+                        ? paidAccessEnds.toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })
+                        : 'the end of your billing period'}
+                    </strong>
+                    . Then your account returns to free trial limits unless you subscribe again. Check your email for confirmation.
+                  </p>
+                </div>
+              ) : null}
               {trialEndsDate && trialDaysLeft > 0 && (
                 <div className="text-sm text-gray-600">
                   ✓ Access ends in <strong>{trialDaysLeft}</strong> day{trialDaysLeft === 1 ? '' : 's'} <span className="text-gray-500">({trialEndsDate.toLocaleDateString()})</span>

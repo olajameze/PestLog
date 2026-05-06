@@ -46,6 +46,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       paymentFailedAt: true,
       stripeCustomerId: true,
       plan: true,
+      subscriptionPeriodEndAt: true,
+      subscriptionCancelAtPeriodEnd: true,
     };
 
     let company = await prisma.company.findUnique({
@@ -90,6 +92,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       paymentFailedAt: company.paymentFailedAt,
       stripeCustomerId: company.stripeCustomerId,
       plan: company.plan,
+      subscriptionPeriodEndAt: company.subscriptionPeriodEndAt,
+      subscriptionCancelAtPeriodEnd: Boolean(company.subscriptionCancelAtPeriodEnd),
     });
   } else {
     res.setHeader('Allow', ['GET']);

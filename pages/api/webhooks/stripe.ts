@@ -4,6 +4,8 @@ import { prisma } from '../../../lib/prisma';
 import { logger } from '../../../lib/logger';
 import { sendSubscriptionUpgradeEmail } from '../subscription';
 import { subscriptionStatusForDb } from '../../../lib/stripe/reconcileCompanyBilling';
+import { stripeSubscriptionBillingSnapshot } from '../../../lib/stripe/subscriptionBilling';
+import { sendSubscriptionCancellationScheduledEmail } from '../../../lib/email';
 
 const GRACE_PERIOD_DAYS = 5;
 const RETRIAL_PERIOD_DAYS = 7;
@@ -171,6 +173,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               paymentFailedAt: null,
               paymentGraceEndsAt: null,
               nonPaymentCanceledAt: null,
+              subscriptionCancelAtPeriodEnd: false,
+              subscriptionPeriodEndAt: null,
             },
           });
           
@@ -189,14 +193,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const plan = subscription.metadata.plan;
 
         const validPlans = ['pro', 'business', 'enterprise'] as const;
-        const resolvedPlan = validPlans.find(p => p === plan);
+        const resolvedPlan = validPlans.find((p) => p === plan);
 
-        const updated = await prisma.company.updateMany({
+        const snap = stripeSubscriptionBillingSnapshot(subscription);
+        const periodEnd = snap.periodEnd;
+        const cancelAtPeriodEnd = snap.cancelAtPeriodEnd;
+
+        const companyRow = await prisma.company.findFirst({
           where: { stripeCustomerId },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            plan: true,
+            subscriptionCancelAtPeriodEnd: true,
+          },
+        });
+
+        if (!companyRow) {
+          break;
+        }
+
+        const wasScheduled = Boolean(companyRow.subscriptionCancelAtPeriodEnd);
+        const planForEmail = resolvedPlan ?? String(companyRow.plan ?? 'pro').toLowerCase();
+
+        await prisma.company.update({
+          where: { id: companyRow.id },
           data: {
             subscriptionStatus: dbStatus,
+            subscriptionPeriodEndAt: periodEnd,
+            subscriptionCancelAtPeriodEnd: cancelAtPeriodEnd,
             ...(resolvedPlan && { plan: resolvedPlan }),
-            // Paid subscription (including Stripe `trialing`) — clear app trial / grace noise
             ...(dbStatus === 'active' && {
               trialEndsAt: null,
               paymentFailedAt: null,
@@ -206,8 +233,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           },
         });
 
-        if (!updated.count) {
-          break;
+        if (cancelAtPeriodEnd && !wasScheduled && companyRow.email?.trim()) {
+          try {
+            await sendSubscriptionCancellationScheduledEmail({
+              email: companyRow.email.trim(),
+              companyName: companyRow.name,
+              plan: planForEmail,
+              accessEndsAt: periodEnd,
+            });
+          } catch (emailErr) {
+            logger.error(
+              `Cancel-at-period-end email failed: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
+            );
+          }
         }
 
         if (dbStatus !== 'active') {
@@ -256,6 +294,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             where: { stripeCustomerId },
             data: {
               subscriptionStatus: 'canceled',
+              subscriptionPeriodEndAt: null,
+              subscriptionCancelAtPeriodEnd: false,
             },
           });
         }

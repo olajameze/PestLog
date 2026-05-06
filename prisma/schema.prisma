@@ -26,6 +26,10 @@ model Company {
   paymentGraceEndsAt      DateTime?      @map("paymentGraceEndsAt") @db.Timestamptz(6)
   nonPaymentCanceledAt    DateTime?      @map("nonPaymentCanceledAt") @db.Timestamptz(6)
   retrialGrantedAt        DateTime?      @map("retrialGrantedAt") @db.Timestamptz(6)
+  /** Stripe subscription current_period_end — access through this instant on paid plans. */
+  subscriptionPeriodEndAt       DateTime? @map("subscriptionPeriodEndAt") @db.Timestamptz(6)
+  /** True when Stripe cancel_at_period_end is set (renewal stopped; access until subscriptionPeriodEndAt). */
+  subscriptionCancelAtPeriodEnd Boolean? @default(false) @map("subscriptionCancelAtPeriodEnd")
   plan                    String?        @default("trial") @map("plan")
   createdAt               DateTime?      @default(now()) @map("createdAt") @db.Timestamptz(6)
   updatedAt               DateTime?      @default(now()) @updatedAt @map("updatedAt") @db.Timestamptz(6)

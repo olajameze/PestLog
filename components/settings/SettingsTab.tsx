@@ -47,6 +47,8 @@ type Subscription = {
   trialEndsAt?: string;
   plan?: string;
   stripeCustomerId?: string;
+  subscriptionPeriodEndAt?: string | null;
+  subscriptionCancelAtPeriodEnd?: boolean;
 };
 
 interface SettingsTabProps {
@@ -159,6 +161,11 @@ export default function SettingsTab({
     subscriptionStatus: subscription?.status ?? company.subscriptionStatus,
   }).toUpperCase();
   const trialEndsAtLabel = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString() : 'Not available';
+  const cancelScheduled = Boolean(subscription?.subscriptionCancelAtPeriodEnd);
+  const paidAccessEnds =
+    subscription?.subscriptionPeriodEndAt && !Number.isNaN(new Date(subscription.subscriptionPeriodEndAt).getTime())
+      ? new Date(subscription.subscriptionPeriodEndAt)
+      : null;
 
   const canUseStripeBilling = ownerCanManagePaidPlanInStripe({
     plan: subscription?.plan ?? company.plan,
@@ -181,6 +188,24 @@ export default function SettingsTab({
           </div>
         </div>
       </div>
+      {cancelScheduled ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 shadow-sm">
+          <p className="font-semibold text-amber-950">Subscription renewal cancelled</p>
+          <p className="mt-2 leading-relaxed">
+            You still have full access to your <span className="font-semibold">{currentPlanLabel}</span> features until{' '}
+            <span className="font-semibold">
+              {paidAccessEnds
+                ? paidAccessEnds.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                : 'the end of your current billing period'}
+            </span>
+            . After that, your account moves back to{' '}
+            <span className="font-semibold">free trial</span> limits (same as when a trial has ended) unless you subscribe again.
+          </p>
+          <p className="mt-2 text-xs text-amber-900/90">
+            We&apos;ve emailed your billing address with these details. You can reactivate or update payment details in the Stripe portal anytime.
+          </p>
+        </div>
+      ) : null}
       <Card className="space-y-8 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:p-8">
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
           <h3 className="text-lg font-bold text-navy sm:text-xl">Company profile</h3>

@@ -15,6 +15,8 @@ ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "paymentGraceEndsAt" TIMESTAMPTZ(
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "nonPaymentCanceledAt" TIMESTAMPTZ(6);
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "retrialGrantedAt" TIMESTAMPTZ(6);
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "plan" TEXT DEFAULT 'trial';
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "subscriptionPeriodEndAt" TIMESTAMPTZ(6);
+ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "subscriptionCancelAtPeriodEnd" BOOLEAN NOT NULL DEFAULT false;
 
 -- Stable defaults when INSERT omits columns (fixes NOT NULL drift vs schema.prisma + Prisma/pg-adapter).
 ALTER TABLE "Company" ALTER COLUMN "createdAt" SET DEFAULT now();

@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
+import { stripeSubscriptionBillingSnapshot } from './subscriptionBilling';
 
 const API_VERSION = '2024-06-20' as const;
 
@@ -69,8 +70,12 @@ export async function reconcileCompanyBillingFromStripe(companyId: string): Prom
   const fromExisting = validPlans.find((p) => p === current);
   const resolvedPlan = fromMeta ?? fromExisting;
 
+  const snap = stripeSubscriptionBillingSnapshot(sub);
+
   const data: Prisma.CompanyUpdateInput = {
     subscriptionStatus: dbStatus,
+    subscriptionPeriodEndAt: snap.periodEnd,
+    subscriptionCancelAtPeriodEnd: snap.cancelAtPeriodEnd,
     trialEndsAt: null,
     ...(resolvedPlan ? { plan: resolvedPlan } : {}),
     ...(dbStatus === 'active'

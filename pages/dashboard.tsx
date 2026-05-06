@@ -75,6 +75,8 @@ interface Subscription {
   paymentGraceEndsAt?: string;
   stripeCustomerId?: string;
   plan?: string;
+  subscriptionPeriodEndAt?: string | null;
+  subscriptionCancelAtPeriodEnd?: boolean;
 }
 
 interface BaitStationForm {
