@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -57,6 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const authEmail = normalizeAuthEmail(user.email);
+
   const { plan } = req.body as { plan?: Plan };
   if (!plan || !(plan in PRICE_IDS)) {
     return res.status(400).json({ error: 'Invalid plan. Use "pro", "business" or "enterprise".' });
@@ -70,14 +73,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // Owner-only billing endpoint.
+  // Owner-only billing endpoint (email must match Company row — same normalization as onboarding).
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
   });
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: { email: authEmail },
       select: { id: true },
     });
     if (technician) {
@@ -113,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
-        email: user.email,
+        email: authEmail,
         name: company.name ?? undefined,
         metadata: { companyId: company.id },
       });
@@ -161,6 +164,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Checkout session failed: ${errorMessage}`);
-    res.status(500).json({ error: 'Unable to create checkout session. Please try again later.' });
+    const stripeCode =
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      typeof (error as { code?: unknown }).code === 'string'
+        ? (error as { code: string }).code
+        : undefined;
+    res.status(500).json({
+      error: 'Unable to create checkout session. Please try again later.',
+      ...(stripeCode ? { stripeCode } : {}),
+    });
   }
 }
