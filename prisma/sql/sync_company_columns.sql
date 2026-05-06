@@ -16,6 +16,11 @@ ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "nonPaymentCanceledAt" TIMESTAMPT
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "retrialGrantedAt" TIMESTAMPTZ(6);
 ALTER TABLE "Company" ADD COLUMN IF NOT EXISTS "plan" TEXT DEFAULT 'trial';
 
--- Stable defaults for TIMESTAMP columns when INSERT omits them (helps Prisma/pg-adapter paths).
+-- Stable defaults when INSERT omits columns (fixes NOT NULL drift vs schema.prisma + Prisma/pg-adapter).
 ALTER TABLE "Company" ALTER COLUMN "createdAt" SET DEFAULT now();
 ALTER TABLE "Company" ALTER COLUMN "updatedAt" SET DEFAULT now();
+
+-- id is NOT NULL in many Supabase DDLs without DEFAULT; Prisma may omit pk on INSERT (dbgenerated).
+-- If this fails ("column ... is of type uuid"), use:
+-- ALTER TABLE "Company" ALTER COLUMN "id" SET DEFAULT gen_random_uuid();
+ALTER TABLE "Company" ALTER COLUMN "id" SET DEFAULT (gen_random_uuid()::text);

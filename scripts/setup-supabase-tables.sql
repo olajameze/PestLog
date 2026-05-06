@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS "Company" (
   "subscriptionStatus" TEXT DEFAULT 'trial',
   "trialEndsAt" TIMESTAMPTZ,
   "plan" TEXT DEFAULT 'trial',
-  "createdAt" TIMESTAMPTZ DEFAULT now(),
-  "updatedAt" TIMESTAMPTZ DEFAULT now()
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Create indexes for Company
