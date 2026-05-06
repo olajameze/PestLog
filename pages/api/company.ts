@@ -21,6 +21,11 @@ function isPaidEnterprise(
   return p === 'enterprise' && s === 'active';
 }
 
+/** True when this auth session belongs to technician OTP flow (`technician-signup` sets metadata). */
+function userIsDedicatedTechnicianSession(user: { user_metadata?: Record<string, unknown> | null }): boolean {
+  return user.user_metadata?.role === 'technician';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Get the authorization header
@@ -63,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: { email: user.email },
           select: { id: true, companyId: true },
         });
-        if (technician) {
+        if (technician && userIsDedicatedTechnicianSession(user)) {
           return res.status(403).json({
             error: 'Technician accounts cannot access owner company settings.',
             code: 'ROLE_TECHNICIAN',
@@ -108,7 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { email: user.email },
         select: { id: true },
       });
-      if (technician) {
+      if (technician && userIsDedicatedTechnicianSession(user)) {
         return res.status(403).json({
           error: 'Technician accounts cannot create or update billing company settings.',
           code: 'ROLE_TECHNICIAN',
@@ -167,7 +172,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: { email: user.email },
           select: { id: true },
         });
-        if (technician) {
+        if (technician && userIsDedicatedTechnicianSession(user)) {
           return res.status(403).json({
             error: 'Technician accounts cannot update owner company settings.',
             code: 'ROLE_TECHNICIAN',
