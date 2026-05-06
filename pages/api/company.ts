@@ -11,6 +11,16 @@ function notificationPreferencesWithoutApiKey(raw: unknown): Prisma.InputJsonVal
   return o as Prisma.InputJsonValue;
 }
 
+/** Enterprise IP / verification gates apply only when the company is genuinely on Enterprise billing. */
+function isPaidEnterprise(
+  plan: string | null | undefined,
+  subscriptionStatus: string | null | undefined,
+): boolean {
+  const p = (plan ?? '').toLowerCase();
+  const s = (subscriptionStatus ?? '').toLowerCase();
+  return p === 'enterprise' && s === 'active';
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Get the authorization header
@@ -61,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      if (company?.plan === 'enterprise') {
+      if (company && isPaidEnterprise(company.plan, company.subscriptionStatus)) {
         const enterpriseSettings = parseEnterpriseSettings(company.notificationPreferences);
         if (enterpriseSettings.security.requireVerifiedEmail && !user.email_confirmed_at) {
           return res.status(403).json({
@@ -166,7 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Company not found' });
       }
 
-      if (company.plan === 'enterprise') {
+      if (isPaidEnterprise(company.plan, company.subscriptionStatus)) {
         const enterpriseSettings = parseEnterpriseSettings(company.notificationPreferences);
         if (enterpriseSettings.security.requireVerifiedEmail && !user.email_confirmed_at) {
           return res.status(403).json({
