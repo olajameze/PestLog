@@ -61,6 +61,8 @@ function upgradeToHttpsUnlessLocal(u: URL): void {
 export function finalizeStripeBillingReturnUrl(raw: string): string | null {
   const scrubbed = scrubUrlString(raw);
   if (!scrubbed) return null;
+  /** Spaces or pasted prose (e.g. "…com (note)/path") yield Stripe url_invalid — reject early. */
+  if (/\s/.test(scrubbed)) return null;
   try {
     const u = new URL(scrubbed);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
@@ -123,7 +125,7 @@ export function getWebManifestLinkHref(): string {
 }
 
 /** Absolute return URL for Stripe Customer Portal; falls back if env is relative or invalid. */
-export function resolveStripePortalReturnUrl(defaultReturn: string): string {
+export function resolveStripePortalReturnUrl(defaultReturn: string): string | null {
   const raw = scrubUrlString(process.env.STRIPE_PORTAL_RETURN_URL ?? '');
   if (!raw) return assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
 
@@ -151,12 +153,8 @@ export function resolveStripePortalReturnUrl(defaultReturn: string): string {
   return finalized ?? assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
 }
 
-function assertStripeReturnUrlOrDefault(candidate: string, fallback: string): string {
-  const c = finalizeStripeBillingReturnUrl(candidate);
-  if (c) return c;
-  const f = finalizeStripeBillingReturnUrl(fallback);
-  if (f) return f;
-  return scrubUrlString(fallback);
+function assertStripeReturnUrlOrDefault(candidate: string, fallback: string): string | null {
+  return finalizeStripeBillingReturnUrl(candidate) ?? finalizeStripeBillingReturnUrl(fallback);
 }
 
 /**
@@ -226,7 +224,8 @@ export function listStripePortalReturnUrlCandidates(req: NextApiRequest): string
   const seen = new Set<string>();
   const ordered: string[] = [];
 
-  const push = (u: string) => {
+  const pushFinal = (u: string | null | undefined) => {
+    if (!u) return;
     const v = finalizeStripeBillingReturnUrl(u);
     if (!v || seen.has(v)) return;
     seen.add(v);
@@ -236,14 +235,14 @@ export function listStripePortalReturnUrlCandidates(req: NextApiRequest): string
   const envRaw = scrubUrlString(process.env.STRIPE_PORTAL_RETURN_URL ?? '');
   if (envRaw) {
     const baseForEnv = withTab[0] ?? 'http://localhost:3000/dashboard?tab=settings';
-    push(resolveStripePortalReturnUrl(baseForEnv));
+    pushFinal(resolveStripePortalReturnUrl(baseForEnv));
   }
 
   for (const d of withTab) {
-    push(assertStripeReturnUrlOrDefault(d, d));
+    pushFinal(assertStripeReturnUrlOrDefault(d, d));
   }
   for (const d of plainDash) {
-    push(assertStripeReturnUrlOrDefault(d, d));
+    pushFinal(assertStripeReturnUrlOrDefault(d, d));
   }
 
   return ordered;
