@@ -1,4 +1,5 @@
 import { Html, Head, Main, NextScript } from 'next/document';
+import { getWebManifestLinkHref } from '../lib/siteOrigin';
 
 export default function Document() {
   return (
@@ -9,33 +10,8 @@ export default function Document() {
         <meta name="theme-color" content="#2563EB" />
         <meta name="mobile-web-app-capable" content="yes" />
 
-        {/* Web App Manifest: prefer absolute canonical URL — see .env.example (Vercel Preview + protection). */}
-        <link
-          rel="manifest"
-          href={
-            (() => {
-              const candidates = [
-                process.env.NEXT_PUBLIC_MANIFEST_ORIGIN,
-                process.env.NEXT_PUBLIC_APP_URL,
-                process.env.NEXT_PUBLIC_SITE_URL,
-                ...(process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()
-                  ? [
-                      process.env.VERCEL_PROJECT_PRODUCTION_URL.trim().startsWith('http')
-                        ? process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()
-                        : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`,
-                    ]
-                  : []),
-              ];
-              const baseRaw = candidates.find(
-                (x): x is string => typeof x === 'string' && x.trim().length > 0,
-              );
-              const base = baseRaw?.trim().replace(/\/+$/, '') ?? '';
-              return base && /^https?:\/\//i.test(base)
-                ? `${base}/manifest.json`
-                : '/manifest.json';
-            })()
-          }
-        />
+        {/* Web App Manifest: canonical origin avoids 401 on Vercel preview (Deployment Protection). */}
+        <link rel="manifest" href={getWebManifestLinkHref()} />
         <link rel="canonical" href="https://pesttrace.com" />
         <meta property="og:url" content="https://pesttrace.com" />
         <meta property="og:site_name" content="Pest Trace" />

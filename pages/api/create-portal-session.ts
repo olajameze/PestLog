@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
-import { resolveSiteOriginForApiRequest } from '../../lib/siteOrigin';
+import { resolveSiteOriginForApiRequest, resolveStripePortalReturnUrl } from '../../lib/siteOrigin';
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -91,9 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
   const defaultReturn = `${fallbackReturn.replace(/\/+$/, '')}/dashboard?tab=settings`;
-  const returnUrl = (
-    process.env.STRIPE_PORTAL_RETURN_URL?.trim() || defaultReturn
-  ).trim();
+  const returnUrl = resolveStripePortalReturnUrl(defaultReturn);
 
   const intentRaw =
     typeof req.body?.intent === 'string'

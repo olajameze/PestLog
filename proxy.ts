@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { normalizeOriginBase } from './lib/siteOrigin';
+import { getWebManifestLinkHref } from './lib/siteOrigin';
 
 const PUBLIC_PATH_PREFIXES = [
   '/_next',
@@ -18,23 +18,6 @@ function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
-/** Avoid 401 manifest fetches on Vercel previews (Deployment Protection on *.vercel.app). */
-function canonicalPublicOrigin(): string | null {
-  const preferred = [
-    process.env.NEXT_PUBLIC_MANIFEST_ORIGIN,
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_SITE_URL,
-  ];
-  for (const raw of preferred) {
-    const o = normalizeOriginBase(typeof raw === 'string' ? raw : undefined);
-    if (o) return o;
-  }
-  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  if (prod?.startsWith('http')) return normalizeOriginBase(prod);
-  if (prod) return normalizeOriginBase(`https://${prod}`);
-  return null;
-}
-
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -42,11 +25,15 @@ export function proxy(request: NextRequest) {
     const hostHeader = request.headers.get('host') ?? '';
     const hostNoPort = hostHeader.split(':')[0]?.toLowerCase() ?? '';
     if (hostNoPort.endsWith('.vercel.app')) {
-      const origin = canonicalPublicOrigin();
-      if (origin) {
-        const target = new URL(`${origin.replace(/\/+$/, '')}/manifest.json`);
-        if (target.hostname.toLowerCase() !== hostNoPort) {
-          return NextResponse.redirect(target, 307);
+      const href = getWebManifestLinkHref();
+      if (/^https?:\/\//i.test(href)) {
+        try {
+          const target = new URL(href);
+          if (target.hostname.toLowerCase() !== hostNoPort) {
+            return NextResponse.redirect(target, 307);
+          }
+        } catch {
+          /* invalid href — serve same-origin */
         }
       }
     }
