@@ -479,7 +479,8 @@ export default function TechnicianPage() {
     if (!ctx) return;
     isDrawing.current = true;
     ctx.strokeStyle = '#1E293B';
-    ctx.lineWidth = 2;
+    const strokeW = event.pointerType === 'touch' || event.pointerType === 'pen' ? 3.75 : 2.25;
+    ctx.lineWidth = strokeW;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
@@ -514,6 +515,9 @@ export default function TechnicianPage() {
     const y = (event.clientY - rect.top) * scaleY;
 
     ctx.lineTo(x, y);
+    ctx.strokeStyle = '#1E293B';
+    const strokeW = event.pointerType === 'touch' || event.pointerType === 'pen' ? 3.75 : 2.25;
+    ctx.lineWidth = strokeW;
     ctx.stroke();
     event.preventDefault();
   };
@@ -1097,12 +1101,13 @@ export default function TechnicianPage() {
                   </button>
                 )}
               </div>
-              <div className="rounded-lg border-2 border-gray-300 overflow-hidden bg-white shadow-sm">
+              <div className="rounded-lg border-2 border-gray-300 overflow-hidden bg-white shadow-sm touch-none">
                 <canvas
                   ref={canvasRef}
                   width={800}
                   height={200}
-                  className="signature-canvas w-full"
+                  className="signature-canvas w-full max-h-[200px]"
+                  style={{ touchAction: 'none' }}
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}

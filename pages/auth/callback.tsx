@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/supabase';
-import { sanitizeInternalNextPath } from '../../lib/authRedirect';
+import { sanitizeInternalNextPath, DEFAULT_POST_AUTH } from '../../lib/authRedirect';
 import AuthLayout from '../../components/layouts/AuthLayout';
 
 const REDIRECT_WAIT_MS = 15000;
@@ -16,20 +16,26 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    const next = sanitizeInternalNextPath(
-      typeof router.query.next === 'string' ? router.query.next : undefined
-    );
+    const resolveTarget = (sessionUser: { user_metadata?: Record<string, unknown> | null }) => {
+      const rawNext = typeof router.query.next === 'string' ? router.query.next : undefined;
+      let target = sanitizeInternalNextPath(rawNext);
+      const role = sessionUser.user_metadata?.role;
+      if (role === 'technician' && (!rawNext || target === DEFAULT_POST_AUTH)) {
+        target = '/technician';
+      }
+      return target;
+    };
 
     let finished = false;
-    const go = () => {
+    const go = (sessionUser: { user_metadata?: Record<string, unknown> | null }) => {
       if (finished) return;
       finished = true;
-      void router.replace(next);
+      void router.replace(resolveTarget(sessionUser));
     };
 
     void supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        go();
+        go(session.user);
       }
     });
 
@@ -37,7 +43,7 @@ export default function AuthCallbackPage() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        go();
+        go(session.user);
       }
     });
 

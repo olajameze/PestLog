@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { TECHNICIAN_EMAIL_NOT_ON_ROSTER } from '../../../lib/auth/technicianGate';
+import { authCallbackUrl } from '../../../lib/authRedirect';
 import { prisma } from '../../../lib/prisma';
 import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 
@@ -37,9 +38,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Auth service is not configured.' });
   }
 
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ''
+  ).replace(/\/$/, '');
+  const emailRedirectTo = baseUrl ? authCallbackUrl(baseUrl, '/technician') : undefined;
+
   const created = await admin.auth.admin.createUser({
     email,
     email_confirm: true,
+    ...(emailRedirectTo ? { email_redirect_to: emailRedirectTo } : {}),
     user_metadata: {
       role: 'technician',
       fullName: fullName || techRecord.name || '',

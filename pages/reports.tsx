@@ -38,6 +38,7 @@ type ReportEntry = {
   poisonUsed?: string;
   photoUrl?: string;
   photoUrls?: string[];
+  photoStoragePaths?: string[];
   photos?: { url: string }[];
   signature?: string;
   price?: number;
@@ -390,8 +391,10 @@ export default function ReportsPage() {
     rooms: RoomForm[];
     baitBoxesPlaced: string;
     poisonUsed: string;
+    editPhotos: Array<{ storagePath: string; previewUrl: string }>;
   } | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editPhotoUploading, setEditPhotoUploading] = useState(false);
   const [updatedEntryMessage, setUpdatedEntryMessage] = useState<string | null>(null);
   const [savedViews, setSavedViews] = useState<SavedReportView[]>([]);
   const [savedViewName, setSavedViewName] = useState('');
@@ -1061,18 +1064,46 @@ export default function ReportsPage() {
     setDeletingCertificationId(null);
   };
 
-  const startEditingEntry = (entry: ReportEntry) => {
-    setEditingEntryId(entry.id);
-    setEditingEntryState({
-      date: entry.date,
-      clientName: entry.clientName,
-      address: entry.address,
-      treatment: entry.treatment,
-      notes: entry.notes || '',
-      rooms: parseRoomForms(entry.rooms),
-      baitBoxesPlaced: entry.baitBoxesPlaced || '',
-      poisonUsed: entry.poisonUsed || '',
+  const clearEditingEntry = () => {
+    setEditingEntryState((prev) => {
+      if (prev?.editPhotos) {
+        for (const p of prev.editPhotos) {
+          if (p.previewUrl.startsWith('blob:')) URL.revokeObjectURL(p.previewUrl);
+        }
+      }
+      return null;
     });
+    setEditingEntryId(null);
+  };
+
+  const startEditingEntry = (entry: ReportEntry) => {
+    setEditingEntryState((prev) => {
+      if (prev?.editPhotos) {
+        for (const p of prev.editPhotos) {
+          if (p.previewUrl.startsWith('blob:')) URL.revokeObjectURL(p.previewUrl);
+        }
+      }
+      const paths = entry.photoStoragePaths ?? [];
+      const previews = parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos);
+      const editPhotos = paths.map((storagePath, i) => ({
+        storagePath,
+        previewUrl: previews[i] || '',
+      }));
+      const rawDate = entry.date || '';
+      const dateInput = rawDate.includes('T') ? rawDate.slice(0, 10) : rawDate.slice(0, 10);
+      return {
+        date: dateInput,
+        clientName: entry.clientName,
+        address: entry.address,
+        treatment: entry.treatment,
+        notes: entry.notes || '',
+        rooms: parseRoomForms(entry.rooms),
+        baitBoxesPlaced: entry.baitBoxesPlaced || '',
+        poisonUsed: entry.poisonUsed || '',
+        editPhotos,
+      };
+    });
+    setEditingEntryId(entry.id);
   };
 
   const updateEditingRoom = (index: number, field: keyof RoomForm, value: string) => {
@@ -1096,6 +1127,53 @@ export default function ReportsPage() {
     setEditingEntryState({ ...editingEntryState, rooms: nextRooms });
   };
 
+  const removeEditPhotoSlot = (index: number) => {
+    if (!editingEntryState) return;
+    const target = editingEntryState.editPhotos[index];
+    if (target?.previewUrl.startsWith('blob:')) URL.revokeObjectURL(target.previewUrl);
+    const next = editingEntryState.editPhotos.filter((_, i) => i !== index);
+    setEditingEntryState({ ...editingEntryState, editPhotos: next });
+  };
+
+  const handleEditPhotosChange = async (files: FileList | null) => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Photo uploads are disabled in preview mode.', 'info');
+      return;
+    }
+    if (!files?.length || !editingEntryState || !company?.id || !selectedTechnician) return;
+    const remaining = 4 - editingEntryState.editPhotos.length;
+    if (remaining <= 0) {
+      showToast('Photo limit', 'You can attach up to four photos per job.', 'info');
+      return;
+    }
+    const selected = Array.from(files).slice(0, remaining);
+    setEditPhotoUploading(true);
+    const additions: Array<{ storagePath: string; previewUrl: string }> = [];
+    for (let index = 0; index < selected.length; index += 1) {
+      const file = selected[index];
+      const sanitizedFileName = file.name.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-._]/g, '');
+      const filePath = `${company.id}/${selectedTechnician}/${Date.now()}-${index}-${sanitizedFileName}`;
+      const previewUrl = URL.createObjectURL(file);
+      const { error: uploadError } = await supabase.storage.from('logbook-photos').upload(filePath, file, {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: false,
+      });
+      if (uploadError) {
+        URL.revokeObjectURL(previewUrl);
+        showToast('Upload failed', uploadError.message, 'error');
+        setEditPhotoUploading(false);
+        return;
+      }
+      additions.push({ storagePath: filePath, previewUrl });
+    }
+    setEditingEntryState({
+      ...editingEntryState,
+      editPhotos: [...editingEntryState.editPhotos, ...additions],
+    });
+    setEditPhotoUploading(false);
+  };
+
   const saveEditedEntry = async () => {
     if (!editingEntryId || !editingEntryState) return;
     if (!selectedTechnician) {
@@ -1106,6 +1184,7 @@ export default function ReportsPage() {
     setSavingEdit(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.access_token) {
+      setSavingEdit(false);
       router.push('/auth/signin');
       return;
     }
@@ -1113,6 +1192,8 @@ export default function ReportsPage() {
     const roomsPayload = editingEntryState.rooms
       .map((room) => ({ name: room.name.trim(), note: room.note.trim() }))
       .filter((room) => room.name.length > 0);
+
+    const photoUrlsPayload = editingEntryState.editPhotos.map((p) => p.storagePath).filter(Boolean);
 
     const res = await fetch(`/api/logbook-entries/${editingEntryId}`, {
       method: 'PUT',
@@ -1130,6 +1211,7 @@ export default function ReportsPage() {
         rooms: roomsPayload.length > 0 ? roomsPayload : undefined,
         baitBoxesPlaced: editingEntryState.baitBoxesPlaced || undefined,
         poisonUsed: editingEntryState.poisonUsed || undefined,
+        photoUrls: photoUrlsPayload,
       }),
     });
 
@@ -1140,33 +1222,17 @@ export default function ReportsPage() {
       return;
     }
 
-    setReport((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        entries: prev.entries.map((entry) =>
-          entry.id === editingEntryId
-            ? {
-                ...entry,
-                date: editingEntryState.date,
-                clientName: editingEntryState.clientName,
-                address: editingEntryState.address,
-                treatment: editingEntryState.treatment,
-                notes: editingEntryState.notes,
-                rooms: roomsPayload.length > 0 ? roomsPayload : undefined,
-                baitBoxesPlaced: editingEntryState.baitBoxesPlaced || undefined,
-                poisonUsed: editingEntryState.poisonUsed || undefined,
-              }
-            : entry
-        ),
-      };
-    });
+    for (const p of editingEntryState.editPhotos) {
+      if (p.previewUrl.startsWith('blob:')) URL.revokeObjectURL(p.previewUrl);
+    }
 
     showToast('Updated', 'Report entry updated successfully.', 'success');
     setUpdatedEntryMessage('Report entry updated successfully.');
     setEditingEntryId(null);
     setEditingEntryState(null);
     setSavingEdit(false);
+
+    await fetchReport();
 
     window.setTimeout(() => {
       setUpdatedEntryMessage(null);
@@ -1949,7 +2015,7 @@ export default function ReportsPage() {
                         <div className="mt-6 rounded-2xl border border-primary-200 bg-primary-50 p-4">
                           <div className="flex items-center justify-between gap-4">
                             <h5 className="text-base font-semibold text-primary-900">Edit report entry</h5>
-                            <button type="button" onClick={() => { setEditingEntryId(null); setEditingEntryState(null); }} className="text-sm text-primary-700 hover:text-primary-900">Cancel</button>
+                            <button type="button" onClick={clearEditingEntry} className="text-sm text-primary-700 hover:text-primary-900">Cancel</button>
                           </div>
                           <div className="mt-4 grid gap-4 sm:grid-cols-2">
                             <FormInput label="Client Name" id={`edit-client-${entry.id}`} value={editingEntryState.clientName} onChange={(e) => setEditingEntryState({ ...editingEntryState, clientName: e.target.value })} />
@@ -1959,6 +2025,50 @@ export default function ReportsPage() {
                           </div>
                           <div className="mt-4 grid gap-4">
                             <FormInput label="Job Notes" id={`edit-notes-${entry.id}`} as="textarea" value={editingEntryState.notes} onChange={(e) => setEditingEntryState({ ...editingEntryState, notes: e.target.value })} />
+                          </div>
+                          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                            <p className="font-semibold text-slate-900">Job photos (up to 4)</p>
+                            <p className="mt-1 text-xs text-slate-600">Add or remove images stored with this job. New uploads go to your company logbook bucket.</p>
+                            <div className="mt-3 flex flex-wrap gap-3">
+                              {editingEntryState.editPhotos.map((photo, photoIndex) => (
+                                <div key={`${photo.storagePath}-${photoIndex}`} className="relative rounded-xl border border-slate-200 bg-slate-50 p-1 w-[120px]">
+                                  {photo.previewUrl ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={photo.previewUrl}
+                                      alt=""
+                                      className="h-24 w-full object-cover rounded-lg"
+                                    />
+                                  ) : (
+                                    <div className="h-24 w-full rounded-lg bg-slate-200" title="Preview unavailable" />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeEditPhotoSlot(photoIndex)}
+                                    className="mt-1 w-full text-xs text-red-600 hover:text-red-800"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                            {editingEntryState.editPhotos.length < 4 ? (
+                              <div className="mt-3">
+                                <label htmlFor={`edit-photos-${entry.id}`} className="block text-sm font-medium text-slate-700">
+                                  Add photos
+                                </label>
+                                <input
+                                  id={`edit-photos-${entry.id}`}
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-100 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary-800"
+                                  disabled={editPhotoUploading}
+                                  onChange={(e) => void handleEditPhotosChange(e.target.files)}
+                                />
+                                {editPhotoUploading ? <p className="mt-2 text-xs text-slate-500">Uploading…</p> : null}
+                              </div>
+                            ) : null}
                           </div>
                           <div className="mt-4">
                             <div className="flex items-center justify-between gap-4 mb-3">
@@ -1979,7 +2089,7 @@ export default function ReportsPage() {
                             <button type="button" onClick={saveEditedEntry} disabled={savingEdit} className="btn btn-primary btn-sm">
                               {savingEdit ? 'Saving...' : 'Save changes'}
                             </button>
-                            <button type="button" onClick={() => { setEditingEntryId(null); setEditingEntryState(null); }} className="btn btn-secondary btn-sm">
+                            <button type="button" onClick={clearEditingEntry} className="btn btn-secondary btn-sm">
                               Close
                             </button>
                           </div>

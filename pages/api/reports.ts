@@ -25,7 +25,11 @@ type ReportEntryRecord = {
   photos?: ReportPhotoRecord[];
 };
 
-async function signEntryPhotos(entry: ReportEntryRecord & { photos?: ReportPhotoRecord[] }): Promise<ReportEntryRecord & { photos?: ReportPhotoRecord[]; photoUrls?: string[] }> {
+async function signEntryPhotos(
+  entry: ReportEntryRecord & { photos?: ReportPhotoRecord[] },
+): Promise<
+  ReportEntryRecord & { photos?: ReportPhotoRecord[]; photoUrls?: string[]; photoStoragePaths?: string[] }
+> {
   const photoUrlsFromPrimary = (() => {
     if (!entry.photoUrl) return [];
     try {
@@ -58,6 +62,7 @@ async function signEntryPhotos(entry: ReportEntryRecord & { photos?: ReportPhoto
 
   return {
     ...entry,
+    photoStoragePaths: uniquePhotoValues,
     photoUrl: signedPrimaryPhoto,
     photoUrls: publicPhotoUrls,
     photos: signedPhotos,

@@ -78,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ownerEmail = normalizeAuthEmail(user.email);
 
     if (req.method === 'GET') {
-      const company = await prisma.company.findUnique({
+      let company = await prisma.company.findUnique({
         where: { email: ownerEmail },
         select: {
           id: true,
@@ -100,16 +100,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       if (!company) {
-        const technician = await prisma.technician.findFirst({
+        const technicianWithCompany = await prisma.technician.findFirst({
           where: { email: ownerEmail },
-          select: { id: true, companyId: true },
+          include: {
+            company: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                address: true,
+                website: true,
+                vatNumber: true,
+                requireSignature: true,
+                requirePhotos: true,
+                defaultReportRangeDays: true,
+                notificationPreferences: true,
+                stripeCustomerId: true,
+                subscriptionStatus: true,
+                trialEndsAt: true,
+                plan: true,
+              },
+            },
+          },
         });
-        if (technician && isDedicatedTechnicianSession(user)) {
-          return res.status(403).json({
-            error: 'Technician accounts cannot access owner company settings.',
-            code: 'ROLE_TECHNICIAN',
-          });
+        if (technicianWithCompany?.company && isDedicatedTechnicianSession(user)) {
+          company = technicianWithCompany.company;
         }
+      }
+
+      if (!company) {
+        return res.status(200).json(null);
       }
 
       if (company && isPaidEnterprise(company.plan, company.subscriptionStatus)) {

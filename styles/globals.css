@@ -278,6 +278,7 @@ button {
 
 .signature-canvas {
   cursor: crosshair;
+  touch-action: none;
 }
 
 .form-group {

@@ -76,6 +76,17 @@ export default function SignUp({ initialRole, initialInviteEmail }: SignUpPagePr
   const resolvedEmail = isTechnicianSignup && prefilledInviteEmail ? prefilledInviteEmail : email;
 
   useEffect(() => {
+    if (!router.isReady || !isTechnicianSignup || !prefilledInviteEmail) return;
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user?.email) return;
+      const sessionEmail = session.user.email.trim().toLowerCase();
+      const inviteEmail = prefilledInviteEmail.trim().toLowerCase();
+      if (sessionEmail === inviteEmail) return;
+      void supabase.auth.signOut();
+    });
+  }, [router.isReady, isTechnicianSignup, prefilledInviteEmail]);
+
+  useEffect(() => {
     if (resendCountdown <= 0) return;
     const interval = window.setInterval(() => {
       setResendCountdown((prev) => (prev > 0 ? prev - 1 : 0));

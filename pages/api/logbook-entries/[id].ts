@@ -1,7 +1,50 @@
+import { randomUUID } from 'crypto';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { supabase } from '../../../lib/supabase';
 import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
+import { normalizeAuthEmail } from '../../../lib/auth/userSession';
+
+type CompanyForAccess = {
+  id: string;
+  subscriptionStatus: string | null;
+  trialEndsAt: Date | null;
+  paymentGraceEndsAt: Date | null;
+  plan: string | null;
+};
+
+async function resolveCompanyForEntryAccess(userEmail: string): Promise<CompanyForAccess | null> {
+  const email = normalizeAuthEmail(userEmail);
+  const asOwner = await prisma.company.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      subscriptionStatus: true,
+      trialEndsAt: true,
+      paymentGraceEndsAt: true,
+      plan: true,
+    },
+  });
+  if (asOwner) return asOwner;
+
+  const tech = await prisma.technician.findFirst({
+    where: { email },
+    select: {
+      companyId: true,
+      company: {
+        select: {
+          id: true,
+          subscriptionStatus: true,
+          trialEndsAt: true,
+          paymentGraceEndsAt: true,
+          plan: true,
+        },
+      },
+    },
+  });
+  if (!tech?.company) return null;
+  return tech.company;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -20,10 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const company = await prisma.company.findUnique({
-    where: { email: user.email },
-    select: { id: true, subscriptionStatus: true, trialEndsAt: true, paymentGraceEndsAt: true, plan: true },
-  });
+  const company = await resolveCompanyForEntryAccess(user.email);
   if (!company) {
     return res.status(403).json({ error: 'Forbidden' });
   }
@@ -48,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Delete old join records
     await prisma.logbookEntryTechnician.deleteMany({
-      where: { logbookEntryId: id }
+      where: { logbookEntryId: id },
     });
 
     // Create new join records
@@ -65,6 +105,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })),
     });
 
+    const shouldUpdatePhotos = Object.prototype.hasOwnProperty.call(req.body ?? {}, 'photoUrls') && Array.isArray(photoUrls);
+    const normalizedPhotoUrls = shouldUpdatePhotos
+      ? (photoUrls as unknown[]).filter((url): url is string => typeof url === 'string' && url.trim().length > 0).slice(0, 4)
+      : [];
+    const primaryPhotoUrl =
+      normalizedPhotoUrls.length > 1
+        ? JSON.stringify(normalizedPhotoUrls)
+        : normalizedPhotoUrls[0] || null;
+
     // Update entry
     const updatedEntry = await prisma.logbookEntry.update({
       where: { id },
@@ -74,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         address,
         treatment,
         notes,
-        photoUrl: photoUrls?.length > 1 ? JSON.stringify(photoUrls) : photoUrls?.[0] || null,
+        ...(shouldUpdatePhotos ? { photoUrl: primaryPhotoUrl } : {}),
         signature,
         rooms: Array.isArray(rooms) ? rooms : undefined,
         followUpDate: followUpDate ? new Date(followUpDate) : undefined,
@@ -96,6 +145,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: status || "open",
       },
     });
+
+    if (shouldUpdatePhotos) {
+      await prisma.logbookPhoto.deleteMany({ where: { logbookEntryId: id } });
+      if (normalizedPhotoUrls.length > 0) {
+        await prisma.logbookPhoto.createMany({
+          data: normalizedPhotoUrls.map((url) => ({
+            id: randomUUID(),
+            logbookEntryId: id,
+            url,
+            createdAt: new Date(),
+          })),
+        });
+      }
+    }
+
     // Update baitStations if provided
     if (Array.isArray(baitStations) && baitStations.length > 0) {
       // Remove old stations for this entry and insert new ones
@@ -121,6 +185,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
+    const ownerCompany = await prisma.company.findUnique({
+      where: { email: normalizeAuthEmail(user.email) },
+      select: { id: true },
+    });
+    if (!ownerCompany || ownerCompany.id !== company.id) {
+      return res.status(403).json({ error: 'Only business owners can delete logbook entries.' });
+    }
+
     const entry = await prisma.logbookEntry.findUnique({
       where: { id },
       select: { companyId: true }

@@ -234,7 +234,7 @@ export async function sendTechnicianInviteEmail(params: {
   const inviteLink =
     params.inviteLink ??
     `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(params.email)}`;
-  const signinLink = `${appUrl}/auth/signin?role=technician`;
+  const signinLink = `${appUrl}/auth/signin?role=technician&email=${encodeURIComponent(params.email)}`;
   const safeName = params.technicianName ? escapeHtml(params.technicianName) : 'there';
   const safeCompany = params.companyName ? escapeHtml(params.companyName) : 'your team';
 
@@ -242,6 +242,7 @@ export async function sendTechnicianInviteEmail(params: {
     <p>Hi ${safeName},</p>
     <p>You were invited to join <strong>${safeCompany}</strong> on Pest Trace as a technician.</p>
     <p>Use the button below to complete technician setup and activate your account.</p>
+    <p class="text-sm text-slate-600">If you also receive a separate &quot;confirm email&quot; message from our auth provider, that link now opens your technician workspace (not the business dashboard).</p>
     <p style="text-align:center;">
       <a href="${inviteLink}" style="background-color:#10b981;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;display:inline-block;">
         Complete technician setup

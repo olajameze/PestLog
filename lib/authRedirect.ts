@@ -1,4 +1,4 @@
-const DEFAULT_POST_AUTH = '/dashboard';
+export const DEFAULT_POST_AUTH = '/dashboard';
 
 /**
  * Restrict open redirects: only same-origin paths starting with a single "/".
