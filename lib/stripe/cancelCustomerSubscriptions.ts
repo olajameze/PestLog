@@ -57,6 +57,24 @@ export async function cancelAllSubscriptionsForStripeCustomer(
     return { ok: true, cancelledCount };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    // Stripe has no subscriptions to cancel when the customer id is unknown in this account
+    // (wrong live/test keys, migrated account, or customer removed in Dashboard).
+    if (/no such customer/i.test(message)) {
+      console.warn(
+        `[stripe] cancelSubscriptions: customer "${customerId}" not found — continuing without cancel (${message}).`,
+      );
+      return { ok: true, cancelledCount: 0 };
+    }
+    const code =
+      typeof e === 'object' && e !== null && 'code' in e
+        ? String((e as { code?: unknown }).code ?? '')
+        : '';
+    if (code === 'resource_missing') {
+      console.warn(
+        `[stripe] cancelSubscriptions: missing resource for customer "${customerId}" — continuing (${message}).`,
+      );
+      return { ok: true, cancelledCount: 0 };
+    }
     return { ok: false, error: message };
   }
 }
