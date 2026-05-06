@@ -6,6 +6,14 @@ import { logger } from '../../lib/logger';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { resolveSiteOriginForApiRequest, resolveStripePortalReturnUrl } from '../../lib/siteOrigin';
 
+function stripeReturnHostLog(returnUrl: string): string {
+  try {
+    return new URL(returnUrl).hostname || '(bad-url)';
+  } catch {
+    return '(bad-url)';
+  }
+}
+
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
@@ -133,7 +141,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ url: portalSession.url });
       } catch (flowErr) {
         const msg = flowErr instanceof Error ? flowErr.message : String(flowErr);
-        logger.warn(`Stripe portal cancel deep-link failed, using default portal: ${msg}`);
+        logger.warn(
+          `Stripe portal cancel deep-link failed, using default portal: ${msg} return_host=${stripeReturnHostLog(returnUrl)}`,
+        );
       }
     }
 
@@ -143,6 +153,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
-    return res.status(500).json({ error: (error as Error).message });
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(
+      `Stripe billingPortal.sessions.create failed: ${message} return_host=${stripeReturnHostLog(returnUrl)}`,
+    );
+    const stripeReturnBug =
+      /not a valid url|return_url/i.test(message);
+    return res.status(500).json({
+      error: message,
+      ...(stripeReturnBug
+        ? {
+            hint: 'Unset STRIPE_PORTAL_RETURN_URL unless it is a full https URL. In Stripe → Customer portal, allow your dashboard domain under return URLs.',
+          }
+        : {}),
+    });
   }
 }
