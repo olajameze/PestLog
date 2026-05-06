@@ -12,7 +12,6 @@ test.describe('Pest Trace E2E smoke', () => {
     await expect(page.locator('body')).toBeVisible();
 
     const baseEmail = `playwright+${Date.now()}@example.com`;
-    const password = 'Password123!';
 
     await page.goto('/auth/signup');
     await expect(page.locator('text=Create your account')).toBeVisible();
@@ -20,8 +19,9 @@ test.describe('Pest Trace E2E smoke', () => {
     await page.fill('#business-name', 'Playwright Pest Co');
     await page.fill('#full-name', 'E2E Tester');
     await page.fill('#email', baseEmail);
-    await page.fill('#password', password);
-    await page.fill('#confirm-password', password);
+    // Controlled inputs: pressSequentially reliably updates React state (fill alone can skip onChange).
+    await page.locator('#password').pressSequentially('Password123!', { delay: 15 });
+    await page.locator('#confirm-password').pressSequentially('Password123!', { delay: 15 });
     await page.click('button:has-text("Create Account")');
 
     const otpLoc = page.locator('#admin-signup-otp');

@@ -13,10 +13,10 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'set NODE_ENV=test&& npm run build && npm start',
+    command: 'npm run build && npm start',
     port: 3001,
     timeout: 180000,
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     env: {
       PORT: '3001',
       NODE_ENV: 'test',
