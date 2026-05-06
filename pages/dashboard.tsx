@@ -690,8 +690,9 @@ export default function Dashboard() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      setAppError(data.error || 'Unable to open customer portal.');
-      showToast('Portal failed', data.error || 'Unable to open customer portal.', 'error');
+      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      setAppError(detail || 'Unable to open customer portal.');
+      showToast('Portal failed', detail || 'Unable to open customer portal.', 'error');
       setLoadingPortal(false);
     }
   };
@@ -722,8 +723,9 @@ export default function Dashboard() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      setAppError(data.error || 'Unable to open cancellation flow.');
-      showToast('Cancel plan', data.error || 'Unable to open Stripe billing.', 'error');
+      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      setAppError(detail || 'Unable to open cancellation flow.');
+      showToast('Cancel plan', detail || 'Unable to open Stripe billing.', 'error');
       setLoadingPortal(false);
     }
   };

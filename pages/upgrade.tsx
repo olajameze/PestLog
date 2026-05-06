@@ -155,7 +155,8 @@ export default function UpgradePage() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      showToast('Portal failed', data.error || 'Unable to open Stripe portal', 'error');
+      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      showToast('Portal failed', detail || 'Unable to open Stripe portal', 'error');
       setActionLoading(false);
       setSelectedPlan(null);
     }
@@ -185,7 +186,8 @@ export default function UpgradePage() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      showToast('Cancel plan', data.error || 'Unable to open Stripe billing', 'error');
+      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      showToast('Cancel plan', detail || 'Unable to open Stripe billing', 'error');
       setActionLoading(false);
       setSelectedPlan(null);
     }
