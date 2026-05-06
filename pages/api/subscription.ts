@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { sendUpgradeNotificationEmail } from '../../lib/email';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { reconcileCompanyBillingFromStripe } from '../../lib/stripe/reconcileCompanyBilling';
 
 /** Called from the Stripe webhook when checkout activates a paid plan for a company. */
 export async function sendSubscriptionUpgradeEmail(companyId: string, plan: string): Promise<void> {
@@ -37,16 +38,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const authEmail = normalizeAuthEmail(user.email);
 
     // Get company and return subscription status directly from Company model
+    const subscriptionSelect = {
+      id: true,
+      subscriptionStatus: true,
+      trialEndsAt: true,
+      paymentGraceEndsAt: true,
+      paymentFailedAt: true,
+      stripeCustomerId: true,
+      plan: true,
+    };
+
     let company = await prisma.company.findUnique({
       where: { email: authEmail },
-      select: {
-        subscriptionStatus: true,
-        trialEndsAt: true,
-        paymentGraceEndsAt: true,
-        paymentFailedAt: true,
-        stripeCustomerId: true,
-        plan: true,
-      },
+      select: subscriptionSelect,
     });
 
     if (!company) {
@@ -54,14 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { email: authEmail },
         include: {
           company: {
-            select: {
-              subscriptionStatus: true,
-              trialEndsAt: true,
-              paymentGraceEndsAt: true,
-              paymentFailedAt: true,
-              stripeCustomerId: true,
-              plan: true,
-            },
+            select: subscriptionSelect,
           },
         },
       });
@@ -71,6 +68,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       company = technician.company;
+    }
+
+    if (company.stripeCustomerId?.trim()) {
+      try {
+        await reconcileCompanyBillingFromStripe(company.id);
+      } catch (e) {
+        console.warn('[subscription] Stripe reconcile skipped:', e instanceof Error ? e.message : e);
+      }
+      const latest = await prisma.company.findUnique({
+        where: { id: company.id },
+        select: subscriptionSelect,
+      });
+      if (latest) company = latest;
     }
 
     return res.status(200).json({

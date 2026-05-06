@@ -20,15 +20,19 @@ export function hasSubscriptionAccess(snapshot: AccessSnapshot, nowMs = Date.now
   const hasPaidTierName =
     planNorm !== '' && checkPlan(planNorm, ['pro', 'business', 'enterprise']);
 
-  // Stripe uses `trialing` for subscription trial phases; treat like active for gated features.
-  const isPaidStripeState = status === 'active' || status === 'trialing';
+  // Stripe billing states that retain product access pending payment / webhook grace flows.
+  const stripeSupportsPaidSku =
+    status === 'active' ||
+    status === 'trialing' ||
+    status === 'past_due' ||
+    status === 'unpaid';
 
-  // Paid SKU in DB alone must not unlock access (avoids orphaned plan values / webhook drift).
-  if (hasPaidTierName && isPaidStripeState) {
+  if (hasPaidTierName && stripeSupportsPaidSku) {
     return true;
   }
 
-  if (isPaidStripeState) {
+  // Active/trialing even if plan slug drifted
+  if (status === 'active' || status === 'trialing') {
     return true;
   }
 
@@ -41,7 +45,7 @@ export function hasSubscriptionAccess(snapshot: AccessSnapshot, nowMs = Date.now
   return graceEndMs !== null && graceEndMs > nowMs;
 }
 
-/** Billing badge: paid tiers show when Stripe reports active or trialing subscription. */
+/** Billing badge: paid tier when Stripe shows an active-ish billing lifecycle. */
 export function formatOwnerBillingPlanLabel(
   snapshot: Pick<AccessSnapshot, 'plan' | 'subscriptionStatus'>,
 ): string {
@@ -51,13 +55,17 @@ export function formatOwnerBillingPlanLabel(
     : '';
 
   const isPaidTier = checkPlan(plan, ['pro', 'business', 'enterprise']);
-  const isPaidStripeState = status === 'active' || status === 'trialing';
+  const showsPaidStripeLabel =
+    status === 'active' ||
+    status === 'trialing' ||
+    status === 'past_due' ||
+    status === 'unpaid';
 
-  if (isPaidStripeState && isPaidTier) {
+  if (showsPaidStripeLabel && isPaidTier) {
     return plan;
   }
 
-  if (isPaidTier && !isPaidStripeState) {
+  if (isPaidTier && !showsPaidStripeLabel) {
     return 'free trial';
   }
 

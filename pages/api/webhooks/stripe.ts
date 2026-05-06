@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { prisma } from '../../../lib/prisma';
 import { logger } from '../../../lib/logger';
 import { sendSubscriptionUpgradeEmail } from '../subscription';
+import { subscriptionStatusForDb } from '../../../lib/stripe/reconcileCompanyBilling';
 
 const GRACE_PERIOD_DAYS = 5;
 const RETRIAL_PERIOD_DAYS = 7;
@@ -25,13 +26,6 @@ async function clearGraceMetadata(stripeCustomerId: string) {
       nonPaymentCanceledAt: null,
     },
   });
-}
-
-/** Persist `active` for Stripe paid states so UI matches Checkout (Stripe uses `trialing` during sub trials). */
-function subscriptionStatusForDb(stripeStatus: string): string {
-  const s = String(stripeStatus).toLowerCase();
-  if (s === 'active' || s === 'trialing') return 'active';
-  return s;
 }
 
 async function applyExpiredGracePolicy(stripeCustomerId: string, now = new Date()) {

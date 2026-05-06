@@ -18,6 +18,13 @@ export default function Document() {
                 process.env.NEXT_PUBLIC_MANIFEST_ORIGIN,
                 process.env.NEXT_PUBLIC_APP_URL,
                 process.env.NEXT_PUBLIC_SITE_URL,
+                ...(process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim()
+                  ? [
+                      process.env.VERCEL_PROJECT_PRODUCTION_URL.trim().startsWith('http')
+                        ? process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()
+                        : `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}`,
+                    ]
+                  : []),
               ];
               const baseRaw = candidates.find(
                 (x): x is string => typeof x === 'string' && x.trim().length > 0,
