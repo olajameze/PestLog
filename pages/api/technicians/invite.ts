@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { sendTechnicianInviteEmail } from '../../../lib/email';
+import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -19,14 +20,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } = await supabase.auth.getUser(token);
   if (error || !user?.email) return res.status(401).json({ error: 'Unauthorized' });
 
+  const ownerEmail = normalizeAuthEmail(user.email);
+
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: ownerEmail },
     select: { id: true, name: true },
   });
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: { email: ownerEmail },
       select: { id: true },
     });
     if (technician) {
@@ -56,13 +59,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     'http://localhost:3000';
+  const recipientEmail = normalizeAuthEmail(technician.email);
   const inviteLink = `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(
-    technician.email,
+    recipientEmail,
   )}`;
 
   try {
-    await sendTechnicianInviteEmail({
-      email: technician.email,
+    const sendResult = await sendTechnicianInviteEmail({
+      email: recipientEmail,
       technicianName: technician.name,
       companyName: company.name || undefined,
       inviteLink,
@@ -70,6 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       inviteLink,
+      resendId: sendResult?.id,
     });
   } catch (sendError) {
     console.error('Technician invite email failed:', sendError);

@@ -51,7 +51,7 @@ async function sendMail(payload: {
 
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
-  return resend.emails.send({
+  const result = await resend.emails.send({
     from: `Pest Trace <${fromAddress}>`,
     to: payload.to,
     subject: payload.subject,
@@ -59,6 +59,18 @@ async function sendMail(payload: {
     text: payload.text,
     replyTo: supportEmail,
   });
+
+  if (result.error) {
+    const msg = result.error.message || 'Resend rejected the email.';
+    console.error('[Resend]', result.error);
+    throw new Error(msg);
+  }
+
+  if (result.data?.id) {
+    console.info(`[Resend] email queued id=${result.data.id} subject=${payload.subject} to=${payload.to.join(',')}`);
+  }
+
+  return result.data;
 }
 
 export async function sendWelcomeEmail(email: string, fullName?: string, businessName?: string) {
@@ -218,7 +230,7 @@ export async function sendTechnicianInviteEmail(params: {
   companyName?: string;
   /** When omitted, falls back to SITE_URL-derived signup link using `params.email`. */
   inviteLink?: string;
-}) {
+}): Promise<{ id: string } | undefined> {
   const inviteLink =
     params.inviteLink ??
     `${appUrl}/auth/signup?role=technician&email=${encodeURIComponent(params.email)}`;
@@ -259,7 +271,7 @@ Need help? Contact ${supportEmail}.
 Thanks,
 The Pest Trace team`;
 
-  await sendMail({
+  return sendMail({
     to: [params.email],
     subject: 'You are invited to Pest Trace as a technician',
     html: brandEmailHtml('Technician invite', inner),
