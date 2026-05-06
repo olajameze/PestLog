@@ -37,10 +37,52 @@ function originHostStripeSafe(origin: string | null): boolean {
   }
 }
 
+/** Remove CR/LF, BOM, and accidental wrapping quotes from env/dashboard URLs before Stripe parses them. */
+export function scrubUrlString(raw: string): string {
+  let v = raw.replace(/\uFEFF/g, '').replace(/\r\n|\r|\n/g, '').trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
+}
+
+function upgradeToHttpsUnlessLocal(u: URL): void {
+  const h = u.hostname.toLowerCase();
+  const local = h === 'localhost' || h === '127.0.0.1';
+  if (!local && u.protocol === 'http:') {
+    u.protocol = 'https:';
+  }
+}
+
+/**
+ * Canonical return_url string for Stripe Customer Portal API.
+ * Stripe rejects url_invalid when http is used on public hosts or the string has hidden characters.
+ */
+export function finalizeStripeBillingReturnUrl(raw: string): string | null {
+  const scrubbed = scrubUrlString(raw);
+  if (!scrubbed) return null;
+  try {
+    const u = new URL(scrubbed);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    upgradeToHttpsUnlessLocal(u);
+    if (
+      process.env.NODE_ENV === 'production' &&
+      u.protocol === 'http:' &&
+      !isLoopbackOrigin(u.origin)
+    ) {
+      return null;
+    }
+    if (!originHostStripeSafe(u.origin)) return null;
+    return (u.href.split('#')[0] ?? u.href).trim();
+  } catch {
+    return null;
+  }
+}
+
 /** Build an absolute https? origin for redirects (Stripe return URLs, Customer Portal). */
 export function normalizeOriginBase(raw?: string): string | null {
   if (typeof raw !== 'string') return null;
-  let v = raw.trim();
+  let v = scrubUrlString(raw);
   if (!v) return null;
   v = v.replace(/\/+$/, '');
   if (!/^https?:\/\//i.test(v)) {
@@ -82,7 +124,7 @@ export function getWebManifestLinkHref(): string {
 
 /** Absolute return URL for Stripe Customer Portal; falls back if env is relative or invalid. */
 export function resolveStripePortalReturnUrl(defaultReturn: string): string {
-  const raw = process.env.STRIPE_PORTAL_RETURN_URL?.trim();
+  const raw = scrubUrlString(process.env.STRIPE_PORTAL_RETURN_URL ?? '');
   if (!raw) return assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
 
   let resolved: URL;
@@ -103,50 +145,18 @@ export function resolveStripePortalReturnUrl(defaultReturn: string): string {
   if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
     return assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
   }
-  if (
-    process.env.NODE_ENV === 'production' &&
-    resolved.protocol === 'http:' &&
-    !isLoopbackOrigin(resolved.origin)
-  ) {
-    return assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
-  }
-  if (!originHostStripeSafe(resolved.origin)) {
-    return assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
-  }
-  return resolved.href.split('#')[0] ?? resolved.href;
-}
 
-/** Strip BOM / odd whitespace so Stripe parses return_url from env/request. */
-export function sanitizeUrlForStripe(raw: string): string | null {
-  const trimmed = raw.replace(/^\uFEFF/, '').trim();
-  try {
-    const u = new URL(trimmed.normalize('NFKC'));
-    return u.href.split('#')[0] ?? u.href;
-  } catch {
-    return null;
-  }
+  const href = resolved.href.split('#')[0] ?? resolved.href;
+  const finalized = finalizeStripeBillingReturnUrl(href);
+  return finalized ?? assertStripeReturnUrlOrDefault(defaultReturn, defaultReturn);
 }
 
 function assertStripeReturnUrlOrDefault(candidate: string, fallback: string): string {
-  try {
-    const u = new URL(candidate);
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-      return fallback;
-    }
-    if (!originHostStripeSafe(u.origin)) {
-      return fallback;
-    }
-    if (
-      process.env.NODE_ENV === 'production' &&
-      u.protocol === 'http:' &&
-      !isLoopbackOrigin(u.origin)
-    ) {
-      return fallback;
-    }
-    return u.href.split('#')[0] ?? u.href;
-  } catch {
-    return fallback;
-  }
+  const c = finalizeStripeBillingReturnUrl(candidate);
+  if (c) return c;
+  const f = finalizeStripeBillingReturnUrl(fallback);
+  if (f) return f;
+  return scrubUrlString(fallback);
 }
 
 /**
@@ -210,24 +220,29 @@ export function listBillingOriginCandidates(req: NextApiRequest): string[] {
 /** Full return URLs to try for Stripe Customer Portal (same path the app uses after billing). */
 export function listStripePortalReturnUrlCandidates(req: NextApiRequest): string[] {
   const origins = listBillingOriginCandidates(req);
-  const dashboardPaths = origins.map((o) => `${o.replace(/\/+$/, '')}/dashboard?tab=settings`);
+  const withTab = origins.map((o) => `${o.replace(/\/+$/, '')}/dashboard?tab=settings`);
+  const plainDash = origins.map((o) => `${o.replace(/\/+$/, '')}/dashboard`);
 
   const seen = new Set<string>();
   const ordered: string[] = [];
 
   const push = (u: string) => {
-    const v = sanitizeUrlForStripe(u);
+    const v = finalizeStripeBillingReturnUrl(u);
     if (!v || seen.has(v)) return;
     seen.add(v);
     ordered.push(v);
   };
 
-  if (process.env.STRIPE_PORTAL_RETURN_URL?.trim()) {
-    const baseForEnv = dashboardPaths[0] ?? 'http://localhost:3000/dashboard?tab=settings';
+  const envRaw = scrubUrlString(process.env.STRIPE_PORTAL_RETURN_URL ?? '');
+  if (envRaw) {
+    const baseForEnv = withTab[0] ?? 'http://localhost:3000/dashboard?tab=settings';
     push(resolveStripePortalReturnUrl(baseForEnv));
   }
 
-  for (const d of dashboardPaths) {
+  for (const d of withTab) {
+    push(assertStripeReturnUrlOrDefault(d, d));
+  }
+  for (const d of plainDash) {
     push(assertStripeReturnUrlOrDefault(d, d));
   }
 
