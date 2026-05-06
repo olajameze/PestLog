@@ -1,12 +1,8 @@
 // Enhanced Service Worker for Pest Trace with Background Sync
-const CACHE_NAME = 'pesttrace-v5';
-const urlsToCache = [
-  '/auth/signin',
-  '/home',
-  '/offline.html',
-  '/_offline',
-  '/manifest.json',
-];
+const CACHE_NAME = 'pesttrace-v6';
+// Do not precache /manifest.json: on Vercel Preview + Deployment Protection, same-origin manifest
+// fetches get 401 and cache.addAll() would reject. The manifest is loaded via <link rel="manifest">.
+const urlsToCache = ['/auth/signin', '/home', '/offline.html', '/_offline'];
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') {
