@@ -3,11 +3,14 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/enterpriseFeatures';
+import { isDedicatedTechnicianSession, normalizeAuthEmail } from '../../lib/auth/userSession';
 
-function notificationPreferencesWithoutApiKey(raw: unknown): Prisma.InputJsonValue {
-  if (!raw || typeof raw !== 'object') return {};
+function notificationPreferencesSafe(raw: unknown): Prisma.InputJsonValue | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const o = { ...(raw as Record<string, unknown>) };
   delete o.apiKey;
+  if (Object.keys(o).length === 0) return undefined;
   return o as Prisma.InputJsonValue;
 }
 
@@ -21,29 +24,27 @@ function isPaidEnterprise(
   return p === 'enterprise' && s === 'active';
 }
 
-/** True when this auth session belongs to technician OTP flow (`technician-signup` sets metadata). */
-function userIsDedicatedTechnicianSession(user: { user_metadata?: Record<string, unknown> | null }): boolean {
-  return user.user_metadata?.role === 'technician';
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Get the authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader) {
       return res.status(401).json({ error: 'No authorization header' });
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
     if (error || !user?.email) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    const ownerEmail = normalizeAuthEmail(user.email);
+
     if (req.method === 'GET') {
-      // Owner-only company details endpoint.
       const company = await prisma.company.findUnique({
-        where: { email: user.email },
+        where: { email: ownerEmail },
         select: {
           id: true,
           name: true,
@@ -65,10 +66,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (!company) {
         const technician = await prisma.technician.findFirst({
-          where: { email: user.email },
+          where: { email: ownerEmail },
           select: { id: true, companyId: true },
         });
-        if (technician && userIsDedicatedTechnicianSession(user)) {
+        if (technician && isDedicatedTechnicianSession(user)) {
           return res.status(403).json({
             error: 'Technician accounts cannot access owner company settings.',
             code: 'ROLE_TECHNICIAN',
@@ -92,7 +93,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json(company);
-    } else if (req.method === 'POST') {
+    }
+
+    if (req.method === 'POST') {
       const {
         name,
         phone,
@@ -103,54 +106,66 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         requirePhotos,
         defaultReportRangeDays,
         notificationPreferences,
-      } = req.body;
+      } = req.body ?? {};
 
-      if (!name || typeof name !== 'string') {
+      if (typeof name !== 'string') {
+        return res.status(400).json({ error: 'Company name is required' });
+      }
+      const trimmedName = name.trim();
+      if (!trimmedName) {
         return res.status(400).json({ error: 'Company name is required' });
       }
 
       const technician = await prisma.technician.findFirst({
-        where: { email: user.email },
+        where: { email: ownerEmail },
         select: { id: true },
       });
-      if (technician && userIsDedicatedTechnicianSession(user)) {
+      if (technician && isDedicatedTechnicianSession(user)) {
         return res.status(403).json({
           error: 'Technician accounts cannot create or update billing company settings.',
           code: 'ROLE_TECHNICIAN',
         });
       }
 
+      const prefs = notificationPreferencesSafe(notificationPreferences);
+      const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const rowNow = new Date();
+
       const company = await prisma.company.upsert({
-    where: { email: user.email },
-    create: {
-      name: name.trim(),
-      phone: typeof phone === 'string' ? phone.trim() : undefined,
-      address: typeof address === 'string' ? address.trim() : undefined,
-      website: typeof website === 'string' ? website.trim() : undefined,
-      vatNumber: typeof vatNumber === 'string' ? vatNumber.trim() : undefined,
-      requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
-      requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
-      defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
-      notificationPreferences: notificationPreferencesWithoutApiKey(notificationPreferences),
-      email: user.email,
-      subscriptionStatus: 'trial',
-      plan: 'trial',
-      trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-    update: {
-      name: name.trim(),
-      phone: typeof phone === 'string' ? phone.trim() : undefined,
-      address: typeof address === 'string' ? address.trim() : undefined,
-      website: typeof website === 'string' ? website.trim() : undefined,
-      vatNumber: typeof vatNumber === 'string' ? vatNumber.trim() : undefined,
-      requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
-      requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
-      defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
-      notificationPreferences: notificationPreferencesWithoutApiKey(notificationPreferences),
+        where: { email: ownerEmail },
+        create: {
+          name: trimmedName,
+          phone: typeof phone === 'string' ? phone.trim() : undefined,
+          address: typeof address === 'string' ? address.trim() : undefined,
+          website: typeof website === 'string' ? website.trim() : undefined,
+          vatNumber: typeof vatNumber === 'string' ? vatNumber.trim() : undefined,
+          requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
+          requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
+          defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
+          ...(prefs !== undefined ? { notificationPreferences: prefs } : {}),
+          email: ownerEmail,
+          subscriptionStatus: 'trial',
+          plan: 'trial',
+          trialEndsAt: trialEnd,
+          createdAt: rowNow,
+          updatedAt: rowNow,
+        },
+        update: {
+          name: trimmedName,
+          phone: typeof phone === 'string' ? phone.trim() : undefined,
+          address: typeof address === 'string' ? address.trim() : undefined,
+          website: typeof website === 'string' ? website.trim() : undefined,
+          vatNumber: typeof vatNumber === 'string' ? vatNumber.trim() : undefined,
+          requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
+          requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
+          defaultReportRangeDays: typeof defaultReportRangeDays === 'number' ? defaultReportRangeDays : 30,
+          ...(prefs !== undefined ? { notificationPreferences: prefs } : {}),
+        },
+      });
+      return res.status(200).json(company);
     }
-  });
-  return res.status(200).json(company);
-  } else if (req.method === 'PATCH') {
+
+    if (req.method === 'PATCH') {
       const {
         name,
         phone,
@@ -161,18 +176,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         requirePhotos,
         defaultReportRangeDays,
         notificationPreferences,
-      } = req.body;
+      } = req.body ?? {};
 
       const company = await prisma.company.findUnique({
-        where: { email: user.email },
+        where: { email: ownerEmail },
       });
 
       if (!company) {
         const technician = await prisma.technician.findFirst({
-          where: { email: user.email },
+          where: { email: ownerEmail },
           select: { id: true },
         });
-        if (technician && userIsDedicatedTechnicianSession(user)) {
+        if (technician && isDedicatedTechnicianSession(user)) {
           return res.status(403).json({
             error: 'Technician accounts cannot update owner company settings.',
             code: 'ROLE_TECHNICIAN',
@@ -206,7 +221,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (typeof requirePhotos === 'boolean') updateData.requirePhotos = requirePhotos;
       if (typeof defaultReportRangeDays === 'number') updateData.defaultReportRangeDays = defaultReportRangeDays;
       if (notificationPreferences && typeof notificationPreferences === 'object') {
-        updateData.notificationPreferences = notificationPreferencesWithoutApiKey(notificationPreferences);
+        const patched = notificationPreferencesSafe(notificationPreferences);
+        if (patched !== undefined) {
+          updateData.notificationPreferences = patched;
+        }
       }
 
       const updatedCompany = await prisma.company.update({
@@ -232,10 +250,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       return res.status(200).json(updatedCompany);
-    } else {
-      res.setHeader('Allow', ['GET', 'POST', 'PATCH']);
-      return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
+
+    res.setHeader('Allow', ['GET', 'POST', 'PATCH']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
   } catch (error) {
     console.error('API error:', error);
     return res.status(500).json({ error: 'Internal server error', details: String(error) });
