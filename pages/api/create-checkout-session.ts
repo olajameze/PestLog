@@ -69,6 +69,23 @@ function getStripe() {
 
 type Plan = 'pro' | 'business' | 'enterprise';
 
+/** Duck-type Stripe SDK error for safe JSON + logging without importing internal classes. */
+function extractStripeFields(error: unknown): { code?: string; param?: string; message?: string } {
+  if (typeof error !== 'object' || error === null) return {};
+  const o = error as Record<string, unknown>;
+  const code = typeof o.code === 'string' ? o.code : undefined;
+  const param = typeof o.param === 'string' ? o.param : undefined;
+  const message = typeof o.message === 'string' ? o.message : undefined;
+  return { code, param, message };
+}
+
+function stripeApiMode(secretKey?: string): 'live' | 'test' | 'unknown' {
+  if (!secretKey) return 'unknown';
+  if (secretKey.startsWith('sk_live') || secretKey.startsWith('rk_live')) return 'live';
+  if (secretKey.startsWith('sk_test') || secretKey.startsWith('rk_test')) return 'test';
+  return 'unknown';
+}
+
 const PRICE_IDS: Record<Plan, string> = {
   pro: process.env.STRIPE_PRICE_ID_PRO || '',
   business: process.env.STRIPE_PRICE_ID_BUSINESS || '',
@@ -173,6 +190,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    const stripeMode = stripeApiMode(process.env.STRIPE_SECRET_KEY);
+    try {
+      const pricePreview = await stripe.prices.retrieve(priceId);
+      if (!pricePreview.active) {
+        return res.status(500).json({
+          error: `This plan’s Stripe price is inactive (${priceId}). Activate it in the Stripe Dashboard or set a new STRIPE_PRICE_ID_* in Vercel.`,
+          code: 'STRIPE_PRICE_INACTIVE',
+          stripePriceId: priceId,
+          plan: selectedPlan,
+        });
+      }
+      if (pricePreview.type !== 'recurring') {
+        return res.status(500).json({
+          error:
+            `Checkout expects a recurring subscription price. Price ${priceId} is type "${pricePreview.type}". Create a recurring monthly price in Stripe.`,
+          code: 'STRIPE_PRICE_NOT_RECURRING',
+          stripePriceId: priceId,
+          plan: selectedPlan,
+        });
+      }
+    } catch (e) {
+      const fe = extractStripeFields(e);
+      if (fe.code === 'resource_missing') {
+        return res.status(500).json({
+          error: `Stripe could not find price ${priceId} in ${stripeMode === 'unknown' ? 'this' : stripeMode} mode. Open Stripe Dashboard → Products (toggle Test/Live to match STRIPE_SECRET_KEY), copy each plan’s Price ID, and update STRIPE_PRICE_ID_PRO / BUSINESS / ENTERPRISE in Vercel.`,
+          code: 'STRIPE_PRICE_NOT_FOUND',
+          stripeCode: fe.code,
+          stripeParam: fe.param,
+          stripePriceId: priceId,
+          plan: selectedPlan,
+          stripeApiMode: stripeMode,
+        });
+      }
+      throw e;
+    }
+
     const origin = resolveCheckoutOrigin(req);
     if (!origin) {
       const hint =
@@ -212,17 +265,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({ url: session.url });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Checkout session failed: ${errorMessage}`);
-    const stripeCode =
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      typeof (error as { code?: unknown }).code === 'string'
-        ? (error as { code: string }).code
-        : undefined;
-    res.status(500).json({
-      error: 'Unable to create checkout session. Please try again later.',
-      ...(stripeCode ? { stripeCode } : {}),
-    });
+    const fe = extractStripeFields(error);
+    logger.error(`Checkout session failed: ${errorMessage}${fe.code ? ` (${JSON.stringify(fe)})` : ''}`);
+    let message = 'Unable to create checkout session. Please try again later.';
+    if (fe.code === 'resource_missing') {
+      if (typeof fe.param === 'string' && /price|line_items/i.test(fe.param)) {
+        message =
+          'Stripe rejected the checkout price ID. Ensure STRIPE_PRICE_ID_* matches a real recurring price from the Stripe Dashboard for the same test/live mode as STRIPE_SECRET_KEY.';
+      }
+    }
+
+    const payload: Record<string, string | undefined> = {
+      error: message,
+    };
+    if (fe.code) payload.stripeCode = fe.code;
+    if (fe.param) payload.stripeParam = fe.param;
+    res.status(500).json(payload);
   }
 }
