@@ -57,6 +57,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       select: { id: true },
     });
     if (technician) {
+      if (req.method === 'GET') {
+        return res.status(200).json([]);
+      }
       return res.status(403).json({
         error: 'Technician accounts cannot manage saved report views.',
         code: 'ROLE_TECHNICIAN',

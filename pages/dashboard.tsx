@@ -485,6 +485,15 @@ export default function Dashboard() {
         router.replace(`/auth/verify?email=${encodeURIComponent(session.user.email ?? '')}`);
         return;
       }
+
+      const technicianProfileRes = await fetch('/api/technician-profile', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (technicianProfileRes.ok) {
+        router.replace('/technician');
+        return;
+      }
+
       setUser(session.user);
       const companyPromise = fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -499,10 +508,6 @@ export default function Dashboard() {
       const companyRes = await companyPromise;
       const companyData = await companyRes.json().catch(() => null);
       if (!companyRes.ok) {
-        if (companyRes.status === 403 && companyData?.code === 'ROLE_TECHNICIAN') {
-          router.replace('/technician?accessDenied=dashboard');
-          return;
-        }
         setAppError(companyData?.error || 'Unable to load company details.');
         showToast('Load failed', companyData?.error || 'Unable to load company details.', 'error');
         setCompanyLoadState('error');

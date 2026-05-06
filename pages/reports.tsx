@@ -366,7 +366,7 @@ export default function ReportsPage() {
   const [company, setCompany] = useState<Company | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selectedTechnician, setSelectedTechnician] = useState('');
-  const [isOwner, setIsOwner] = useState(true);
+  const [isOwner, setIsOwner] = useState(false);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [report, setReport] = useState<ReportResponse | null>(null);
@@ -427,7 +427,61 @@ export default function ReportsPage() {
         return;
       }
 
-      // Try owner/company access first
+      const technicianProfileRes = await fetch('/api/technician-profile', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (technicianProfileRes.ok) {
+        const techData = await technicianProfileRes.json();
+        setCompany({
+          id: techData.technician.companyId,
+          name: techData.technician.companyName,
+          email: techData.technician.companyId,
+        });
+        const subRes = await fetch('/api/subscription', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+          setPlan(
+            queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
+              ? queryPlan
+              : subData.plan || 'trial',
+          );
+          setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
+          if (
+            !hasSubscriptionAccess({
+              plan: subData.plan,
+              subscriptionStatus: subData.status,
+              trialEndsAt: subData.trialEndsAt,
+              paymentGraceEndsAt: subData.paymentGraceEndsAt,
+            })
+          ) {
+            router.replace('/upgrade');
+            return;
+          }
+          const daysLeft = getGraceDaysLeft({ paymentGraceEndsAt: subData.paymentGraceEndsAt });
+          setOverdueBanner(
+            daysLeft !== null
+              ? `Payment is overdue. You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining before service interruption.`
+              : null,
+          );
+        } else {
+          const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
+          if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
+            setPlan(queryPlan);
+          }
+        }
+        setTechnicians([
+          { id: techData.technician.id, name: techData.technician.name, email: techData.technician.email },
+        ]);
+        setSelectedTechnician(techData.technician.id);
+        setIsOwner(false);
+        setLoading(false);
+        return;
+      }
+
+      // Business owner path
       const companyRes = await fetch('/api/company', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
@@ -446,7 +500,7 @@ export default function ReportsPage() {
             setPlan(
               queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
                 ? queryPlan
-                : subData.plan || 'trial'
+                : subData.plan || 'trial',
             );
             setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
             if (
@@ -464,7 +518,7 @@ export default function ReportsPage() {
             setOverdueBanner(
               daysLeft !== null
                 ? `Payment is overdue. You have ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining before service interruption.`
-                : null
+                : null,
             );
           } else {
             const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
@@ -497,42 +551,7 @@ export default function ReportsPage() {
         }
       }
 
-      // Fallback to technician mode
-      const techRes = await fetch('/api/technician-profile', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!techRes.ok) {
-        router.push('/dashboard');
-        return;
-      }
-      const techData = await techRes.json();
-      setCompany({ 
-        id: techData.technician.companyId, 
-        name: techData.technician.companyName,
-        email: techData.technician.companyId // placeholder
-      });
-      const subRes = await fetch('/api/subscription', {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (subRes.ok) {
-        const subData = await subRes.json();
-        const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
-        setPlan(
-          queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')
-            ? queryPlan
-            : subData.plan || 'trial'
-        );
-        setTrialEndsAt(subData.trialEndsAt ? String(subData.trialEndsAt) : null);
-      } else {
-        const queryPlan = typeof router.query.upgradedPlan === 'string' ? router.query.upgradedPlan : undefined;
-        if (queryPlan && (queryPlan === 'pro' || queryPlan === 'business' || queryPlan === 'enterprise')) {
-          setPlan(queryPlan);
-        }
-      }
-      setTechnicians([{ id: techData.technician.id, name: techData.technician.name, email: techData.technician.email }]);
-      setSelectedTechnician(techData.technician.id);
-      setIsOwner(false);
-      setLoading(false);
+      router.push('/dashboard');
     };
 
     loadUserData();

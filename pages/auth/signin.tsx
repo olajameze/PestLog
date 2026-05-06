@@ -113,6 +113,18 @@ export default function SignIn({ initialRole, initialInviteEmail }: SignInPagePr
         setLoading(false);
         return;
       }
+      if (data.session.access_token) {
+        const techCheck = await fetch('/api/technician-profile', {
+          headers: { Authorization: `Bearer ${data.session.access_token}` },
+        });
+        if (techCheck.ok) {
+          setSuccessMessage('Signed in successfully. Redirecting to technician workspace...');
+          showToast('Signed in', 'Redirecting to technician workspace', 'success');
+          setLoading(false);
+          await router.push('/technician');
+          return;
+        }
+      }
       setSuccessMessage('Signed in successfully. Redirecting to dashboard...');
       showToast('Signed in', 'Redirecting to dashboard', 'success');
       router.push('/dashboard');
