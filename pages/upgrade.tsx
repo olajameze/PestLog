@@ -3,17 +3,20 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/ToastProvider';
 import { MARKETING_PLAN_FEATURES, PRICING_TRIAL_FOOTNOTE } from '../lib/marketingPlanFeatures';
+import { ownerCanManagePaidPlanInStripe } from '../lib/subscriptionAccess';
 
 type Company = {
   id: string;
   name?: string;
   email: string;
+  plan?: string | null;
 };
 
 type Subscription = {
   status: string;
   trialEndsAt?: string;
   stripeCustomerId?: string;
+  plan?: string;
 };
 
 export default function UpgradePage() {
@@ -142,7 +145,11 @@ export default function UpgradePage() {
     setActionLoading(true);
     const res = await fetch('/api/create-portal-session', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${session.access_token}` },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ intent: 'manage' }),
     });
     const data = await res.json();
     if (res.ok && data.url) {
@@ -154,9 +161,47 @@ export default function UpgradePage() {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Billing portal is disabled in preview mode.', 'info');
+      return;
+    }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+
+    setActionLoading(true);
+    const res = await fetch('/api/create-portal-session', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ intent: 'cancel' }),
+    });
+    const data = await res.json();
+    if (res.ok && data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('Cancel plan', data.error || 'Unable to open Stripe billing', 'error');
+      setActionLoading(false);
+      setSelectedPlan(null);
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-offwhite">Loading subscription details...</div>;
   }
+
+  const canStripeBilling =
+    !isPreviewMode &&
+    ownerCanManagePaidPlanInStripe({
+      plan: subscription?.plan ?? company?.plan,
+      subscriptionStatus: subscription?.status,
+      stripeCustomerId: subscription?.stripeCustomerId,
+    });
 
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
@@ -267,10 +312,25 @@ export default function UpgradePage() {
         <p className="text-center text-xs leading-relaxed text-zinc-500">{PRICING_TRIAL_FOOTNOTE}</p>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-          {subscription?.status === 'active' ? (
-            <button onClick={handleManageSubscription} disabled={actionLoading} className="btn btn-success w-full sm:w-auto hover:shadow-md hover-lift">
-              {actionLoading ? 'Opening portal...' : 'Manage Subscription'}
-            </button>
+          {canStripeBilling ? (
+            <>
+              <button
+                type="button"
+                onClick={handleManageSubscription}
+                disabled={actionLoading}
+                className="btn btn-success w-full sm:w-auto hover:shadow-md hover-lift"
+              >
+                {actionLoading ? 'Opening portal...' : 'Manage subscription'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelSubscription}
+                disabled={actionLoading}
+                className="btn btn-secondary w-full border-red-300 text-red-800 hover:bg-red-50 sm:w-auto hover:shadow-md hover-lift"
+              >
+                {actionLoading ? 'Opening…' : 'Cancel plan'}
+              </button>
+            </>
           ) : null}
           <button className="btn btn-secondary w-full sm:w-auto hover:shadow-md hover-lift" onClick={() => router.push('/dashboard')}>
             Back to Dashboard

@@ -68,6 +68,22 @@ export function formatOwnerBillingPlanLabel(
   return 'free trial';
 }
 
+/** Stripe portal: manage / cancel — not limited to legacy `subscriptionStatus === 'active'`. */
+export function ownerCanManagePaidPlanInStripe(snapshot: {
+  plan?: string | null;
+  subscriptionStatus?: string | null;
+  stripeCustomerId?: string | null;
+}): boolean {
+  if (!snapshot.stripeCustomerId?.trim()) return false;
+  const planNorm = String(snapshot.plan ?? '').toLowerCase().trim();
+  if (!checkPlan(planNorm, ['pro', 'business', 'enterprise'])) return false;
+  const s = snapshot.subscriptionStatus
+    ? String(snapshot.subscriptionStatus).toLowerCase().trim()
+    : '';
+  const ended = new Set(['canceled', 'cancelled', 'incomplete_expired']);
+  return !ended.has(s);
+}
+
 export function getGraceDaysLeft(snapshot: AccessSnapshot, nowMs = Date.now()): number | null {
   const graceEndMs = parseTrialEnd(snapshot.paymentGraceEndsAt);
   if (graceEndMs === null || graceEndMs <= nowMs) {

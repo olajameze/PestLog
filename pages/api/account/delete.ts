@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 import { sendAccountDeletionEmail } from '../../../lib/email';
 import { cancelAllSubscriptionsForStripeCustomer } from '../../../lib/stripe/cancelCustomerSubscriptions';
+import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
@@ -22,13 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const authEmail = normalizeAuthEmail(user.email);
+
   const company = await prisma.company.findUnique({
-    where: { email: user.email },
+    where: { email: authEmail },
   });
 
   if (!company) {
     const technician = await prisma.technician.findFirst({
-      where: { email: user.email },
+      where: { email: authEmail },
       select: { id: true },
     });
     if (technician) {

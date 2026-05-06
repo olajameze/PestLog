@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatOwnerBillingPlanLabel } from '../../lib/subscriptionAccess';
+import { formatOwnerBillingPlanLabel, ownerCanManagePaidPlanInStripe } from '../../lib/subscriptionAccess';
 import { getClientSupportEmail } from '../../lib/supportEmail';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -46,6 +46,7 @@ type Subscription = {
   status: string;
   trialEndsAt?: string;
   plan?: string;
+  stripeCustomerId?: string;
 };
 
 interface SettingsTabProps {
@@ -69,6 +70,7 @@ interface SettingsTabProps {
   savingSettings: boolean;
   checkoutLoading: boolean;
   portalLoading: boolean;
+  onCancelSubscription: () => Promise<void>;
 }
 
 export default function SettingsTab({
@@ -82,6 +84,7 @@ export default function SettingsTab({
   savingSettings,
   checkoutLoading,
   portalLoading,
+  onCancelSubscription,
 }: SettingsTabProps) {
   const supportAddr = getClientSupportEmail();
   const [companyName, setCompanyName] = useState(company.name || '');
@@ -156,6 +159,12 @@ export default function SettingsTab({
     subscriptionStatus: subscription?.status ?? company.subscriptionStatus,
   }).toUpperCase();
   const trialEndsAtLabel = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt).toLocaleDateString() : 'Not available';
+
+  const canUseStripeBilling = ownerCanManagePaidPlanInStripe({
+    plan: subscription?.plan ?? company.plan,
+    subscriptionStatus: subscription?.status ?? company.subscriptionStatus,
+    stripeCustomerId: subscription?.stripeCustomerId,
+  });
 
   return (
     <div className="space-y-8">
@@ -422,16 +431,30 @@ export default function SettingsTab({
 
         <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
           <p className="text-sm text-slate-600">
-            Use the billing portal to manage or cancel your plan. If your trial ends without a paid subscription, you will be prompted to upgrade to continue using the full application.
+            Manage payment method, invoices, or cancel in Stripe. Cancelling stops renewal; access continues until the end of your billing period unless you delete your account immediately.
           </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Button onClick={onSubscribe} disabled={checkoutLoading} className="w-full whitespace-normal bg-gradient-to-r from-blue-500 to-purple-600 sm:w-auto">
             {checkoutLoading ? 'Loading...' : 'Choose Plan & Upgrade'}
           </Button>
-          {subscription?.status === 'active' && (
-            <Button onClick={onManageSubscription} disabled={portalLoading} className="w-full whitespace-normal sm:w-auto">
-              {portalLoading ? 'Opening Portal...' : 'Manage Subscription'}
-            </Button>
+          {canUseStripeBilling && (
+            <>
+              <Button
+                onClick={onManageSubscription}
+                disabled={portalLoading}
+                className="w-full whitespace-normal sm:w-auto"
+              >
+                {portalLoading ? 'Opening…' : 'Manage subscription'}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={onCancelSubscription}
+                disabled={portalLoading}
+                className="w-full border-red-300 whitespace-normal text-red-800 hover:bg-red-50 sm:w-auto"
+              >
+                {portalLoading ? 'Opening…' : 'Cancel plan'}
+              </Button>
+            </>
           )}
         </div>
         </section>
@@ -440,7 +463,9 @@ export default function SettingsTab({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold text-red-900">Delete account</p>
-              <p className="text-sm text-red-700">Permanently delete this account, cancel your subscription, and remove all company data.</p>
+              <p className="text-sm text-red-700">
+                Permanently delete this account, cancel Stripe subscriptions, and remove all company data from Pest Trace.
+              </p>
             </div>
             <Button variant="danger" onClick={onDeleteAccount} disabled={deletingAccount}>
               {deletingAccount ? 'Deleting...' : 'Delete account'}

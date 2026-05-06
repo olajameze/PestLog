@@ -680,7 +680,11 @@ export default function Dashboard() {
 
     const res = await fetch('/api/create-portal-session', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ intent: 'manage' }),
     });
     const data = await res.json();
     if (res.ok && data.url) {
@@ -688,6 +692,38 @@ export default function Dashboard() {
     } else {
       setAppError(data.error || 'Unable to open customer portal.');
       showToast('Portal failed', data.error || 'Unable to open customer portal.', 'error');
+      setLoadingPortal(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (isPreviewMode) {
+      showToast('Preview mode', 'Billing portal is disabled in preview mode.', 'info');
+      return;
+    }
+    setLoadingPortal(true);
+    setAppError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      router.push('/auth/signin');
+      return;
+    }
+    const token = session.access_token;
+
+    const res = await fetch('/api/create-portal-session', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ intent: 'cancel' }),
+    });
+    const data = await res.json();
+    if (res.ok && data.url) {
+      window.location.href = data.url;
+    } else {
+      setAppError(data.error || 'Unable to open cancellation flow.');
+      showToast('Cancel plan', data.error || 'Unable to open Stripe billing.', 'error');
       setLoadingPortal(false);
     }
   };
@@ -1078,6 +1114,7 @@ if (!user || companyLoadState === 'loading') return (
                   subscription={subscription} 
                   onSubscribe={() => setShowPlanModal(true)}
                   onManageSubscription={handleManageSubscription} 
+                  onCancelSubscription={handleCancelSubscription}
                   onUpdateCompanySettings={handleUpdateCompanySettings}
                   onDeleteAccount={handleRequestDeleteAccount}
                   deletingAccount={deletingAccount}
