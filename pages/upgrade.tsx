@@ -155,7 +155,14 @@ export default function UpgradePage() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      const detail = [data.error, data.hint]
+        .concat(
+          Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.length > 0
+            ? [`Tried hosts: ${data.attemptedReturnHosts.join(', ')}`]
+            : [],
+        )
+        .filter(Boolean)
+        .join(' — ');
       showToast('Portal failed', detail || 'Unable to open Stripe portal', 'error');
       setActionLoading(false);
       setSelectedPlan(null);
@@ -186,7 +193,14 @@ export default function UpgradePage() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      const detail = [data.error, data.hint]
+        .concat(
+          Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.length > 0
+            ? [`Tried hosts: ${data.attemptedReturnHosts.join(', ')}`]
+            : [],
+        )
+        .filter(Boolean)
+        .join(' — ');
       showToast('Cancel plan', detail || 'Unable to open Stripe billing', 'error');
       setActionLoading(false);
       setSelectedPlan(null);

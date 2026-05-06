@@ -116,6 +116,17 @@ export function resolveStripePortalReturnUrl(defaultReturn: string): string {
   return resolved.href.split('#')[0] ?? resolved.href;
 }
 
+/** Strip BOM / odd whitespace so Stripe parses return_url from env/request. */
+export function sanitizeUrlForStripe(raw: string): string | null {
+  const trimmed = raw.replace(/^\uFEFF/, '').trim();
+  try {
+    const u = new URL(trimmed.normalize('NFKC'));
+    return u.href.split('#')[0] ?? u.href;
+  } catch {
+    return null;
+  }
+}
+
 function assertStripeReturnUrlOrDefault(candidate: string, fallback: string): string {
   try {
     const u = new URL(candidate);
@@ -138,8 +149,11 @@ function assertStripeReturnUrlOrDefault(candidate: string, fallback: string): st
   }
 }
 
-export function resolveSiteOriginForApiRequest(req: NextApiRequest): string | null {
-  /** Do not use NEXT_PUBLIC_MANIFEST_ORIGIN here — manifest-only env can break Stripe return URLs. */
+/**
+ * Ordered billing-related origins (incoming request first, then env). Used for Stripe return_url fallbacks.
+ * Does not use NEXT_PUBLIC_MANIFEST_ORIGIN.
+ */
+export function listBillingOriginCandidates(req: NextApiRequest): string[] {
   const forwardedHostRaw = req.headers['x-forwarded-host'];
   const hostRaw = req.headers.host;
   const xfHostFirst =
@@ -153,7 +167,6 @@ export function resolveSiteOriginForApiRequest(req: NextApiRequest): string | nu
   if (xfHostFirst && (protoFirst === 'http' || protoFirst === 'https')) {
     fromIncoming.push(`${protoFirst}://${xfHostFirst}`);
   }
-  /** Vercel sometimes omits x-forwarded-proto on API routes; assume HTTPS for non-loopback hosts. */
   if (xfHostFirst && !protoFirst && isRunningOnVercel()) {
     fromIncoming.push(`https://${xfHostFirst}`);
   }
@@ -171,16 +184,57 @@ export function resolveSiteOriginForApiRequest(req: NextApiRequest): string | nu
 
   const skipLoopbackPublic = isRunningOnVercel();
 
+  const seen = new Set<string>();
+  const out: string[] = [];
+
   for (const raw of rawCandidates) {
     const base = normalizeOriginBase(raw ?? undefined);
     if (!base) continue;
     if (skipLoopbackPublic && isLoopbackOrigin(base)) continue;
     if (!originHostStripeSafe(base)) continue;
-    return base;
+    if (seen.has(base)) continue;
+    seen.add(base);
+    out.push(base);
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    return normalizeOriginBase('http://localhost:3000');
+    const local = normalizeOriginBase('http://localhost:3000');
+    if (local && !seen.has(local)) {
+      out.push(local);
+    }
   }
-  return null;
+
+  return out;
+}
+
+/** Full return URLs to try for Stripe Customer Portal (same path the app uses after billing). */
+export function listStripePortalReturnUrlCandidates(req: NextApiRequest): string[] {
+  const origins = listBillingOriginCandidates(req);
+  const dashboardPaths = origins.map((o) => `${o.replace(/\/+$/, '')}/dashboard?tab=settings`);
+
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  const push = (u: string) => {
+    const v = sanitizeUrlForStripe(u);
+    if (!v || seen.has(v)) return;
+    seen.add(v);
+    ordered.push(v);
+  };
+
+  if (process.env.STRIPE_PORTAL_RETURN_URL?.trim()) {
+    const baseForEnv = dashboardPaths[0] ?? 'http://localhost:3000/dashboard?tab=settings';
+    push(resolveStripePortalReturnUrl(baseForEnv));
+  }
+
+  for (const d of dashboardPaths) {
+    push(assertStripeReturnUrlOrDefault(d, d));
+  }
+
+  return ordered;
+}
+
+export function resolveSiteOriginForApiRequest(req: NextApiRequest): string | null {
+  const candidates = listBillingOriginCandidates(req);
+  return candidates[0] ?? (process.env.NODE_ENV !== 'production' ? normalizeOriginBase('http://localhost:3000') : null);
 }

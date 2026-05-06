@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
-import { resolveSiteOriginForApiRequest, resolveStripePortalReturnUrl } from '../../lib/siteOrigin';
+import { listStripePortalReturnUrlCandidates } from '../../lib/siteOrigin';
 
 function stripeReturnHostLog(returnUrl: string): string {
   try {
@@ -14,15 +14,31 @@ function stripeReturnHostLog(returnUrl: string): string {
   }
 }
 
-function parseStripePortalError(error: unknown): { message: string; code?: string; type?: string } {
+function parseStripePortalError(error: unknown): {
+  message: string;
+  code?: string;
+  type?: string;
+  param?: string;
+} {
   if (typeof error === 'object' && error !== null) {
     const o = error as Record<string, unknown>;
     const message = typeof o.message === 'string' ? o.message : 'Stripe request failed';
     const code = typeof o.code === 'string' ? o.code : undefined;
     const type = typeof o.type === 'string' ? o.type : undefined;
-    return { message, code, type };
+    let param = typeof o.param === 'string' ? o.param : undefined;
+    if (!param && o.raw && typeof o.raw === 'object' && o.raw !== null) {
+      const raw = (o.raw as Record<string, unknown>).param;
+      if (typeof raw === 'string') param = raw;
+    }
+    return { message, code, type, param };
   }
   return { message: error instanceof Error ? error.message : String(error) };
+}
+
+function isStripePortalReturnUrlRejection(error: unknown): boolean {
+  const p = parseStripePortalError(error);
+  const blob = `${p.message} ${p.code ?? ''} ${p.param ?? ''}`.toLowerCase();
+  return /not a valid url|invalid url|url_invalid|\breturn_url\b/.test(blob);
 }
 
 function portalFailureHint(parsed: { message: string; code?: string }): string | undefined {
@@ -116,19 +132,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'No Stripe customer configured for this account.' });
   }
 
-  const origin = resolveSiteOriginForApiRequest(req);
-  const fallbackReturn =
-    origin ??
-    (process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : null);
-  if (!fallbackReturn || !/^https?:\/\//i.test(fallbackReturn)) {
-    logger.error('Billing portal: invalid return URL — set NEXT_PUBLIC_APP_URL');
+  const returnUrlCandidates = listStripePortalReturnUrlCandidates(req);
+  if (!returnUrlCandidates.length) {
+    logger.error('Billing portal: no return URLs could be resolved — set NEXT_PUBLIC_APP_URL');
     return res.status(500).json({
       error:
-        'Billing redirects are misconfigured. Set NEXT_PUBLIC_APP_URL or STRIPE_PORTAL_RETURN_URL.',
+        'Billing redirects are misconfigured. Set NEXT_PUBLIC_APP_URL / NEXT_PUBLIC_SITE_URL or STRIPE_PORTAL_RETURN_URL.',
     });
   }
-  const defaultReturn = `${fallbackReturn.replace(/\/+$/, '')}/dashboard?tab=settings`;
-  const returnUrl = resolveStripePortalReturnUrl(defaultReturn);
 
   const intentRaw =
     typeof req.body?.intent === 'string'
@@ -144,16 +155,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const configurationId = process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID?.trim();
 
-  const portalBase = {
-    customer: company.stripeCustomerId,
-    return_url: returnUrl,
-    ...(configurationId ? { configuration: configurationId } : {}),
-  } as const;
+  /** Try each plausible return_url then, on Stripe URL rejection, Stripe default config (omit bpc_). */
+  const customerId = company.stripeCustomerId.trim();
+  let lastError: unknown;
+  let attemptedReturnHostname = '';
 
   try {
+    let cancelSubscriptionId: string | undefined;
     if (intent === 'cancel') {
       const list = await stripe.subscriptions.list({
-        customer: company.stripeCustomerId,
+        customer: customerId,
         status: 'all',
         limit: 30,
       });
@@ -164,36 +175,101 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             'No cancellable subscription found on this account. Try “Manage subscription”, or contact support.',
         });
       }
-      try {
-        const portalSession = await stripe.billingPortal.sessions.create({
-          ...portalBase,
-          flow_data: {
-            type: 'subscription_cancel',
-            subscription_cancel: {
-              subscription: target.id,
-            },
-          },
-        });
-        return res.status(200).json({ url: portalSession.url });
-      } catch (flowErr) {
-        const parsedFlow = parseStripePortalError(flowErr);
-        logger.warn(
-          `Stripe portal cancel deep-link failed, using default portal: ${parsedFlow.message} code=${parsedFlow.code ?? ''} return_host=${stripeReturnHostLog(returnUrl)}`,
-        );
+      cancelSubscriptionId = target.id;
+    }
+
+    const configVariants: boolean[] = configurationId ? [true, false] : [false];
+
+    for (const returnUrl of returnUrlCandidates) {
+      attemptedReturnHostname = stripeReturnHostLog(returnUrl);
+
+      if (intent === 'cancel' && cancelSubscriptionId) {
+        for (const withConfig of configVariants) {
+          try {
+            const portalSession = await stripe.billingPortal.sessions.create({
+              customer: customerId,
+              return_url: returnUrl,
+              ...(withConfig && configurationId ? { configuration: configurationId } : {}),
+              flow_data: {
+                type: 'subscription_cancel',
+                subscription_cancel: {
+                  subscription: cancelSubscriptionId,
+                },
+              },
+            });
+            return res.status(200).json({ url: portalSession.url });
+          } catch (flowErr) {
+            lastError = flowErr;
+            const parsedFlow = parseStripePortalError(flowErr);
+            if (isStripePortalReturnUrlRejection(flowErr)) {
+              logger.warn(
+                `Stripe portal cancel-flow URL reject (retry): ${parsedFlow.message} stripeParam=${parsedFlow.param ?? ''} use_bpc=${withConfig} return_host=${attemptedReturnHostname}`,
+              );
+              continue;
+            }
+            logger.warn(
+              `Stripe portal cancel deep-link failed, trying default portal: ${parsedFlow.message} code=${parsedFlow.code ?? ''} return_host=${attemptedReturnHostname}`,
+            );
+            break;
+          }
+        }
+      }
+
+      for (const withConfig of configVariants) {
+        try {
+          const portalSession = await stripe.billingPortal.sessions.create({
+            customer: customerId,
+            return_url: returnUrl,
+            ...(withConfig && configurationId ? { configuration: configurationId } : {}),
+          });
+          return res.status(200).json({ url: portalSession.url });
+        } catch (err) {
+          lastError = err;
+          const parsed = parseStripePortalError(err);
+          if (isStripePortalReturnUrlRejection(err)) {
+            logger.warn(
+              `Stripe billing portal URL reject (retry): ${parsed.message} stripeParam=${parsed.param ?? ''} use_bpc=${withConfig} return_host=${attemptedReturnHostname}`,
+            );
+            continue;
+          }
+          logger.error(
+            `Stripe billingPortal.sessions.create failed: ${parsed.message} code=${parsed.code ?? ''} type=${parsed.type ?? ''} param=${parsed.param ?? ''} return_host=${attemptedReturnHostname}`,
+          );
+          const hint = portalFailureHint(parsed);
+          return res.status(500).json({
+            error: parsed.message,
+            ...(parsed.code ? { stripeCode: parsed.code } : {}),
+            ...(parsed.param ? { stripeParam: parsed.param } : {}),
+            ...(hint ? { hint } : {}),
+          });
+        }
       }
     }
 
-    const portalSession = await stripe.billingPortal.sessions.create({ ...portalBase });
-    return res.status(200).json({ url: portalSession.url });
-  } catch (error) {
-    const parsed = parseStripePortalError(error);
+    const parsed = parseStripePortalError(
+      lastError ?? new Error('Billing portal could not start — Stripe rejected every return URL.'),
+    );
     logger.error(
-      `Stripe billingPortal.sessions.create failed: ${parsed.message} code=${parsed.code ?? ''} type=${parsed.type ?? ''} return_host=${stripeReturnHostLog(returnUrl)}`,
+      `Stripe billing portal exhausted return_url candidates: ${parsed.message} code=${parsed.code ?? ''} param=${parsed.param ?? ''} last_return_host=${attemptedReturnHostname}`,
     );
     const hint = portalFailureHint(parsed);
     return res.status(500).json({
       error: parsed.message,
       ...(parsed.code ? { stripeCode: parsed.code } : {}),
+      ...(parsed.param ? { stripeParam: parsed.param } : {}),
+      ...(hint ? { hint } : {}),
+      attemptedReturnHosts: returnUrlCandidates.map((u) => stripeReturnHostLog(u)),
+    });
+  } catch (error) {
+    const parsed = parseStripePortalError(error);
+    logger.error(
+      `Billing portal unexpected failure: ${parsed.message} code=${parsed.code ?? ''} type=${parsed.type ?? ''} param=${parsed.param ?? ''}`,
+    );
+    const hint = portalFailureHint(parsed);
+    return res.status(500).json({
+      error: parsed.message,
+      ...(parsed.code ? { stripeCode: parsed.code } : {}),
+      ...(parsed.param ? { stripeParam: parsed.param } : {}),
       ...(hint ? { hint } : {}),
     });
   }

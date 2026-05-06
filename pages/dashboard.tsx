@@ -690,7 +690,14 @@ export default function Dashboard() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      const detail = [data.error, data.hint]
+        .concat(
+          Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.length > 0
+            ? [`Tried hosts: ${data.attemptedReturnHosts.join(', ')}`]
+            : [],
+        )
+        .filter(Boolean)
+        .join(' — ');
       setAppError(detail || 'Unable to open customer portal.');
       showToast('Portal failed', detail || 'Unable to open customer portal.', 'error');
       setLoadingPortal(false);
@@ -723,7 +730,14 @@ export default function Dashboard() {
     if (res.ok && data.url) {
       window.location.href = data.url;
     } else {
-      const detail = [data.error, data.hint].filter(Boolean).join(' — ');
+      const detail = [data.error, data.hint]
+        .concat(
+          Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.length > 0
+            ? [`Tried hosts: ${data.attemptedReturnHosts.join(', ')}`]
+            : [],
+        )
+        .filter(Boolean)
+        .join(' — ');
       setAppError(detail || 'Unable to open cancellation flow.');
       showToast('Cancel plan', detail || 'Unable to open Stripe billing.', 'error');
       setLoadingPortal(false);
