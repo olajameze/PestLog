@@ -14,6 +14,35 @@ function stripeReturnHostLog(returnUrl: string): string {
   }
 }
 
+function parseStripePortalError(error: unknown): { message: string; code?: string; type?: string } {
+  if (typeof error === 'object' && error !== null) {
+    const o = error as Record<string, unknown>;
+    const message = typeof o.message === 'string' ? o.message : 'Stripe request failed';
+    const code = typeof o.code === 'string' ? o.code : undefined;
+    const type = typeof o.type === 'string' ? o.type : undefined;
+    return { message, code, type };
+  }
+  return { message: error instanceof Error ? error.message : String(error) };
+}
+
+function portalFailureHint(parsed: { message: string; code?: string }): string | undefined {
+  const blob = `${parsed.message} ${parsed.code ?? ''}`.toLowerCase();
+  if (blob.includes('not a valid url') || blob.includes('return_url') || parsed.code === 'url_invalid') {
+    return 'Allow your dashboard domain in Stripe → Settings → Billing → Customer portal. For Vercel previews use a wildcard like https://*.vercel.app, or set STRIPE_PORTAL_RETURN_URL to your production https://…/dashboard?tab=settings.';
+  }
+  if (
+    parsed.code === 'resource_missing' ||
+    (blob.includes('configuration') && blob.includes('portal')) ||
+    blob.includes('default customer portal configuration')
+  ) {
+    return 'Activate Customer portal in Stripe Dashboard (Billing → Customer portal) and save a configuration, or set STRIPE_BILLING_PORTAL_CONFIGURATION_ID to a bpc_… id from the API/Dashboard.';
+  }
+  if (blob.includes('no such customer')) {
+    return 'This Stripe customer id is not in the same mode as STRIPE_SECRET_KEY (test vs live).';
+  }
+  return undefined;
+}
+
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
@@ -113,6 +142,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? 'cancel'
       : 'manage';
 
+  const configurationId = process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID?.trim();
+
+  const portalBase = {
+    customer: company.stripeCustomerId,
+    return_url: returnUrl,
+    ...(configurationId ? { configuration: configurationId } : {}),
+  } as const;
+
   try {
     if (intent === 'cancel') {
       const list = await stripe.subscriptions.list({
@@ -129,8 +166,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       try {
         const portalSession = await stripe.billingPortal.sessions.create({
-          customer: company.stripeCustomerId,
-          return_url: returnUrl,
+          ...portalBase,
           flow_data: {
             type: 'subscription_cancel',
             subscription_cancel: {
@@ -140,32 +176,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         return res.status(200).json({ url: portalSession.url });
       } catch (flowErr) {
-        const msg = flowErr instanceof Error ? flowErr.message : String(flowErr);
+        const parsedFlow = parseStripePortalError(flowErr);
         logger.warn(
-          `Stripe portal cancel deep-link failed, using default portal: ${msg} return_host=${stripeReturnHostLog(returnUrl)}`,
+          `Stripe portal cancel deep-link failed, using default portal: ${parsedFlow.message} code=${parsedFlow.code ?? ''} return_host=${stripeReturnHostLog(returnUrl)}`,
         );
       }
     }
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: company.stripeCustomerId,
-      return_url: returnUrl,
-    });
+    const portalSession = await stripe.billingPortal.sessions.create({ ...portalBase });
     return res.status(200).json({ url: portalSession.url });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const parsed = parseStripePortalError(error);
     logger.error(
-      `Stripe billingPortal.sessions.create failed: ${message} return_host=${stripeReturnHostLog(returnUrl)}`,
+      `Stripe billingPortal.sessions.create failed: ${parsed.message} code=${parsed.code ?? ''} type=${parsed.type ?? ''} return_host=${stripeReturnHostLog(returnUrl)}`,
     );
-    const stripeReturnBug =
-      /not a valid url|return_url/i.test(message);
+    const hint = portalFailureHint(parsed);
     return res.status(500).json({
-      error: message,
-      ...(stripeReturnBug
-        ? {
-            hint: 'Unset STRIPE_PORTAL_RETURN_URL unless it is a full https URL. In Stripe → Customer portal, allow your dashboard domain under return URLs.',
-          }
-        : {}),
+      error: parsed.message,
+      ...(parsed.code ? { stripeCode: parsed.code } : {}),
+      ...(hint ? { hint } : {}),
     });
   }
 }

@@ -140,23 +140,34 @@ function assertStripeReturnUrlOrDefault(candidate: string, fallback: string): st
 
 export function resolveSiteOriginForApiRequest(req: NextApiRequest): string | null {
   /** Do not use NEXT_PUBLIC_MANIFEST_ORIGIN here — manifest-only env can break Stripe return URLs. */
+  const forwardedHostRaw = req.headers['x-forwarded-host'];
+  const hostRaw = req.headers.host;
+  const xfHostFirst =
+    (typeof forwardedHostRaw === 'string' ? forwardedHostRaw.split(',')[0]?.trim() : '') ||
+    (typeof hostRaw === 'string' ? hostRaw.split(',')[0]?.trim() : '');
+  const protoRaw = req.headers['x-forwarded-proto'];
+  const protoFirst =
+    (typeof protoRaw === 'string' ? protoRaw.split(',')[0]?.trim().toLowerCase() : '') || '';
+
+  const fromIncoming: string[] = [];
+  if (xfHostFirst && (protoFirst === 'http' || protoFirst === 'https')) {
+    fromIncoming.push(`${protoFirst}://${xfHostFirst}`);
+  }
+  /** Vercel sometimes omits x-forwarded-proto on API routes; assume HTTPS for non-loopback hosts. */
+  if (xfHostFirst && !protoFirst && isRunningOnVercel()) {
+    fromIncoming.push(`https://${xfHostFirst}`);
+  }
+  if (typeof req.headers.origin === 'string' && req.headers.origin.trim()) {
+    fromIncoming.push(req.headers.origin.trim());
+  }
+
   const rawCandidates = [
+    ...fromIncoming,
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.NEXT_PUBLIC_SITE_URL,
     vercelProductionOriginRaw(),
     ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
-    typeof req.headers.origin === 'string' ? req.headers.origin : undefined,
   ];
-
-  const protoHeader = req.headers['x-forwarded-proto'];
-  const xfHost = req.headers.host;
-  if (typeof xfHost === 'string' && typeof protoHeader === 'string') {
-    const p = protoHeader.split(',')[0]?.trim().toLowerCase();
-    const h = xfHost.split(',')[0]?.trim();
-    if ((p === 'http' || p === 'https') && h) {
-      rawCandidates.push(`${p}://${h}`);
-    }
-  }
 
   const skipLoopbackPublic = isRunningOnVercel();
 
