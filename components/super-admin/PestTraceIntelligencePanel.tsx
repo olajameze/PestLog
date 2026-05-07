@@ -19,7 +19,7 @@ import {
   YAxis,
   ZAxis,
 } from 'recharts';
-import { jsPDF } from 'jspdf';
+import { saveIntelligenceExecutivePdf } from '../../lib/intelligence/intelligenceExecutivePdf';
 import Button from '../ui/Button';
 import { useToast } from '../ui/ToastProvider';
 
@@ -133,39 +133,15 @@ export default function PestTraceIntelligencePanel() {
     showToast('Export', 'CSV download started', 'success');
   };
 
-  const downloadPdf = () => {
+  const downloadPdf = async () => {
     if (!summary) return;
-    const doc = new jsPDF();
-    let y = 14;
-    doc.setFontSize(16);
-    doc.text('PestTrace Intelligence — Executive summary', 14, y);
-    y += 10;
-    doc.setFontSize(10);
-    doc.text(`Period: ${dateFrom} to ${dateTo}`, 14, y);
-    y += 6;
-    doc.text(`Anonymised events in period: ${summary.total}`, 14, y);
-    y += 6;
-    if (summary.executive.topPest) {
-      doc.text(
-        `Dominant pest category (normalised): ${summary.executive.topPest} (${summary.executive.topPestShare ?? 0}% of volume)`,
-        14,
-        y,
-      );
-      y += 6;
+    try {
+      await saveIntelligenceExecutivePdf(summary, { dateFrom, dateTo, logoPath: '/pest-trace.png' });
+      showToast('PDF', 'Executive report downloaded', 'success');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'PDF export failed';
+      showToast('PDF failed', msg, 'error');
     }
-    y += 4;
-    doc.text('Top pest types', 14, y);
-    y += 5;
-    summary.byPestType.slice(0, 10).forEach((row) => {
-      doc.text(`${row.name}: ${row.count}`, 18, y);
-      y += 5;
-      if (y > 270) {
-        doc.addPage();
-        y = 14;
-      }
-    });
-    doc.save(`pesttrace-intelligence-summary-${dateFrom}.pdf`);
-    showToast('PDF', 'Executive summary downloaded', 'success');
   };
 
   if (loading && !summary) {
@@ -191,7 +167,7 @@ export default function PestTraceIntelligencePanel() {
           <Button variant="secondary" size="sm" onClick={downloadCsv}>
             Export CSV
           </Button>
-          <Button variant="secondary" size="sm" onClick={downloadPdf} disabled={!summary}>
+          <Button variant="secondary" size="sm" onClick={() => void downloadPdf()} disabled={!summary}>
             Executive PDF
           </Button>
           <Button variant="primary" size="sm" onClick={() => void runReindexBatch()} disabled={reindexing}>
