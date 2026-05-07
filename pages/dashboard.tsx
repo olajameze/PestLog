@@ -21,6 +21,7 @@ import {
 } from '../lib/subscriptionAccess';
 import { formatTechnicianLimit, getTechnicianLimit } from '../lib/planLimits';
 import { canUseEnterprisePreview, trialFullDaysRemaining } from '../lib/trialEnterprisePreview';
+import { parseApiBody } from '../lib/api/parseApiBody';
 
 const DashboardEnhancements = dynamic(() => import('../components/dashboard/DashboardEnhancements'));
 const OnboardingTour = dynamic(() => import('../components/onboarding/OnboardingTour'), { ssr: false });
@@ -332,13 +333,14 @@ export default function Dashboard() {
       },
     });
 
-    const data = await res.json();
+    const data = await parseApiBody(res, 'Account deletion failed.');
     if (res.ok) {
       await supabase.auth.signOut();
       showToast('Account deleted', 'Your account and all data have been deleted. Sign up again to create a new account.', 'success');
       router.push('/auth/signup');
     } else {
-      showToast('Delete failed', data?.error || 'Unable to delete account.', 'error');
+      const msg = typeof data.error === 'string' ? data.error : 'Unable to delete account.';
+      showToast('Delete failed', msg, 'error');
     }
 
     setDeletingAccount(false);
@@ -664,12 +666,14 @@ export default function Dashboard() {
       },
       body: JSON.stringify({ plan }),
     });
-    const data = await res.json();
-    if (res.ok && data.url) {
-      window.location.href = data.url;
+    const data = await parseApiBody(res, 'Checkout failed.');
+    const checkoutUrl = typeof data.url === 'string' ? data.url : undefined;
+    const checkoutErr = typeof data.error === 'string' ? data.error : undefined;
+    if (res.ok && checkoutUrl) {
+      window.location.href = checkoutUrl;
     } else {
-      setAppError(data.error || 'Unable to start checkout. Please try again.');
-      showToast('Checkout failed', data.error || 'Unable to start checkout. Please try again.', 'error');
+      setAppError(checkoutErr || 'Unable to start checkout. Please try again.');
+      showToast('Checkout failed', checkoutErr || 'Unable to start checkout. Please try again.', 'error');
       setLoadingCheckout(false);
     }
   };
@@ -696,16 +700,20 @@ export default function Dashboard() {
       },
       body: JSON.stringify({ intent: 'manage' }),
     });
-    const data = await res.json();
-    if (res.ok && data.url) {
-      window.location.href = data.url;
+    const data = await parseApiBody(res, 'Billing portal failed.');
+    const portalUrl = typeof data.url === 'string' ? data.url : undefined;
+    if (res.ok && portalUrl) {
+      window.location.href = portalUrl;
     } else {
-      const detail = [data.error, data.hint]
-        .concat(
-          Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.length > 0
-            ? [`Tried hosts: ${data.attemptedReturnHosts.join(', ')}`]
-            : [],
-        )
+      const hosts =
+        Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.every((h) => typeof h === 'string')
+          ? (data.attemptedReturnHosts as string[]).join(', ')
+          : '';
+      const detail = [
+        typeof data.error === 'string' ? data.error : undefined,
+        typeof data.hint === 'string' ? data.hint : undefined,
+        hosts ? `Tried hosts: ${hosts}` : undefined,
+      ]
         .filter(Boolean)
         .join(' — ');
       setAppError(detail || 'Unable to open customer portal.');
@@ -736,16 +744,20 @@ export default function Dashboard() {
       },
       body: JSON.stringify({ intent: 'cancel' }),
     });
-    const data = await res.json();
-    if (res.ok && data.url) {
-      window.location.href = data.url;
+    const data = await parseApiBody(res, 'Cancellation flow failed.');
+    const cancelPortalUrl = typeof data.url === 'string' ? data.url : undefined;
+    if (res.ok && cancelPortalUrl) {
+      window.location.href = cancelPortalUrl;
     } else {
-      const detail = [data.error, data.hint]
-        .concat(
-          Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.length > 0
-            ? [`Tried hosts: ${data.attemptedReturnHosts.join(', ')}`]
-            : [],
-        )
+      const hosts =
+        Array.isArray(data.attemptedReturnHosts) && data.attemptedReturnHosts.every((h) => typeof h === 'string')
+          ? (data.attemptedReturnHosts as string[]).join(', ')
+          : '';
+      const detail = [
+        typeof data.error === 'string' ? data.error : undefined,
+        typeof data.hint === 'string' ? data.hint : undefined,
+        hosts ? `Tried hosts: ${hosts}` : undefined,
+      ]
         .filter(Boolean)
         .join(' — ');
       setAppError(detail || 'Unable to open cancellation flow.');
@@ -807,13 +819,14 @@ export default function Dashboard() {
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const data = await parseApiBody(res, 'Settings save failed.');
     if (res.ok) {
-      setCompany(data);
+      setCompany(data as unknown as Company);
       showToast('Saved', 'Company settings updated successfully.', 'success');
     } else {
-      setAppError(data.error || 'Unable to update company settings.');
-      showToast('Save failed', data.error || 'Unable to update company settings.', 'error');
+      const msg = typeof data.error === 'string' ? data.error : 'Unable to update company settings.';
+      setAppError(msg);
+      showToast('Save failed', msg, 'error');
     }
     setSavingSettings(false);
   };
