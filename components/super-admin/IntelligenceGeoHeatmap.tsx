@@ -25,7 +25,16 @@ export default function IntelligenceGeoHeatmap({ points, cols = 48, rows = 34 }:
     return buildGeoHeatmap(pts, { cols, rows, useUkFallbackExtent: true });
   }, [points, cols, rows]);
 
-  if (!model || model.bins.length === 0) {
+  const binLookup = useMemo(() => {
+    if (!model?.bins.length) return null;
+    const m = new Map<string, (typeof model.bins)[number]>();
+    for (const b of model.bins) {
+      m.set(`${b.i},${b.j}`, b);
+    }
+    return m;
+  }, [model]);
+
+  if (!model || model.bins.length === 0 || !binLookup) {
     return (
       <div className="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-zinc-50 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-400">
         No geo-bucketed points for density map in this range.
@@ -33,20 +42,13 @@ export default function IntelligenceGeoHeatmap({ points, cols = 48, rows = 34 }:
     );
   }
 
-  const { cols: gc, rows: gr, minLat, maxLat, minLng, maxLng, bins } = model;
-  const binAt = useMemo(() => {
-    const m = new Map<string, (typeof bins)[number]>();
-    for (const b of bins) {
-      m.set(`${b.i},${b.j}`, b);
-    }
-    return m;
-  }, [bins]);
+  const { cols: gc, rows: gr, minLat, maxLat, minLng, maxLng } = model;
 
   const rects: ReactNode[] = [];
   for (let jr = 0; jr < gr; jr += 1) {
     for (let i = 0; i < gc; i += 1) {
       const j = gr - 1 - jr;
-      const bin = binAt.get(`${i},${j}`);
+      const bin = binLookup.get(`${i},${j}`);
       const fill = bin ? heatmapCssColor(bin.intensity) : 'rgb(250,250,250)';
       rects.push(
         <rect
