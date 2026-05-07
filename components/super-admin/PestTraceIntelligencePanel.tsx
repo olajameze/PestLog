@@ -20,6 +20,8 @@ import {
   ZAxis,
 } from 'recharts';
 import { saveIntelligenceExecutivePdf } from '../../lib/intelligence/intelligenceExecutivePdf';
+import { buildGeoHeatmap, heatmapCssColor } from '../../lib/intelligence/geoHeatmap';
+import IntelligenceGeoHeatmap from './IntelligenceGeoHeatmap';
 import Button from '../ui/Button';
 import { useToast } from '../ui/ToastProvider';
 
@@ -58,6 +60,19 @@ export default function PestTraceIntelligencePanel() {
   const [propertyType, setPropertyType] = useState('');
   const [region, setRegion] = useState('');
   const [treatmentOutcome, setTreatmentOutcome] = useState('');
+
+  const heatmapModel = useMemo(() => {
+    if (!summary?.heatmapPoints.length) return null;
+    return buildGeoHeatmap(
+      summary.heatmapPoints.map((p) => ({ lat: p.lat, lng: p.lng, weight: p.weight })),
+      { cols: 48, rows: 34 },
+    );
+  }, [summary]);
+
+  const maxScatterWeight = useMemo(() => {
+    if (!summary?.heatmapPoints.length) return 1;
+    return Math.max(1, ...summary.heatmapPoints.map((p) => p.weight));
+  }, [summary]);
 
   const queryString = useMemo(() => {
     const p = new URLSearchParams();
@@ -344,26 +359,60 @@ export default function PestTraceIntelligencePanel() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
-            <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Regional hotspot scatter (rounded coordinates)</h4>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Points use anonymised district-level centroids where configured; bubble size reflects activity score.
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <h4 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Regional activity map</h4>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Left: log-scaled density grid from rounded coordinates. Right: weighted point overlay (same map extent).
+              Bubble size reflects activity score; colour also reflects relative weight.
             </p>
-            <div className="mt-2 h-96 w-full min-w-0">
-              {summary.heatmapPoints.length === 0 ? (
-                <p className="py-16 text-center text-sm text-zinc-500">No geo-bucketed points in this filter window.</p>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ScatterChart margin={{ top: 16, right: 16, bottom: 16, left: 16 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
-                    <XAxis type="number" dataKey="lng" name="Lng" stroke="#71717a" tick={{ fontSize: 10 }} />
-                    <YAxis type="number" dataKey="lat" name="Lat" stroke="#71717a" tick={{ fontSize: 10 }} />
-                    <ZAxis type="number" dataKey="weight" range={[40, 400]} />
-                    <Tooltip cursor={{ stroke: '#2F855A' }} />
-                    <Scatter name="Hotspots" data={summary.heatmapPoints} fill="#2F855A" fillOpacity={0.65} />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              )}
+            <div className="mt-4 grid gap-6 xl:grid-cols-2">
+              <div className="min-w-0">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Density heatmap</p>
+                <IntelligenceGeoHeatmap points={summary.heatmapPoints} cols={48} rows={34} />
+              </div>
+              <div className="min-w-0">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Scatter overlay</p>
+                {summary.heatmapPoints.length === 0 ? (
+                  <p className="py-16 text-center text-sm text-zinc-500">No geo-bucketed points in this filter window.</p>
+                ) : (
+                  <div className="h-[min(420px,65vh)] w-full min-h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ScatterChart margin={{ top: 8, right: 12, bottom: 8, left: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" className="dark:stroke-zinc-700" />
+                        <XAxis
+                          type="number"
+                          dataKey="lng"
+                          name="Longitude"
+                          stroke="#71717a"
+                          tick={{ fontSize: 10 }}
+                          domain={heatmapModel ? [heatmapModel.minLng, heatmapModel.maxLng] : ['auto', 'auto']}
+                          allowDataOverflow
+                        />
+                        <YAxis
+                          type="number"
+                          dataKey="lat"
+                          name="Latitude"
+                          stroke="#71717a"
+                          tick={{ fontSize: 10 }}
+                          domain={heatmapModel ? [heatmapModel.minLat, heatmapModel.maxLat] : ['auto', 'auto']}
+                          allowDataOverflow
+                        />
+                        <ZAxis type="number" dataKey="weight" range={[48, 420]} />
+                        <Tooltip cursor={{ stroke: '#2F855A' }} />
+                        <Scatter name="Events" data={summary.heatmapPoints}>
+                          {summary.heatmapPoints.map((entry, index) => (
+                            <Cell
+                              key={`${entry.lat}-${entry.lng}-${index}`}
+                              fill={heatmapCssColor(entry.weight / maxScatterWeight)}
+                              fillOpacity={0.82}
+                            />
+                          ))}
+                        </Scatter>
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { buildGeoHeatmap, heatmapRgb, type GeoHeatmapModel } from './geoHeatmap';
 
 export type IntelligenceSummaryForPdf = {
   total: number;
@@ -11,6 +12,7 @@ export type IntelligenceSummaryForPdf = {
   dayTrend: { day: string; count: number }[];
   monthTrend: { month: string; count: number }[];
   executive: { periodEvents: number; topPest: string | null; topPestShare: number | null };
+  heatmapPoints: { lat: number; lng: number; weight: number }[];
 };
 
 const PRIMARY = { r: 47, g: 133, b: 90 };
@@ -248,6 +250,98 @@ function drawHorizontalBarChart(
   return data.length * rowH;
 }
 
+function drawHeatmapGrid(doc: jsPDF, x: number, y: number, w: number, h: number, model: GeoHeatmapModel): void {
+  const cellW = w / model.cols;
+  const cellH = h / model.rows;
+  const map = new Map<string, (typeof model.bins)[number]>();
+  for (const b of model.bins) {
+    map.set(`${b.i},${b.j}`, b);
+  }
+  for (let jr = 0; jr < model.rows; jr += 1) {
+    for (let i = 0; i < model.cols; i += 1) {
+      const j = model.rows - 1 - jr;
+      const bin = map.get(`${i},${j}`);
+      const cx = x + i * cellW;
+      const cy = y + jr * cellH;
+      if (bin) {
+        const { r, g, b } = heatmapRgb(bin.intensity);
+        doc.setFillColor(r, g, b);
+      } else {
+        doc.setFillColor(252, 252, 252);
+      }
+      doc.rect(cx, cy, cellW + 0.03, cellH + 0.03, 'F');
+    }
+  }
+  doc.setDrawColor(BORDER.r, BORDER.g, BORDER.b);
+  doc.setLineWidth(0.2);
+  doc.rect(x, y, w, h, 'S');
+}
+
+function drawHeatmapLegend(doc: jsPDF, x: number, y: number, w: number): void {
+  const steps = 28;
+  const lh = 3;
+  for (let s = 0; s < steps; s += 1) {
+    const t = s / Math.max(1, steps - 1);
+    const { r, g, b } = heatmapRgb(t);
+    doc.setFillColor(r, g, b);
+    doc.rect(x + (s / steps) * w, y, w / steps + 0.08, lh, 'F');
+  }
+  doc.setDrawColor(BORDER.r, BORDER.g, BORDER.b);
+  doc.rect(x, y, w, lh, 'S');
+  doc.setFontSize(6);
+  doc.setTextColor(MUTED.r, MUTED.g, MUTED.b);
+  doc.text('Lower relative intensity', x, y + lh + 3.5);
+  doc.text('Higher relative intensity', x + w, y + lh + 3.5, { align: 'right' });
+}
+
+function drawRegionalHeatmapSection(
+  doc: jsPDF,
+  startY: number,
+  points: { lat: number; lng: number; weight: number }[],
+  onNeedPage: () => void,
+): number {
+  let y = sectionTitle(doc, startY, 'Regional activity density');
+  doc.setFontSize(7);
+  doc.setTextColor(MUTED.r, MUTED.g, MUTED.b);
+  doc.text(
+    'Log-scaled grid from rounded district-level coordinates. Does not expose exact property locations.',
+    MARGIN,
+    y,
+    { maxWidth: PAGE_W - MARGIN * 2 },
+  );
+  y += 9;
+
+  const model = buildGeoHeatmap(points, { cols: 40, rows: 28, useUkFallbackExtent: true });
+  if (!model || model.bins.length === 0) {
+    doc.setTextColor(MUTED.r, MUTED.g, MUTED.b);
+    doc.text('No geo-bucketed events in this filter window.', MARGIN, y);
+    return y + 6;
+  }
+
+  const hmW = PAGE_W - MARGIN * 2;
+  const hmH = 58;
+  if (y + hmH + 24 > PAGE_H - 18) {
+    onNeedPage();
+    y = HEADER_BAND + 10;
+    y = sectionTitle(doc, y, 'Regional activity density');
+    y += 6;
+  }
+
+  drawHeatmapGrid(doc, MARGIN, y, hmW, hmH, model);
+  y += hmH + 3;
+  drawHeatmapLegend(doc, MARGIN, y, hmW);
+  y += 10;
+  doc.setFontSize(7);
+  doc.setTextColor(MUTED.r, MUTED.g, MUTED.b);
+  doc.text(
+    `Extent (rounded): Lat ${model.minLat.toFixed(2)}°N to ${model.maxLat.toFixed(2)}°N   ·   Lng ${model.minLng.toFixed(2)}° to ${model.maxLng.toFixed(2)}°`,
+    MARGIN,
+    y,
+    { maxWidth: PAGE_W - MARGIN * 2 },
+  );
+  return y + 6;
+}
+
 function sectionTitle(doc: jsPDF, y: number, title: string): number {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -352,6 +446,10 @@ export async function saveIntelligenceExecutivePdf(
   y = sectionTitle(doc, y, 'Property-type profile');
   const propH = drawHorizontalBarChart(doc, MARGIN, y, PAGE_W - MARGIN * 2, summary.byProperty, 10, BLUE);
   y += propH + 12;
+
+  y = drawRegionalHeatmapSection(doc, y, summary.heatmapPoints ?? [], () => {
+    addFreshPage(false);
+  });
 
   if (summary.postcodeRedactedNote) {
     doc.setFontSize(8);
