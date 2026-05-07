@@ -6,6 +6,7 @@ import Sidebar from '../components/sidebar';
 import { useToast } from '../components/ui/ToastProvider';
 import Button from '../components/ui/Button';
 import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
+import { isValidUkPostcode } from '../lib/ukPostcode';
 
 type TechnicianProfile = {
   id: string;
@@ -20,6 +21,8 @@ type LogbookEntry = {
   date: string;
   clientName: string;
   address: string;
+  postcode?: string | null;
+  propertyType?: string | null;
   treatment: string;
   notes?: string;
   rooms?: Array<string | { name: string; note?: string }>;
@@ -118,8 +121,23 @@ const treatments = [
   'Bait Station Service',
   'Audit/Compliance Inspection',
 ];
+
+const PROPERTY_TYPE_OPTIONS = [
+  { value: 'residential_house', label: 'Residential — house' },
+  { value: 'residential_flat', label: 'Residential — flat / apartment' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'agricultural', label: 'Agricultural / farm' },
+  { value: 'other', label: 'Other' },
+] as const;
+
 const ENABLE_VOICE_NOTES = process.env.NEXT_PUBLIC_ENABLE_VOICE_NOTES === 'true';
 const ENABLE_PHOTO_ANNOTATION = process.env.NEXT_PUBLIC_ENABLE_PHOTO_ANNOTATION === 'true';
+
+function propertyTypeLabel(value: string | null | undefined): string {
+  if (!value) return '';
+  const hit = PROPERTY_TYPE_OPTIONS.find((o) => o.value === value);
+  return hit?.label ?? value;
+}
 
 export default function TechnicianPage() {
   const router = useRouter();
@@ -133,6 +151,10 @@ export default function TechnicianPage() {
   const [date, setDate] = useState('');
   const [clientName, setClientName] = useState('');
   const [address, setAddress] = useState('');
+  const [postcode, setPostcode] = useState('');
+  const [propertyType, setPropertyType] = useState<(typeof PROPERTY_TYPE_OPTIONS)[number]['value']>(
+    PROPERTY_TYPE_OPTIONS[0].value,
+  );
   const [treatment, setTreatment] = useState(treatments[0]);
   const [notes, setNotes] = useState('');
   const [photoAnnotation, setPhotoAnnotation] = useState('');
@@ -188,6 +210,10 @@ export default function TechnicianPage() {
         if (typeof draft.date === 'string') setDate(draft.date);
         if (typeof draft.clientName === 'string') setClientName(draft.clientName);
         if (typeof draft.address === 'string') setAddress(draft.address);
+        if (typeof draft.postcode === 'string') setPostcode(draft.postcode);
+        if (typeof draft.propertyType === 'string' && PROPERTY_TYPE_OPTIONS.some((o) => o.value === draft.propertyType)) {
+          setPropertyType(draft.propertyType as (typeof PROPERTY_TYPE_OPTIONS)[number]['value']);
+        }
         if (typeof draft.treatment === 'string') setTreatment(draft.treatment);
         if (typeof draft.notes === 'string') setNotes(draft.notes);
         if (Array.isArray(draft.rooms)) {
@@ -217,6 +243,8 @@ export default function TechnicianPage() {
         date,
         clientName,
         address,
+        postcode,
+        propertyType,
         treatment,
         notes,
         rooms,
@@ -226,7 +254,7 @@ export default function TechnicianPage() {
         photoAnnotation,
       }),
     );
-  }, [currentDraftKey, date, clientName, address, treatment, notes, rooms, baitBoxesPlaced, poisonUsed, followUpDate, photoAnnotation]);
+  }, [currentDraftKey, date, clientName, address, postcode, propertyType, treatment, notes, rooms, baitBoxesPlaced, poisonUsed, followUpDate, photoAnnotation]);
 
   useEffect(() => {
     if (!templateStorageKey) return;
@@ -383,6 +411,8 @@ export default function TechnicianPage() {
             date: new Date().toISOString(),
             clientName: 'Riverside Restaurant',
             address: '45 High Street, Manchester',
+            postcode: 'M1 1AE',
+            propertyType: 'commercial',
             treatment: 'Rodenticide Bait Stations',
             notes: 'Installed 6 bait stations in kitchen and storage areas.',
           rooms: ['Kitchen', 'Storage'],
@@ -395,6 +425,8 @@ export default function TechnicianPage() {
             date: new Date(Date.now() - 86400000).toISOString(),
             clientName: 'City Warehouse Ltd',
             address: '12 Industrial Estate, Leeds',
+            postcode: 'LS1 4DY',
+            propertyType: 'commercial',
             treatment: 'Rodent Monitoring',
             notes: 'Quarterly inspection completed. No activity detected.',
           rooms: ['Warehouse floor'],
@@ -590,6 +622,17 @@ export default function TechnicianPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
+
+    const pc = postcode.trim();
+    if (!pc) {
+      showToast('Missing postcode', 'UK postcode is required for every logbook entry.', 'error');
+      return;
+    }
+    if (!isValidUkPostcode(pc)) {
+      showToast('Invalid postcode', 'Enter a valid UK postcode.', 'error');
+      return;
+    }
+
     setSubmitting(true);
     const finalNotes =
       ENABLE_PHOTO_ANNOTATION && photoAnnotation.trim()
@@ -603,6 +646,8 @@ export default function TechnicianPage() {
           date: date || new Date().toISOString(),
           clientName,
           address,
+          postcode: pc,
+          propertyType,
           treatment,
           notes: finalNotes,
           rooms: rooms
@@ -620,6 +665,8 @@ export default function TechnicianPage() {
       setDate('');
       setClientName('');
       setAddress('');
+      setPostcode('');
+      setPropertyType(PROPERTY_TYPE_OPTIONS[0].value);
       setTreatment(treatments[0]);
       setNotes('');
       setRooms([]);
@@ -638,6 +685,7 @@ export default function TechnicianPage() {
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
+      setSubmitting(false);
       router.push('/auth/signin');
       return;
     }
@@ -648,6 +696,8 @@ export default function TechnicianPage() {
       date: date || new Date().toISOString(),
       clientName,
       address,
+      postcode: pc,
+      propertyType,
       treatment,
       notes: finalNotes,
       rooms: rooms
@@ -672,6 +722,8 @@ export default function TechnicianPage() {
         date,
         clientName,
         address,
+        postcode: pc,
+        propertyType,
         treatment,
         notes: finalNotes,
         rooms: rooms
@@ -692,6 +744,8 @@ export default function TechnicianPage() {
       setDate('');
       setClientName('');
       setAddress('');
+      setPostcode('');
+      setPropertyType(PROPERTY_TYPE_OPTIONS[0].value);
       setTreatment(treatments[0]);
       setNotes('');
       setRooms([]);
@@ -909,6 +963,45 @@ export default function TechnicianPage() {
                 placeholder="Job address"
                 className="form-input"
               />
+            </div>
+
+            {/* Postcode & property type (required for intelligence + analytics) */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="form-group">
+                <label htmlFor="technician-entry-postcode" className="form-label">
+                  Postcode (UK) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="technician-entry-postcode"
+                  type="text"
+                  value={postcode}
+                  onChange={(e) => setPostcode(e.target.value)}
+                  required
+                  autoComplete="postal-code"
+                  placeholder="e.g. SW1A 1AA"
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="technician-entry-property-type" className="form-label">
+                  Property type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="technician-entry-property-type"
+                  value={propertyType}
+                  onChange={(e) =>
+                    setPropertyType(e.target.value as (typeof PROPERTY_TYPE_OPTIONS)[number]['value'])
+                  }
+                  required
+                  className="form-select"
+                >
+                  {PROPERTY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Treatment and Photo Row */}
@@ -1220,6 +1313,12 @@ export default function TechnicianPage() {
                   </summary>
                   <div className="mt-4 border-t border-gray-200 pt-4">
                     <p className="text-gray-700">{entry.address}</p>
+                    {entry.postcode ? (
+                      <p className="mt-1 text-sm text-gray-600">Postcode: {entry.postcode}</p>
+                    ) : null}
+                    {entry.propertyType ? (
+                      <p className="mt-0.5 text-sm text-gray-600">Property: {propertyTypeLabel(entry.propertyType)}</p>
+                    ) : null}
                     {entry.rooms && entry.rooms.length > 0 ? (
                       <p className="mt-2 text-sm text-gray-600">
                         Rooms: {entry.rooms.map((room) => (typeof room === 'string' ? room : room.name)).join(', ')}

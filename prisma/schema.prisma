@@ -87,6 +87,10 @@ model LogbookEntry {
   date                    DateTime                 @map("date") @db.Timestamptz(6)
   clientName              String                   @map("clientName")
   address                 String                   @map("address")
+  /** UK postcode (required for technician-submitted entries; optional for legacy rows). */
+  postcode                String?                  @map("postcode")
+  /** e.g. residential_house | residential_flat | commercial | agricultural | other */
+  propertyType            String?                  @map("propertyType")
   treatment               String                   @map("treatment")
   notes                   String?                  @map("notes")
   photoUrl                String?                  @map("photoUrl")

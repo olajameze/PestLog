@@ -40,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     orderBy: { date: 'desc' },
   });
 
-  const header = ['date', 'clientName', 'address', 'treatment', 'status', 'notes'];
+  const header = ['date', 'clientName', 'address', 'postcode', 'propertyType', 'treatment', 'status', 'notes'];
   const lines = [header.join(',')];
   for (const entry of entries) {
     lines.push(
@@ -48,6 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entry.date.toISOString(),
         csvEscape(entry.clientName ?? ''),
         csvEscape(entry.address ?? ''),
+        csvEscape(entry.postcode ?? ''),
+        csvEscape(entry.propertyType ?? ''),
         csvEscape(entry.treatment ?? ''),
         csvEscape(entry.status ?? ''),
         csvEscape(entry.notes ?? ''),

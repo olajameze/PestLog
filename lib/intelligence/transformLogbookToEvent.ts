@@ -52,6 +52,18 @@ export function inferPropertyType(address: string): string {
   return 'residential_unknown';
 }
 
+/** Map stored logbook `propertyType` to intelligence layer vocabulary; fall back to address inference. */
+export function resolvePropertyTypeForIntelligence(stored: string | null | undefined, address: string): string {
+  const s = stored?.trim().toLowerCase();
+  if (s === 'residential_house' || s === 'house') return 'residential_house';
+  if (s === 'residential_flat' || s === 'flat') return 'residential_flat';
+  if (s === 'commercial') return 'commercial';
+  if (s === 'agricultural') return 'agricultural';
+  if (s === 'other' || s === 'mixed_use') return 'mixed_use';
+  if (s && s.length > 0) return s.slice(0, 64);
+  return inferPropertyType(address);
+}
+
 export function inferInfestationSeverity(treatment: string, notes: string | null, status: string | null): string {
   const blob = `${treatment} ${notes ?? ''} ${status ?? ''}`.toLowerCase();
   if (/\b(severe|heavy|major|serious|high)\b/.test(blob)) return 'high';
@@ -141,15 +153,18 @@ export function buildAnonymizedEventPayload(params: {
   entryId: string;
   date: Date;
   address: string;
+  postcode?: string | null;
+  propertyType?: string | null;
   treatment: string;
   notes: string | null;
   status: string | null | undefined;
   followUpDate: Date | null | undefined;
   sourceFingerprint: string;
 }): AnonymizedEventPayload {
-  const postcodeArea = extractUkPostcodeArea(params.address);
+  const postcodeBlob = params.postcode?.trim() ? params.postcode : params.address;
+  const postcodeArea = extractUkPostcodeArea(postcodeBlob);
   const coords = approxCoordsFromOutcode(postcodeArea);
-  const propertyType = inferPropertyType(params.address);
+  const propertyType = resolvePropertyTypeForIntelligence(params.propertyType ?? null, params.address);
   const infestationSeverity = inferInfestationSeverity(params.treatment, params.notes, params.status ?? null);
   const pestType = normalizePestType(params.treatment);
   const treatmentMethod = normalizeTreatmentMethod(params.treatment);

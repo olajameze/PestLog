@@ -35,7 +35,7 @@ export default function CSATScore({ csat, loading }: CSATScoreProps) {
         <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Customer satisfaction</p>
         <h3 className="text-xl font-semibold text-navy">CSAT & NPS trend</h3>
         <p className="mt-2 text-xs text-slate-500">
-          Scores are modelled from documentation quality on jobs (photos, signatures, notes) until survey responses are stored in Pest Trace.
+          With Enterprise NPS captured on Reports, charts use those real scores. Otherwise CSAT is inferred from job documentation quality (photos, signatures, notes) until survey data exists.
         </p>
       </div>
       {loading ? (

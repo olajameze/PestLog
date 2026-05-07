@@ -3,6 +3,9 @@ import type {
   DashboardData,
   DashboardDateRangeOption,
 } from './api/mockDashboardData';
+import { normalizeUkPostcode } from './ukPostcode';
+
+const ESTIMATED_GBP_PER_VISIT = 135;
 
 type CompanyPolicy = {
   requirePhotos: boolean;
@@ -19,8 +22,6 @@ type DashboardEnterpriseOptions = {
     comment?: string;
   }>;
 };
-
-const ESTIMATED_GBP_PER_VISIT = 135;
 
 function startOfLocalDay(d: Date): Date {
   const x = new Date(d);
@@ -40,8 +41,12 @@ function rangeToDays(range: DashboardDateRangeOption): number {
   return 90;
 }
 
-function normalizeClientKey(name: string): string {
-  return name.trim().toLowerCase();
+function normalizeClientKey(entry: { clientName: string; postcode?: string | null; address: string }): string {
+  const name = entry.clientName.trim().toLowerCase();
+  if (!name) return '';
+  const rawPc = entry.postcode?.trim();
+  if (rawPc) return `${name}|${normalizeUkPostcode(rawPc)}`;
+  return `${name}|${entry.address.trim().toLowerCase()}`;
 }
 
 function hashStringToPercent(s: string, axis: 0 | 1): number {
@@ -330,7 +335,7 @@ if (nextBestActions.length === 0) {
 
 const clientCounts = new Map<string, number>();
 for (const e of entriesInRange) {
-  const k = normalizeClientKey(e.clientName);
+  const k = normalizeClientKey(e);
   if (!k) continue;
   clientCounts.set(k, (clientCounts.get(k) ?? 0) + 1);
 }
@@ -353,11 +358,12 @@ for (const e of entriesInRange) {
     .slice(0, 5)
     .map(([reason, count]) => ({ reason, count }));
 
-  const avgJobsPerClient = uniqueClients === 0 ? 0 : totalJobs / uniqueClients;
-  // Calculate average price per job from actual data, fallback to estimated value
-  const totalRevenue = entriesInRange.reduce((sum, entry) => sum + (entry.price ? Number(entry.price) : ESTIMATED_GBP_PER_VISIT), 0);
-  const avgPricePerJob = entriesInRange.length > 0 ? totalRevenue / entriesInRange.length : ESTIMATED_GBP_PER_VISIT;
-  const clv = Math.round(avgJobsPerClient * avgPricePerJob * Math.max(1, uniqueClients));
+  const totalRevenue = entriesInRange.reduce(
+    (sum, entry) => sum + (entry.price != null && Number(entry.price) > 0 ? Number(entry.price) : ESTIMATED_GBP_PER_VISIT),
+    0,
+  );
+  /** Average revenue per distinct client in range (uses job `price` / invoice value when set, else visit estimate). */
+  const clvPerClient = uniqueClients === 0 ? 0 : Math.round(totalRevenue / uniqueClients);
   const cac = Math.max(420, Math.min(1400, Math.round(5400 / Math.max(1, Math.ceil(uniqueClients / 2) || 1))));
 
   const weekBuckets = Math.min(8, Math.max(3, Math.ceil(days / 14)));
@@ -368,7 +374,11 @@ for (const e of entriesInRange) {
       rangeStart.getTime() + ((w + 1) * (rangeEnd.getTime() - rangeStart.getTime())) / weekBuckets,
     );
     const slice = entriesInRange.filter((e) => e.date >= from && e.date < to);
-    const sliceRevenue = slice.reduce((sum, entry) => sum + (entry.price ? Number(entry.price) : ESTIMATED_GBP_PER_VISIT), 0);
+    const sliceRevenue = slice.reduce(
+      (sum, entry) =>
+        sum + (entry.price != null && Number(entry.price) > 0 ? Number(entry.price) : ESTIMATED_GBP_PER_VISIT),
+      0,
+    );
     trend.push(Math.round(sliceRevenue));
   }
   if (trend.length === 0) trend.push(0);
@@ -445,7 +455,7 @@ for (const e of entriesInRange) {
     urgentAlerts: urgentAlerts.slice(0, 8),
     nextBestActions: nextBestActions.slice(0, 4),
     customerValue: {
-      clv: uniqueClients === 0 ? 0 : clv,
+      clv: clvPerClient,
       cac,
       trend,
     },

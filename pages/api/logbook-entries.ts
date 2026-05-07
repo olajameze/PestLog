@@ -10,6 +10,7 @@ import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
+import { isValidUkPostcode, normalizeUkPostcode } from '../../lib/ukPostcode';
 function tryParseJson(value: unknown) {
   if (typeof value !== 'string') return value;
   try {
@@ -161,6 +162,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         signature,
         price,
         cancellationReason,
+        postcode,
+        propertyType,
       } = req.body;
 
       if (
@@ -174,6 +177,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
+
+      let normalizedPostcode: string | null = null;
+      if (typeof postcode === 'string' && postcode.trim().length > 0) {
+        if (!isValidUkPostcode(postcode)) {
+          return res.status(400).json({ error: 'Invalid UK postcode' });
+        }
+        normalizedPostcode = normalizeUkPostcode(postcode);
+      }
+
+      const normalizedPropertyType =
+        typeof propertyType === 'string' && propertyType.trim().length > 0 ? propertyType.trim() : null;
 
       const parsedDate = new Date(date);
       if (isNaN(parsedDate.getTime())) return res.status(400).json({ error: 'Invalid date' });
@@ -229,6 +243,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ? (typeof cancellationReason === 'string' ? cancellationReason.trim() : '') || null
             : null,
         price: price ? new Prisma.Decimal(price) : null,
+        postcode: normalizedPostcode,
+        propertyType: normalizedPropertyType,
       };
 
       const normalizedRooms = normalizeRoomsValue(rooms);

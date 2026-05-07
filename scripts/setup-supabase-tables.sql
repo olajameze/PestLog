@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS "LogbookEntry" (
   "date" TIMESTAMPTZ NOT NULL,
   "clientName" TEXT NOT NULL,
   "address" TEXT NOT NULL,
+  "postcode" TEXT,
+  "propertyType" TEXT,
   "treatment" TEXT NOT NULL,
   "notes" TEXT,
   "photoUrl" TEXT,

@@ -9,6 +9,9 @@ import {
   isIpAllowed,
   parseEnterpriseSettings,
 } from '../../lib/enterpriseFeatures';
+import { normalizeUkPostcode } from '../../lib/ukPostcode';
+
+const ESTIMATED_GBP_PER_JOB = 135;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -96,11 +99,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Revenue-based metrics (Business/Enterprise only)
     const totalRevenue = (entries as Entry[]).reduce((sum, entry) => {
-      return sum + (entry.price ? Number(entry.price) : 0);
+      return sum + (entry.price != null && Number(entry.price) > 0 ? Number(entry.price) : ESTIMATED_GBP_PER_JOB);
     }, 0);
 
     // Identify unique clients in this period to calculate CLV
-    const uniqueClients = new Set((entries as Entry[]).map((entry) => `${entry.clientName}-${entry.address}`));
+    const uniqueClients = new Set(
+      (entries as Entry[]).map((entry) => {
+        const name = entry.clientName.trim().toLowerCase();
+        const pc = entry.postcode?.trim();
+        if (pc) return `${name}|${normalizeUkPostcode(pc)}`;
+        return `${name}|${entry.address.trim().toLowerCase()}`;
+      }),
+    );
     
     // CLV = Total Revenue / Total Unique Clients
     const clvScore = uniqueClients.size > 0 

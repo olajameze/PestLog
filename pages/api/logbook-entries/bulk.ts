@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
+import { deleteIntelligenceForLogbookEntry, scheduleIntelligenceIngest } from '../../../lib/intelligence/ingestLogbookEntry';
 
 type BulkAction = 'set_status' | 'delete';
 
@@ -61,10 +62,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: { id: { in: scopedIds } },
       data: { status },
     });
+    scopedIds.forEach((entryId) => scheduleIntelligenceIngest(entryId));
     return res.status(200).json({ updated: result.count, affectedIds: scopedIds });
   }
 
   if (action === 'delete') {
+    await Promise.all(
+      scopedIds.map((entryId) => deleteIntelligenceForLogbookEntry(entryId, company.id)),
+    );
     await prisma.$transaction(async (tx) => {
       await tx.logbookEntryTechnician.deleteMany({
         where: { logbookEntryId: { in: scopedIds } },

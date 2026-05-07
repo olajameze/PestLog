@@ -60,7 +60,7 @@ export default function CustomerLifetimeValue({ customerValue, loading }: Custom
           <div className="space-y-2">
             <p className="text-sm font-semibold text-slate-700">Trend</p>
             <p className="text-xs text-slate-500">
-              CLV and CAC are directional estimates from your logged jobs (assumed £{135} average visit value until invoicing is connected). Trend follows estimated revenue by week in the selected range.
+              CLV uses each job’s invoice amount from the Price field when your team logs it on dashboard entries; otherwise an illustrative £135 per visit is assumed. Weekly bars follow the same revenue basis. CAC remains a planning estimate until marketing spend is integrated.
             </p>
             <div
               className="flex h-32 max-h-32 min-h-32 items-end gap-2"

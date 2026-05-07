@@ -74,6 +74,8 @@ async function handleLogbookEntry(
             date: typeof data.date === 'string' ? new Date(data.date) : new Date(),
             clientName: typeof data.clientName === 'string' ? data.clientName : '',
             address: typeof data.address === 'string' ? data.address : '',
+            postcode: typeof data.postcode === 'string' ? data.postcode : null,
+            propertyType: typeof data.propertyType === 'string' ? data.propertyType : null,
             treatment: typeof data.treatment === 'string' ? data.treatment : '',
             notes: typeof data.notes === 'string' ? data.notes : null,
             photoUrl: typeof data.photoUrl === 'string' ? data.photoUrl : null,
@@ -95,10 +97,13 @@ async function handleLogbookEntry(
           data: {
             ...(typeof data.clientName === 'string' ? { clientName: data.clientName } : {}),
             ...(typeof data.address === 'string' ? { address: data.address } : {}),
+            ...(typeof data.postcode === 'string' ? { postcode: data.postcode } : {}),
+            ...(typeof data.propertyType === 'string' ? { propertyType: data.propertyType } : {}),
             ...(typeof data.treatment === 'string' ? { treatment: data.treatment } : {}),
             ...(typeof data.notes === 'string' ? { notes: data.notes } : {}),
             ...(typeof data.status === 'string' ? { status: data.status } : {}),
           },
+          
         });
         return res.status(200).json(updated);
       

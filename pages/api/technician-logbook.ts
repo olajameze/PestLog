@@ -7,6 +7,15 @@ import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
+import { isValidUkPostcode, normalizeUkPostcode } from '../../lib/ukPostcode';
+
+const TECH_PROPERTY_TYPES = new Set([
+  'residential_house',
+  'residential_flat',
+  'commercial',
+  'agricultural',
+  'other',
+]);
 
 type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
@@ -15,6 +24,8 @@ type LogbookEntryWithPhotos = {
   date: Date;
   clientName: string;
   address: string;
+  postcode: string | null;
+  propertyType: string | null;
   treatment: string;
   notes: string | null;
   rooms: unknown;
@@ -143,10 +154,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         photoUrl,
         photoUrls,
         signature,
+        postcode,
+        propertyType,
       } = req.body;
 
       if (!date || !clientName || !address || !treatment) {
         return res.status(400).json({ error: 'Missing required fields' });
+      }
+
+      const postcodeStr = typeof postcode === 'string' ? postcode.trim() : '';
+      if (!postcodeStr) {
+        return res.status(400).json({ error: 'Postcode is required' });
+      }
+      if (!isValidUkPostcode(postcodeStr)) {
+        return res.status(400).json({ error: 'Enter a valid UK postcode' });
+      }
+
+      const propertyTypeStr = typeof propertyType === 'string' ? propertyType.trim() : '';
+      if (!propertyTypeStr || !TECH_PROPERTY_TYPES.has(propertyTypeStr)) {
+        return res.status(400).json({ error: 'Property type is required' });
       }
 
       const normalizedPhotoUrls = Array.isArray(photoUrls)
@@ -172,6 +198,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             date: new Date(date),
             clientName: typeof clientName === 'string' ? clientName.trim() : clientName,
             address: typeof address === 'string' ? address.trim() : address,
+            postcode: normalizeUkPostcode(postcodeStr),
+            propertyType: propertyTypeStr,
             treatment: typeof treatment === 'string' ? treatment.trim() : treatment,
             notes: typeof notes === 'string' ? notes.trim() : notes,
             rooms: normalizedRooms,

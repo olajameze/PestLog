@@ -6,6 +6,7 @@ import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 import { deleteIntelligenceForLogbookEntry, scheduleIntelligenceIngest } from '../../../lib/intelligence/ingestLogbookEntry';
+import { isValidUkPostcode, normalizeUkPostcode } from '../../../lib/ukPostcode';
 
 type CompanyForAccess = {
   id: string;
@@ -83,10 +84,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const { date, clientName, address, treatment, notes, technicianIds, followUpDate, internalNotes, productAmount, recommendation, cancellationReason, rooms, baitStations, baitBoxesPlaced, poisonUsed, startTime, endTime, status, photoUrls, signature } = req.body;
+    const {
+      date,
+      clientName,
+      address,
+      treatment,
+      notes,
+      technicianIds,
+      followUpDate,
+      internalNotes,
+      productAmount,
+      recommendation,
+      cancellationReason,
+      rooms,
+      baitStations,
+      baitBoxesPlaced,
+      poisonUsed,
+      startTime,
+      endTime,
+      status,
+      photoUrls,
+      signature,
+      postcode,
+      propertyType,
+    } = req.body;
     if (!date || !clientName || !address || !treatment || !technicianIds || !Array.isArray(technicianIds) || technicianIds.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    let normalizedPostcode: string | null | undefined;
+    if (postcode !== undefined) {
+      if (postcode === null || (typeof postcode === 'string' && postcode.trim().length === 0)) {
+        normalizedPostcode = null;
+      } else if (typeof postcode === 'string') {
+        if (!isValidUkPostcode(postcode)) {
+          return res.status(400).json({ error: 'Invalid UK postcode' });
+        }
+        normalizedPostcode = normalizeUkPostcode(postcode);
+      }
+    }
+
+    const normalizedPropertyTypePut =
+      propertyType === undefined
+        ? undefined
+        : propertyType === null || (typeof propertyType === 'string' && propertyType.trim().length === 0)
+          ? null
+          : typeof propertyType === 'string'
+            ? propertyType.trim()
+            : undefined;
 
     // Delete old join records
     await prisma.logbookEntryTechnician.deleteMany({
@@ -145,6 +190,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         startTime: startTime ? new Date(startTime) : null,
         endTime: endTime ? new Date(endTime) : null,
         status: status || "open",
+        ...(normalizedPostcode !== undefined ? { postcode: normalizedPostcode } : {}),
+        ...(normalizedPropertyTypePut !== undefined ? { propertyType: normalizedPropertyTypePut } : {}),
       },
     });
 

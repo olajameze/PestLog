@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../lib/supabase';
 import { prisma } from '../../lib/prisma';
+import { deleteIntelligenceForLogbookEntry } from '../../lib/intelligence/ingestLogbookEntry';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -34,6 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Delete related records manually if relations aren't CASCADE
       await prisma.logbookEntryTechnician.deleteMany({ where: { logbookEntryId: entry.id } });
       await prisma.logbookPhoto.deleteMany({ where: { logbookEntryId: entry.id } });
+
+      await deleteIntelligenceForLogbookEntry(entry.id, company.id);
 
       await prisma.logbookEntry.delete({
         where: { id: entry.id },
