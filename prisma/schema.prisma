@@ -147,3 +147,45 @@ model LogbookPhoto {
   @@map("LogbookPhoto")
   @@schema("public")
 }
+
+/// Anonymised pest-activity facts derived from operational logbook data — no PII, separate conceptual layer from `LogbookEntry`.
+model IntelligencePestEvent {
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  /// Dedup key: HMAC(companyId + entryId) — cannot be reversed to recover tenant or row without the server secret.
+  sourceFingerprint      String   @unique @map("source_fingerprint")
+  occurredAt             DateTime @map("occurred_at") @db.Timestamptz(6)
+  pestType               String   @map("pest_type")
+  infestationSeverity    String   @map("infestation_severity")
+  propertyType           String   @map("property_type")
+  postcodeArea           String?  @map("postcode_area")
+  geoLatRounded          Float?   @map("geo_lat_rounded")
+  geoLngRounded          Float?   @map("geo_lng_rounded")
+  treatmentMethod        String   @map("treatment_method")
+  treatmentOutcome       String   @map("treatment_outcome")
+  revisitRequired        Boolean  @default(false) @map("revisit_required")
+  environmentalFactors   Json?    @map("environmental_factors")
+  activityScore          Int      @default(0) @map("activity_score")
+  season                 String?  @map("season")
+  treatmentEffectiveness String?  @map("treatment_effectiveness")
+  environmentalRiskScore Int?     @map("environmental_risk_score")
+  ingestedAt             DateTime @default(now()) @map("ingested_at") @db.Timestamptz(6)
+
+  @@index([occurredAt], map: "intelligence_pest_event_occurred_at_idx")
+  @@index([pestType], map: "intelligence_pest_event_pest_type_idx")
+  @@index([postcodeArea], map: "intelligence_pest_event_postcode_area_idx")
+  @@index([treatmentOutcome], map: "intelligence_pest_event_treatment_outcome_idx")
+  @@index([propertyType], map: "intelligence_pest_event_property_type_idx")
+  @@map("intelligence_pest_event")
+  @@schema("public")
+}
+
+model IntelligenceAuditLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  action    String   @map("action")
+  detail    Json?    @map("detail")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt], map: "intelligence_audit_log_created_at_idx")
+  @@map("intelligence_audit_log")
+  @@schema("public")
+}

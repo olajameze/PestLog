@@ -6,6 +6,7 @@ import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-
 import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
+import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
 
 type LogbookPhotoRecord = { url: string };
 type LogbookEntryWithPhotos = {
@@ -226,6 +227,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         technicianIds: logbookEntryTechnicians.map((lt) => lt.technicianId),
         photos: rest.photos as LogbookPhotoRecord[],
       };
+
+      scheduleIntelligenceIngest(createdEntryId);
 
       return res.status(201).json(await signEntryPhotos(entryWithIds));
     }

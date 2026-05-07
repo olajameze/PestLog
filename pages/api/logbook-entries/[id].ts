@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
+import { deleteIntelligenceForLogbookEntry, scheduleIntelligenceIngest } from '../../../lib/intelligence/ingestLogbookEntry';
 
 type CompanyForAccess = {
   id: string;
@@ -182,6 +183,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ),
       });
     }
+    scheduleIntelligenceIngest(id);
     return res.status(200).json(updatedEntry);
   }
 
@@ -201,6 +203,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!entry || entry.companyId !== company.id) {
       return res.status(403).json({ error: 'Forbidden' });
     }
+    await deleteIntelligenceForLogbookEntry(id, entry.companyId);
     await prisma.logbookEntry.delete({
       where: { id },
     });

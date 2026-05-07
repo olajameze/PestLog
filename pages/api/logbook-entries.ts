@@ -7,6 +7,7 @@ import { createSignedPhotoUrl, createSignedPhotoUrls } from '../../lib/supabase-
 import { writeAuditLog } from '../../lib/audit/log';
 import { logger } from '../../lib/logger';
 import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
+import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
 function tryParseJson(value: unknown) {
   if (typeof value !== 'string') return value;
   try {
@@ -258,6 +259,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
         ipAddress: (req.headers['x-forwarded-for'] as string | undefined) ?? req.socket.remoteAddress ?? null,
       });
+
+      scheduleIntelligenceIngest(fullEntry!.id);
 
       return res.status(201).json(await signEntryPhotos(fullEntry!));
     }

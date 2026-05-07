@@ -2,6 +2,7 @@ import { Fragment, useMemo, useState } from 'react';
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Button from '../components/ui/Button';
+import PestTraceIntelligencePanel from '../components/super-admin/PestTraceIntelligencePanel';
 import { getSupabaseAdmin } from '../lib/supabase-admin';
 import { getSuperAdminCookieName, verifySuperAdminToken } from '../lib/superAdminAuth';
 import { useToast } from '../components/ui/ToastProvider';
@@ -46,6 +47,7 @@ export default function SuperAdminPage({
   const [historyByUserId, setHistoryByUserId] = useState<Record<string, AuditEntry[]>>({});
   const [historyOpenByUserId, setHistoryOpenByUserId] = useState<Record<string, boolean>>({});
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'users' | 'intelligence'>('users');
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   const totals = useMemo(() => {
@@ -70,6 +72,7 @@ export default function SuperAdminPage({
     if (!response.ok) {
       if (response.status === 401) {
         router.replace('/auth/super-admin');
+        setLoading(false);
         return;
       }
       const body = await response.json().catch(() => ({ error: 'Failed to load users' }));
@@ -158,10 +161,6 @@ export default function SuperAdminPage({
     }
   };
 
-  if (loading) {
-    return <div className="min-h-screen bg-offwhite flex items-center justify-center">Loading super admin panel...</div>;
-  }
-
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl min-w-0 space-y-6">
@@ -169,12 +168,52 @@ export default function SuperAdminPage({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-navy">Super Admin</h1>
-              <p className="mt-1 text-sm text-zinc-600">Manage signed-up users across the application.</p>
+              <p className="mt-1 text-sm text-zinc-600">
+                Platform operations: user directory and anonymised intelligence (developer access only).
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={loadUsers}>Refresh users</Button>
+              <Button variant="secondary" size="sm" onClick={() => void loadUsers()} disabled={loading}>
+                {loading ? 'Refreshing…' : 'Refresh users'}
+              </Button>
               <Button variant="danger" size="sm" onClick={handleLogout}>Sign out</Button>
             </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-3">
+            <button
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activeTab === 'users'
+                  ? 'bg-navy text-white'
+                  : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200'
+              }`}
+            >
+              Users
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('intelligence')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activeTab === 'intelligence'
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200'
+              }`}
+            >
+              PestTrace Intelligence
+            </button>
+          </div>
+        </div>
+
+        {activeTab === 'intelligence' ? (
+          <PestTraceIntelligencePanel />
+        ) : null}
+
+        {activeTab === 'users' ? (
+        <>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="mt-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="sr-only">User filters</div>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <input
@@ -366,6 +405,8 @@ export default function SuperAdminPage({
             </table>
           </div>
         </div>
+        </>
+        ) : null}
       </div>
     </div>
   );
