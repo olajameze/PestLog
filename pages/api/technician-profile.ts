@@ -18,7 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const technician = await prisma.technician.findFirst({
     where: technicianEmailWhere(normalizeAuthEmail(user.email)),
-    include: { company: true },
+    include: {
+      company: {
+        select: { name: true },
+      },
+    },
   });
 
   if (!technician) {

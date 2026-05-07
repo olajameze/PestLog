@@ -47,7 +47,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const technician = await prisma.technician.findUnique({
       where: { id: technicianId },
-      include: { company: true },
+      include: {
+        company: {
+          select: {
+            plan: true,
+            subscriptionStatus: true,
+            trialEndsAt: true,
+            paymentGraceEndsAt: true,
+          },
+        },
+      },
     });
 
     if (!technician) {

@@ -22,10 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ownerEmail = normalizeAuthEmail(user.email);
 
     if (req.method === 'GET') {
-      // Get company's technicians
+      // Get company's technicians (narrow select so older DBs without newer Company columns still work)
       const company = await prisma.company.findUnique({
         where: { email: ownerEmail },
-        include: { technicians: true },
+        select: { technicians: true },
       });
       if (!company) {
         const technician = await prisma.technician.findFirst({
@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const company = await prisma.company.findUnique({
         where: { email: ownerEmail },
-        include: { technicians: true },
+        select: { id: true, plan: true, technicians: true },
       });
       if (!company) {
         const technician = await prisma.technician.findFirst({
@@ -114,6 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       const company = await prisma.company.findUnique({
         where: { email: ownerEmail },
+        select: { id: true },
       });
       if (!company) {
         const technician = await prisma.technician.findFirst({

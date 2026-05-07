@@ -8,6 +8,8 @@ import { writeAuditLog } from '../../lib/audit/log';
 import { logger } from '../../lib/logger';
 import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
+import { normalizeAuthEmail } from '../../lib/auth/userSession';
+import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 function tryParseJson(value: unknown) {
   if (typeof value !== 'string') return value;
   try {
@@ -91,15 +93,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         : whereBase;
 
-      const company = await prisma.company.findFirst({
-        where: { id: companyId as string, email: user.email },
+      const authEmail = normalizeAuthEmail(user.email);
+      let company = await prisma.company.findFirst({
+        where: { id: companyId as string, email: authEmail },
         select: {
           id: true,
           plan: true,
           subscriptionStatus: true,
           trialEndsAt: true,
+          paymentGraceEndsAt: true,
         },
       });
+
+      if (!company) {
+        const onRoster = await prisma.technician.findFirst({
+          where: { ...technicianEmailWhere(authEmail), companyId: companyId as string },
+          select: { id: true },
+        });
+        if (onRoster) {
+          company = await prisma.company.findFirst({
+            where: { id: companyId as string },
+            select: {
+              id: true,
+              plan: true,
+              subscriptionStatus: true,
+              trialEndsAt: true,
+              paymentGraceEndsAt: true,
+            },
+          });
+        }
+      }
+
       if (!company) return res.status(403).json({ error: 'Forbidden' });
       if (!hasSubscriptionAccess(company)) {
         return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
