@@ -16,6 +16,7 @@ type ReportEntryRecord = {
   date: Date;
   clientName: string;
   address: string;
+  postcode: string | null;
   treatment: string;
   notes: string | null;
   photoUrl: string | null;
@@ -241,6 +242,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       date: true,
       clientName: true,
       address: true,
+      postcode: true,
       treatment: true,
       status: true,
       followUpDate: true,

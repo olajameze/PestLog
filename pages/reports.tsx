@@ -9,6 +9,8 @@ import FormInput from '../components/ui/FormInput';
 import { useToast } from '../components/ui/ToastProvider';
 import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
 import { isActiveTrial } from '../lib/trialEnterprisePreview';
+import IntelligenceGeoHeatmap from '../components/super-admin/IntelligenceGeoHeatmap';
+import { buildHeatmapPointsFromReportEntries } from '../lib/intelligence/ukPostcodeGeo';
 
 type Company = {
   id: string;
@@ -29,6 +31,8 @@ type ReportEntry = {
   date: string;
   clientName: string;
   address: string;
+  /** UK postcode when captured on the job (improves regional map). */
+  postcode?: string | null;
   treatment: string;
   status?: string;
   followUpDate?: string;
@@ -755,6 +759,10 @@ export default function ReportsPage() {
         ? report.entries.filter((entry) => (jobFilter === 'follow-up' ? entryNeedsFollowUp(entry) : true))
         : [],
     [report, jobFilter],
+  );
+  const reportHeatmapPoints = useMemo(
+    () => buildHeatmapPointsFromReportEntries(visibleEntries),
+    [visibleEntries],
   );
   const clientTimeline = useMemo(() => {
     const map = new Map<string, ReportEntry[]>();
@@ -1771,6 +1779,16 @@ export default function ReportsPage() {
                       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Avg duration</p>
                         <p className="mt-2 text-2xl font-semibold text-navy">{analytics.averageDurationMinutes !== null ? `${analytics.averageDurationMinutes} min` : 'N/A'}</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <h4 className="text-lg font-semibold text-navy">Regional job density</h4>
+                      <p className="mt-1 text-sm text-slate-600">
+                        From UK postcodes on each job (or address). District-level positions — same engine as platform intelligence heatmaps.
+                      </p>
+                      <div className="mt-4">
+                        <IntelligenceGeoHeatmap points={reportHeatmapPoints} cols={40} rows={28} />
                       </div>
                     </div>
 

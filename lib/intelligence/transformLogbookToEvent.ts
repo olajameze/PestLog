@@ -1,42 +1,11 @@
-/** Rough UK outcode → centroid (≈ district centre) for heatmap visuals — no address stored. */
-const OUTCODE_CENTROIDS: Record<string, [number, number]> = {
-  SW1A: [51.5014, -0.1419],
-  EC1A: [51.5155, -0.0922],
-  W1A: [51.5074, -0.1278],
-  E1A: [51.5108, -0.074],
-  M1: [53.4808, -2.2426],
-  B1: [52.4862, -1.8904],
-  L1: [53.4084, -2.9916],
-  LS1: [53.8008, -1.5491],
-  G1: [55.8642, -4.2518],
-  EH1: [55.9533, -3.1883],
-  CF10: [51.4816, -3.1791],
-  BS1: [51.4545, -2.5879],
-  OX1: [51.752, -1.2577],
-  CB1: [52.2053, 0.1218],
-  NR1: [52.6286, 1.2923],
-};
+import { extractUkPostcodeArea, getApproxLatLngForUkPostcodeOutcode } from './ukPostcodeGeo';
 
-function roundCoord(n: number, decimals: number): number {
-  const p = 10 ** decimals;
-  return Math.round(n * p) / p;
-}
-
-export function approxCoordsFromOutcode(outcode: string | null): { lat: number; lng: number } | null {
-  if (!outcode) return null;
-  const key = outcode.toUpperCase().replace(/\s+/g, '');
-  const hit = OUTCODE_CENTROIDS[key];
-  if (!hit) return null;
-  return { lat: roundCoord(hit[0], 3), lng: roundCoord(hit[1], 3) };
-}
-
-export function extractUkPostcodeArea(address: string): string | null {
-  if (!address || typeof address !== 'string') return null;
-  const normalized = address.toUpperCase().replace(/\s+/g, ' ').trim();
-  const m = normalized.match(/\b([A-Z]{1,2}\d[A-Z0-9]?)(?:\s*\d[A-Z]{2})?\b/);
-  if (!m) return null;
-  return m[1];
-}
+export {
+  approxCoordsFromOutcode,
+  extractUkPostcodeArea,
+  getApproxLatLngForUkPostcodeOutcode,
+  buildHeatmapPointsFromReportEntries,
+} from './ukPostcodeGeo';
 
 export function inferPropertyType(address: string): string {
   const a = address.toLowerCase();
@@ -163,7 +132,7 @@ export function buildAnonymizedEventPayload(params: {
 }): AnonymizedEventPayload {
   const postcodeBlob = params.postcode?.trim() ? params.postcode : params.address;
   const postcodeArea = extractUkPostcodeArea(postcodeBlob);
-  const coords = approxCoordsFromOutcode(postcodeArea);
+  const coords = getApproxLatLngForUkPostcodeOutcode(postcodeArea);
   const propertyType = resolvePropertyTypeForIntelligence(params.propertyType ?? null, params.address);
   const infestationSeverity = inferInfestationSeverity(params.treatment, params.notes, params.status ?? null);
   const pestType = normalizePestType(params.treatment);
