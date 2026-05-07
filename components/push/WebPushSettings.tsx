@@ -156,8 +156,12 @@ export default function WebPushSettings() {
 
   if (state === 'no_server_key') {
     return (
-      <p className="text-xs text-amber-800">
-        Push is not configured on the server yet. Add VAPID keys to the deployment environment.
+      <p className="text-xs text-amber-800 dark:text-amber-200">
+        Push is not configured for this deployment. Add VAPID keys to the server environment, then redeploy: set{' '}
+        <span className="font-mono">NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY</span> and{' '}
+        <span className="font-mono">WEB_PUSH_VAPID_PRIVATE_KEY</span> (generate with{' '}
+        <span className="font-mono">npx web-push generate-vapid-keys</span>). See <span className="font-mono">.env.example</span>{' '}
+        under Web Push / Vercel.
       </p>
     );
   }
