@@ -6,19 +6,23 @@ import { logger } from '../../lib/logger';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 import { resolveSiteOriginForApiRequest } from '../../lib/siteOrigin';
+import { reconcileCompanyBillingFromStripe } from '../../lib/stripe/reconcileCompanyBilling';
+import { sendSubscriptionUpgradeEmail } from './subscription';
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
   const isValidPrefix = key?.startsWith('sk_') || key?.startsWith('rk_');
 
   if (
-    !key || 
-    key.trim().length === 0 || 
+    !key ||
+    key.trim().length === 0 ||
     !isValidPrefix ||
-    key === 'sk_test_...' || 
+    key === 'sk_test_...' ||
     key.includes('your-secret-key')
   ) {
-    throw new Error('Stripe Secret Key is missing or using a placeholder value. Please update STRIPE_SECRET_KEY in .env.local with your actual key starting with sk_test_');
+    throw new Error(
+      'Stripe Secret Key is missing or using a placeholder value. Please update STRIPE_SECRET_KEY in .env.local with your actual key starting with sk_test_',
+    );
   }
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
@@ -48,13 +52,18 @@ const PRICE_IDS: Record<Plan, string> = {
   enterprise: process.env.STRIPE_PRICE_ID_ENTERPRISE || '',
 };
 
+const PAYING_SUB_STATUSES = new Set(['active', 'trialing', 'past_due', 'unpaid']);
+
+function payingSubscriptions(subs: Stripe.Subscription[]): Stripe.Subscription[] {
+  return subs.filter((s) => PAYING_SUB_STATUSES.has(s.status)).sort((a, b) => b.created - a.created);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end('Method Not Allowed');
   }
 
-  // Fail fast with a clear message (prevents opaque 500s)
   const stripe = (() => {
     try {
       return getStripe();
@@ -66,63 +75,63 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   })();
   if (!(stripe instanceof Stripe)) return;
 
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No authorization header' });
-  }
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
 
-  const token = authHeader.replace('Bearer ', '');
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user?.email) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+    const token = authHeader.replace('Bearer ', '');
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+    if (error || !user?.email) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
-  const authEmail = normalizeAuthEmail(user.email);
+    const authEmail = normalizeAuthEmail(user.email);
 
-  const { plan } = req.body as { plan?: Plan };
-  if (!plan || !(plan in PRICE_IDS)) {
-    return res.status(400).json({ error: 'Invalid plan. Use "pro", "business" or "enterprise".' });
-  }
+    const { plan } = req.body as { plan?: Plan };
+    if (!plan || !(plan in PRICE_IDS)) {
+      return res.status(400).json({ error: 'Invalid plan. Use "pro", "business" or "enterprise".' });
+    }
 
-  const selectedPlan = plan as Plan;
-  const priceId = PRICE_IDS[selectedPlan];
-  if (!priceId || !priceId.startsWith('price_')) {
-    return res.status(500).json({
-      error: `Stripe price id not configured for ${selectedPlan}. Ensure it starts with 'price_' in your environment variables.`,
-    });
-  }
-
-  // Owner-only billing endpoint (email must match Company row — same normalization as onboarding).
-  const company = await prisma.company.findUnique({
-    where: { email: authEmail },
-  });
-
-  if (!company) {
-    const technician = await prisma.technician.findFirst({
-      where: technicianEmailWhere(authEmail),
-      select: { id: true },
-    });
-    if (technician) {
-      return res.status(403).json({
-        error: 'Technician accounts cannot manage subscription plans.',
-        code: 'ROLE_TECHNICIAN',
+    const selectedPlan = plan as Plan;
+    const priceId = PRICE_IDS[selectedPlan];
+    if (!priceId || !priceId.startsWith('price_')) {
+      return res.status(500).json({
+        error: `Stripe price id not configured for ${selectedPlan}. Ensure it starts with 'price_' in your environment variables.`,
       });
     }
-  }
 
-  if (!company) {
-    return res.status(400).json({ error: 'No company found' });
-  }
+    const company = await prisma.company.findUnique({
+      where: { email: authEmail },
+    });
 
-  try {
+    if (!company) {
+      const technician = await prisma.technician.findFirst({
+        where: technicianEmailWhere(authEmail),
+        select: { id: true },
+      });
+      if (technician) {
+        return res.status(403).json({
+          error: 'Technician accounts cannot manage subscription plans.',
+          code: 'ROLE_TECHNICIAN',
+        });
+      }
+    }
+
+    if (!company) {
+      return res.status(400).json({ error: 'No company found' });
+    }
+
     let stripeCustomerId = company.stripeCustomerId;
 
-    // If a customer ID exists, verify it belongs to the current Stripe mode (Test/Live)
     if (stripeCustomerId) {
       try {
         await stripe.customers.retrieve(stripeCustomerId);
       } catch (e) {
-        // If Stripe returns a 404 or "resource_missing", the ID is from a different environment
         const stripeError = e as { status?: number; code?: string };
         if (stripeError.status === 404 || stripeError.code === 'resource_missing') {
           logger.warn(`Stripe Customer ${stripeCustomerId} not found in this mode. Resetting...`);
@@ -159,8 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       if (pricePreview.type !== 'recurring') {
         return res.status(500).json({
-          error:
-            `Checkout expects a recurring subscription price. Price ${priceId} is type "${pricePreview.type}". Create a recurring monthly price in Stripe.`,
+          error: `Checkout expects a recurring subscription price. Price ${priceId} is type "${pricePreview.type}". Create a recurring monthly price in Stripe.`,
           code: 'STRIPE_PRICE_NOT_RECURRING',
           stripePriceId: priceId,
           plan: selectedPlan,
@@ -193,6 +201,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    const successReturnUrl = `${origin}/reports?upgradedPlan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`;
+    const directUpgradeUrl = `${origin}/reports?upgradedPlan=${selectedPlan}`;
+
+    const subList = await stripe.subscriptions.list({
+      customer: stripeCustomerId,
+      status: 'all',
+      limit: 30,
+    });
+    const paying = payingSubscriptions(subList.data);
+
+    if (paying.length > 0) {
+      for (let i = 1; i < paying.length; i += 1) {
+        const dup = paying[i];
+        try {
+          await stripe.subscriptions.cancel(dup.id);
+          logger.info(`Canceled duplicate Stripe subscription ${dup.id} for customer ${stripeCustomerId}`);
+        } catch (cancelErr) {
+          logger.warn(
+            `Could not cancel duplicate subscription ${dup.id}: ${cancelErr instanceof Error ? cancelErr.message : cancelErr}`,
+          );
+        }
+      }
+
+      const primary = paying[0];
+      const items = primary.items?.data ?? [];
+      if (items.length !== 1) {
+        return res.status(409).json({
+          error:
+            'This account has an unusual subscription setup (multiple line items). Use Billing → Manage subscription in Settings, or contact support.',
+          code: 'STRIPE_SUBSCRIPTION_MULTI_ITEM',
+        });
+      }
+
+      const item = items[0];
+      const currentPriceId = typeof item.price === 'string' ? item.price : item.price?.id;
+      if (currentPriceId === priceId) {
+        await reconcileCompanyBillingFromStripe(company.id);
+        return res.status(200).json({ url: directUpgradeUrl, alreadyOnPlan: true });
+      }
+
+      await stripe.subscriptions.update(primary.id, {
+        cancel_at_period_end: false,
+        metadata: {
+          companyId: company.id,
+          plan: selectedPlan,
+        },
+        items: [
+          {
+            id: item.id,
+            price: priceId,
+          },
+        ],
+        proration_behavior: 'create_prorations',
+      });
+
+      await reconcileCompanyBillingFromStripe(company.id);
+
+      try {
+        await sendSubscriptionUpgradeEmail(company.id, selectedPlan);
+      } catch (emailErr) {
+        logger.warn(
+          `Upgrade email skipped: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}`,
+        );
+      }
+
+      return res.status(200).json({ url: directUpgradeUrl, upgradedInPlace: true });
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       metadata: {
@@ -212,17 +288,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           plan: selectedPlan,
         },
       },
-      success_url: `${origin}/reports?upgradedPlan=${selectedPlan}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: successReturnUrl,
       cancel_url: `${origin}/upgrade`,
       client_reference_id: `${company.id}:${selectedPlan}`,
-      // customer_email: user.email,  // removed - conflict w/ customer
     });
 
-    res.status(200).json({ url: session.url });
+    return res.status(200).json({ url: session.url });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const fe = extractStripeFields(error);
-    logger.error(`Checkout session failed: ${errorMessage}${fe.code ? ` (${JSON.stringify(fe)})` : ''}`);
+    logger.error(
+      `Checkout session failed: ${errorMessage}${fe.code ? ` (${JSON.stringify(fe)})` : ''}${
+        error instanceof Error && error.stack ? ` | ${error.stack}` : ''
+      }`,
+    );
     let message = 'Unable to create checkout session. Please try again later.';
     if (fe.code === 'resource_missing') {
       if (typeof fe.param === 'string' && /price|line_items/i.test(fe.param)) {
@@ -236,6 +315,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     };
     if (fe.code) payload.stripeCode = fe.code;
     if (fe.param) payload.stripeParam = fe.param;
-    res.status(500).json(payload);
+    return res.status(500).json(payload);
   }
 }

@@ -61,7 +61,24 @@ export async function reconcileCompanyBillingFromStripe(companyId: string): Prom
   }
 
   const sub = subs.data.find((s) => PAYING_SUB_STATUSES.has(s.status));
-  if (!sub) return;
+  if (!sub) {
+    const row = await prisma.company.findUnique({
+      where: { id: companyId },
+      select: { subscriptionStatus: true },
+    });
+    const st = (row?.subscriptionStatus ?? '').toLowerCase();
+    if (st === 'active' || st === 'trialing' || st === 'past_due' || st === 'unpaid') {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: {
+          subscriptionStatus: 'canceled',
+          subscriptionPeriodEndAt: null,
+          subscriptionCancelAtPeriodEnd: false,
+        },
+      });
+    }
+    return;
+  }
 
   const dbStatus = subscriptionStatusForDb(sub.status);
   const validPlans = ['pro', 'business', 'enterprise'] as const;

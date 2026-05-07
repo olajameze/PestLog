@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { prisma } from '../../../lib/prisma';
 import { logger } from '../../../lib/logger';
 import { sendSubscriptionUpgradeEmail } from '../subscription';
-import { subscriptionStatusForDb } from '../../../lib/stripe/reconcileCompanyBilling';
+import { reconcileCompanyBillingFromStripe, subscriptionStatusForDb } from '../../../lib/stripe/reconcileCompanyBilling';
 import { stripeSubscriptionBillingSnapshot } from '../../../lib/stripe/subscriptionBilling';
 import { sendSubscriptionCancellationScheduledEmail } from '../../../lib/email';
 
@@ -286,10 +286,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const company = await prisma.company.findUnique({
           where: { stripeCustomerId },
-          select: { subscriptionStatus: true },
+          select: { id: true, subscriptionStatus: true },
         });
 
-        if (company?.subscriptionStatus !== 'trial') {
+        if (company?.id) {
+          await reconcileCompanyBillingFromStripe(company.id);
+        }
+
+        const fresh = await prisma.company.findUnique({
+          where: { stripeCustomerId },
+          select: { subscriptionStatus: true },
+        });
+        const st = (fresh?.subscriptionStatus ?? '').toLowerCase();
+        if (st === 'active' || st === 'trialing') {
+          break;
+        }
+
+        if (fresh?.subscriptionStatus !== 'trial') {
           await prisma.company.updateMany({
             where: { stripeCustomerId },
             data: {
