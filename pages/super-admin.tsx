@@ -5,6 +5,8 @@ import Button from '../components/ui/Button';
 import PestTraceIntelligencePanel from '../components/super-admin/PestTraceIntelligencePanel';
 import { getSupabaseAdmin } from '../lib/supabase-admin';
 import { getSuperAdminCookieName, verifySuperAdminToken } from '../lib/superAdminAuth';
+import { billingRowsByNormalizedEmail, mergeUserBilling } from '../lib/superAdmin/billingForUserEmails';
+import type { UserBillingRow } from '../lib/superAdmin/billingForUserEmails';
 import { useToast } from '../components/ui/ToastProvider';
 
 type SuperAdminUser = {
@@ -16,7 +18,44 @@ type SuperAdminUser = {
   role: string;
   bannedUntil: string | null;
   isProtected: boolean;
-};
+} & UserBillingRow;
+
+function formatPlanLabel(plan: string | null): string {
+  if (!plan?.trim()) return '—';
+  const p = plan.toLowerCase();
+  if (p === 'trial') return 'Trial';
+  if (p === 'business') return 'Business';
+  if (p === 'enterprise') return 'Enterprise';
+  return plan;
+}
+
+function formatSubscriptionLabel(user: SuperAdminUser): string {
+  const st = (user.billingSubscriptionStatus ?? '').toLowerCase();
+  if (!user.billingPlan && !user.billingSubscriptionStatus) return '—';
+
+  const labels: Record<string, string> = {
+    active: 'Active',
+    trialing: 'Trialing',
+    trial: 'Trial',
+    past_due: 'Past due',
+    canceled: 'Canceled',
+    unpaid: 'Unpaid',
+    incomplete: 'Incomplete',
+    incomplete_expired: 'Incomplete (expired)',
+  };
+  const main = labels[st] ?? user.billingSubscriptionStatus ?? '—';
+
+  const bits: string[] = [main];
+  if (user.billingCancelAtPeriodEnd && user.billingPeriodEndAt) {
+    bits.push(`access until ${new Date(user.billingPeriodEndAt).toLocaleDateString()}`);
+  } else if (st === 'trial' && user.billingTrialEndsAt) {
+    bits.push(`ends ${new Date(user.billingTrialEndsAt).toLocaleDateString()}`);
+  } else if ((st === 'active' || st === 'trialing') && user.billingPeriodEndAt) {
+    bits.push(`renews ${new Date(user.billingPeriodEndAt).toLocaleDateString()}`);
+  }
+
+  return bits.join(' · ');
+}
 
 type AuditEntry = {
   id: string;
@@ -281,11 +320,14 @@ export default function SuperAdminPage({
 
         <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] text-left text-sm">
+            <table className="w-full min-w-[1100px] text-left text-sm">
               <thead className="bg-zinc-50 text-zinc-500">
                 <tr>
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Role</th>
+                  <th className="px-4 py-3">Company</th>
+                  <th className="px-4 py-3">Plan</th>
+                  <th className="px-4 py-3">Subscription</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Email Verified</th>
                   <th className="px-4 py-3">Created</th>
@@ -304,6 +346,13 @@ export default function SuperAdminPage({
                   <tr className="border-t border-zinc-100">
                     <td className="break-all px-4 py-3 text-zinc-800">{user.email || '—'}</td>
                     <td className="px-4 py-3 text-zinc-700">{user.role}</td>
+                    <td className="max-w-[12rem] break-words px-4 py-3 text-zinc-700">
+                      {user.billingCompanyName ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-700">{formatPlanLabel(user.billingPlan)}</td>
+                    <td className="max-w-[14rem] break-words px-4 py-3 text-xs text-zinc-700">
+                      {formatSubscriptionLabel(user)}
+                    </td>
                     <td className="px-4 py-3 text-zinc-700">{isDisabled ? 'Disabled' : 'Active'}</td>
                     <td className="px-4 py-3 text-zinc-700">{user.emailConfirmedAt ? 'Yes' : 'No'}</td>
                     <td className="px-4 py-3 text-zinc-700">
@@ -376,7 +425,7 @@ export default function SuperAdminPage({
                   </tr>
                 {historyOpenByUserId[user.id] ? (
                   <tr className="border-t border-zinc-100 bg-zinc-50/60">
-                    <td colSpan={7} className="px-4 py-3">
+                    <td colSpan={10} className="px-4 py-3">
                       {historyLoadingId === user.id ? (
                         <p className="text-sm text-zinc-500">Loading history...</p>
                       ) : (historyByUserId[user.id] ?? []).length === 0 ? (
@@ -452,7 +501,7 @@ export const getServerSideProps: GetServerSideProps<SuperAdminPageProps> = async
   });
   const protectedEmail = (process.env.SUPER_ADMIN_EMAIL ?? '').trim().toLowerCase();
 
-  const users: SuperAdminUser[] = (data?.users ?? []).map((u) => ({
+  const baseUsers = (data?.users ?? []).map((u) => ({
     id: u.id,
     email: u.email ?? '',
     createdAt: u.created_at ?? null,
@@ -462,6 +511,9 @@ export const getServerSideProps: GetServerSideProps<SuperAdminPageProps> = async
     bannedUntil: u.banned_until ?? null,
     isProtected: protectedEmail.length > 0 && (u.email ?? '').trim().toLowerCase() === protectedEmail,
   }));
+
+  const billingMap = await billingRowsByNormalizedEmail(baseUsers.map((u) => u.email));
+  const users: SuperAdminUser[] = baseUsers.map((u) => mergeUserBilling(u, billingMap));
 
   const pageFromData = data && 'page' in data ? data.page : page;
   const perPageFromData = data && 'per_page' in data ? data.per_page : perPage;

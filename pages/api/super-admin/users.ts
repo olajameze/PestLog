@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSupabaseAdmin } from '../../../lib/supabase-admin';
 import { getSuperAdminCookieName, verifySuperAdminToken } from '../../../lib/superAdminAuth';
+import { billingRowsByNormalizedEmail, mergeUserBilling } from '../../../lib/superAdmin/billingForUserEmails';
+import type { UserBillingRow } from '../../../lib/superAdmin/billingForUserEmails';
 
-type SafeUser = {
+type BaseUser = {
   id: string;
   email: string;
   createdAt: string | null;
@@ -12,6 +14,8 @@ type SafeUser = {
   bannedUntil: string | null;
   isProtected: boolean;
 };
+
+type SafeUser = BaseUser & UserBillingRow;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -46,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const protectedEmail = (process.env.SUPER_ADMIN_EMAIL ?? '').trim().toLowerCase();
-  const users: SafeUser[] = (data?.users ?? []).map((u) => ({
+  const baseUsers: BaseUser[] = (data?.users ?? []).map((u) => ({
     id: u.id,
     email: u.email ?? '',
     createdAt: u.created_at ?? null,
@@ -56,6 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     bannedUntil: u.banned_until ?? null,
     isProtected: protectedEmail.length > 0 && (u.email ?? '').trim().toLowerCase() === protectedEmail,
   }));
+
+  const billingMap = await billingRowsByNormalizedEmail(baseUsers.map((u) => u.email));
+  const users: SafeUser[] = baseUsers.map((u) => mergeUserBilling(u, billingMap));
 
   return res.status(200).json({
     users,
