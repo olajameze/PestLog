@@ -15,6 +15,7 @@
     "db:sync-company-columns": "prisma db execute --file prisma/sql/sync_company_columns.sql",
     "db:sync-push-subscriptions": "prisma db execute --file prisma/sql/sync_push_subscription.sql",
     "db:sync-intelligence": "prisma db execute --file prisma/sql/intelligence_tables.sql",
+    "db:sync-audit-logs": "prisma db execute --file prisma/sql/audit_logs.sql",
     "smoke-test": "node scripts/run-smoke-test.js",
     "smoke:production": "node scripts/production-smoke.js",
     "load:health": "node scripts/concurrent-health-smoke.js",
