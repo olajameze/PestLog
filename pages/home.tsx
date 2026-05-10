@@ -116,7 +116,7 @@ export default function Home() {
 
       {/* Navigation */}
       <nav className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-6">
-        <Link href="/home" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <Image 
             src="/pest-trace.png" 
             alt="PestTrace Logo" 

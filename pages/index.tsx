@@ -1,10 +1,2 @@
-import type { GetServerSideProps } from 'next';
-
-/** Marketing content lives at [/home](home.tsx). Root always opens sign-in. */
-export const getServerSideProps: GetServerSideProps = async () => ({
-  redirect: { destination: '/auth/signin', permanent: false },
-});
-
-export default function Index() {
-  return null;
-}
+/** Landing / marketing site. Same module as `home.tsx` so `/` and `/home` stay in sync. */
+export { default } from './home';

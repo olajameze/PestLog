@@ -31,7 +31,7 @@ export default function LandingFAQ() {
                   {faq.question === 'Do I need to download software?' ? (
                     <>
                       No, Pest Trace works in the browser and can be installed as a PWA on mobile.{' '}
-                      <Link href="/home?showPwaPrompt=1" className="font-semibold text-primary-600 hover:underline">
+                      <Link href="/?showPwaPrompt=1" className="font-semibold text-primary-600 hover:underline">
                         Tap here to open install prompt
                       </Link>
                       .

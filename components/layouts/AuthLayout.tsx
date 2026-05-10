@@ -40,7 +40,7 @@ export default function AuthLayout({
           <p className="break-words text-base text-zinc-600 sm:text-xl">{subtitle}</p>
         </div>
         <div className="w-full max-w-md min-w-0 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">{children}</div>
-        <Link href="/home" className="mt-8 text-sm text-zinc-600 transition hover:text-navy">
+        <Link href="/" className="mt-8 text-sm text-zinc-600 transition hover:text-navy">
           ← Product information
         </Link>
       </main>
