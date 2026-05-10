@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Resend } from 'resend';
 import { getServerSupportEmail } from './supportEmail';
 
@@ -44,21 +45,30 @@ async function sendMail(payload: {
   subject: string;
   html: string;
   text: string;
+  /** Visitor/submitter address so support can hit Reply (defaults to support inbox). */
+  replyTo?: string;
+  /** Dedupes retries for 24h — see https://resend.com/docs/dashboard/emails/idempotency-keys */
+  idempotencyKey?: string;
 }) {
   if (!resend) {
     throw new Error('Email service is not configured. Set RESEND_API_KEY.');
   }
 
   const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const replyTo = payload.replyTo ?? supportEmail;
+  const sendOpts = payload.idempotencyKey ? { idempotencyKey: payload.idempotencyKey } : undefined;
 
-  const result = await resend.emails.send({
-    from: `Pest Trace <${fromAddress}>`,
-    to: payload.to,
-    subject: payload.subject,
-    html: payload.html,
-    text: payload.text,
-    replyTo: supportEmail,
-  });
+  const result = await resend.emails.send(
+    {
+      from: `Pest Trace <${fromAddress}>`,
+      to: payload.to,
+      subject: payload.subject,
+      html: payload.html,
+      text: payload.text,
+      replyTo,
+    },
+    sendOpts,
+  );
 
   if (result.error) {
     const msg = result.error.message || 'Resend rejected the email.';
@@ -278,6 +288,49 @@ The Pest Trace team`;
     subject: `Your Pest Trace subscription renewal is cancelled`,
     html: brandEmailHtml('Subscription renewal cancelled', inner),
     text,
+  });
+}
+
+/**
+ * Delivers marketing/contact form submissions to the support inbox via Resend.
+ * Uses an idempotency key so network retries or double-clicks do not send duplicate emails within 24 hours.
+ */
+export async function sendContactFormNotification(params: {
+  submitterName: string;
+  submitterEmail: string;
+  message: string;
+}): Promise<{ id: string } | undefined> {
+  const name = params.submitterName.trim();
+  const email = params.submitterEmail.trim();
+  const message = params.message.trim();
+  const idempotencyPayload = `${email.toLowerCase()}\n${name}\n${message}`;
+  const idempotencyKey = `contact/${createHash('sha256').update(idempotencyPayload).digest('hex').slice(0, 48)}`;
+
+  const subjectSafe = name.replace(/[\r\n]+/g, ' ').trim().slice(0, 80);
+  const subject = subjectSafe.length ? `New contact: ${subjectSafe}` : 'New contact form submission';
+
+  const inner = `
+    <p><strong>New message</strong> from the Pest Trace contact form.</p>
+    <p><strong>Name:</strong> ${escapeHtml(name)}<br/>
+    <strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>
+    <p><strong>Message:</strong></p>
+    <p style="white-space:pre-wrap;border-left:3px solid #e4e4e7;padding-left:12px;margin:0;">${escapeHtml(message)}</p>
+  `;
+  const text = `New message from the Pest Trace contact form.
+
+Name: ${name}
+Email: ${email}
+
+Message:
+${message}`;
+
+  return sendMail({
+    to: [supportEmail],
+    subject,
+    html: brandEmailHtml(subject, inner),
+    text,
+    replyTo: email,
+    idempotencyKey,
   });
 }
 
