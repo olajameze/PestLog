@@ -49,6 +49,7 @@ export default function PestTraceIntelligencePanel() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [reindexing, setReindexing] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [dateFrom, setDateFrom] = useState(() => {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - 90);
@@ -143,6 +144,40 @@ export default function PestTraceIntelligencePanel() {
     }
   };
 
+  const runResetAggregates = async () => {
+    if (
+      !window.confirm(
+        'Clear ALL anonymised intelligence rows?\n\n• Main logbook data is NOT deleted.\n• Charts stay empty until new jobs are logged (automatic ingest).\n• Avoid “Backfill from logbooks” after this if old test logbooks still exist — that would re-import them.',
+      )
+    ) {
+      return;
+    }
+    setResetting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/super-admin/intelligence/reset', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET' }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string; deletedRows?: number };
+      if (!res.ok) throw new Error(body.error || 'Reset failed');
+      showToast(
+        'Intelligence cleared',
+        `Removed ${body.deletedRows ?? 0} aggregate row(s). New signups will appear when they create logbook entries.`,
+        'success',
+      );
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Reset failed';
+      setError(msg);
+      showToast('Reset failed', msg, 'error');
+    } finally {
+      setResetting(false);
+    }
+  };
+
   const downloadCsv = () => {
     window.location.href = `/api/super-admin/intelligence/export?format=csv&${queryString}`;
     showToast('Export', 'CSV download started', 'success');
@@ -173,7 +208,9 @@ export default function PestTraceIntelligencePanel() {
         <h2 className="text-xl font-bold text-emerald-900 dark:text-emerald-100">PestTrace Intelligence</h2>
         <p className="mt-1 text-sm text-emerald-800/90 dark:text-emerald-200/80">
           Anonymised, aggregated telemetry derived from field reports. No client names, full addresses, or technician
-          identities are stored in this layer.
+          identities are stored in this layer. Charts read from the intelligence database table — use{' '}
+          <strong>Refresh</strong> to reload; use <strong>Clear aggregates</strong> to drop old test-era rows (live
+          signups then appear as new logbook jobs are saved). <strong>Backfill</strong> re-imports from all logbooks.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}>
@@ -185,8 +222,11 @@ export default function PestTraceIntelligencePanel() {
           <Button variant="secondary" size="sm" onClick={() => void downloadPdf()} disabled={!summary}>
             Executive PDF
           </Button>
-          <Button variant="primary" size="sm" onClick={() => void runReindexBatch()} disabled={reindexing}>
+          <Button variant="primary" size="sm" onClick={() => void runReindexBatch()} disabled={reindexing || resetting}>
             {reindexing ? 'Reindexing…' : 'Backfill from logbooks'}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => void runResetAggregates()} disabled={resetting || reindexing}>
+            {resetting ? 'Clearing…' : 'Clear aggregates'}
           </Button>
         </div>
         {error ? (
