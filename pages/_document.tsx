@@ -1,6 +1,10 @@
 import { Html, Head, Main, NextScript } from 'next/document';
 import { getWebManifestLinkHref } from '../lib/siteOrigin';
 
+const UMAMI_SCRIPT_URL = process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL ?? 'https://cloud.umami.is/script.js';
+const UMAMI_WEBSITE_ID =
+  process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID ?? 'fa32c121-cb14-4b86-a3bd-0ab1bfd6bfca';
+
 export default function Document() {
   return (
     <Html lang="en" data-scroll-behavior="smooth">
@@ -31,6 +35,11 @@ export default function Document() {
         <link rel="icon" type="image/png" sizes="192x192 512x512" href="/pest-trace.png" />
 
         {/* Fonts - handled by next/font/google in _app.tsx */}
+
+        {/* Umami Analytics (privacy-friendly page views) */}
+        {process.env.NODE_ENV === 'production' && UMAMI_WEBSITE_ID ? (
+          <script defer src={UMAMI_SCRIPT_URL} data-website-id={UMAMI_WEBSITE_ID} />
+        ) : null}
 
         {/* Keep startup assets minimal to avoid broken links in production */}
       </Head>
