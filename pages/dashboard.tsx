@@ -290,8 +290,6 @@ export default function Dashboard() {
   const [trialBanner, setTrialBanner] = useState<string | null>(null);
   const [overdueBanner, setOverdueBanner] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
-  const [showDeleteAccountConfirm, setShowDeleteAccountConfirm] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(false);
   const [selectedTechId, setSelectedTechId] = useState('');
   const [showCertModal, setShowCertModal] = useState(false);
   const [technicianCerts, setTechnicianCerts] = useState<Certification[]>([]);
@@ -307,44 +305,10 @@ export default function Dashboard() {
     ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) || company.subscriptionStatus === 'active'
     : false;
 
-  const handleRequestDeleteAccount = () => {
-    setShowDeleteAccountConfirm(true);
-  };
-
-  const handleDeleteAccount = async () => {
-    if (isPreviewMode) {
-      showToast('Preview mode', 'Account deletion is disabled in preview mode.', 'info');
-      setShowDeleteAccountConfirm(false);
-      return;
-    }
-
-    setDeletingAccount(true);
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      setDeletingAccount(false);
-      router.push('/auth/signin');
-      return;
-    }
-
-    const res = await fetch('/api/account/delete', {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    const data = await parseApiBody(res, 'Account deletion failed.');
-    if (res.ok) {
-      await supabase.auth.signOut();
-      showToast('Account deleted', 'Your account and all data have been deleted. Sign up again to create a new account.', 'success');
-      router.push('/auth/signup');
-    } else {
-      const msg = typeof data.error === 'string' ? data.error : 'Unable to delete account.';
-      showToast('Delete failed', msg, 'error');
-    }
-
-    setDeletingAccount(false);
-    setShowDeleteAccountConfirm(false);
+  const handleAccountDeleted = async () => {
+    await supabase.auth.signOut();
+    showToast('Account deleted', 'Sorry to see you go.', 'success');
+    router.push('/?accountDeleted=1');
   };
 
   const handleCertUpload = async () => {
@@ -1155,8 +1119,9 @@ if (!user || companyLoadState === 'loading') return (
                   onManageSubscription={handleManageSubscription} 
                   onCancelSubscription={handleCancelSubscription}
                   onUpdateCompanySettings={handleUpdateCompanySettings}
-                  onDeleteAccount={handleRequestDeleteAccount}
-                  deletingAccount={deletingAccount}
+                  showToast={showToast}
+                  onAccountDeleted={handleAccountDeleted}
+                  previewMode={isPreviewMode}
                   savingSettings={savingSettings}
                   checkoutLoading={loadingCheckout} 
                   portalLoading={loadingPortal} 
@@ -1237,17 +1202,6 @@ if (!user || companyLoadState === 'loading') return (
         }}
       />
 
-      <ConfirmDialog
-        open={showDeleteAccountConfirm}
-        title="Delete account"
-        description="This will cancel your subscription and permanently delete your account and all company data. If you want to use Pest Trace again, you will need to sign up again. This cannot be undone."
-        confirmLabel={deletingAccount ? 'Deleting...' : 'Delete account'}
-        cancelLabel="Cancel"
-        onCancel={() => setShowDeleteAccountConfirm(false)}
-        onConfirm={handleDeleteAccount}
-      />
-
-      {/* Plan Modal */}
       {showPlanModal && (
         <PlanModal
           onClose={() => setShowPlanModal(false)}

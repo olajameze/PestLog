@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
+  globalSetup: './playwright-global-setup.ts',
   testDir: './tests',
   timeout: 120000,
   expect: {
@@ -15,12 +16,14 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npm start',
     port: 3001,
-    timeout: 180000,
+    timeout: 420000,
     reuseExistingServer: !process.env.CI,
     env: {
+      ...process.env,
       PORT: '3001',
       NODE_ENV: 'test',
       NODE_TLS_REJECT_UNAUTHORIZED: '0',
+      PLAYWRIGHT_MAINTENANCE_MOCK_DB_FAILURE: process.env.PLAYWRIGHT_MAINTENANCE_MOCK_DB_FAILURE ?? '',
     },
   },
 });

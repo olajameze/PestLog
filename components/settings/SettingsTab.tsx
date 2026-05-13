@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { formatOwnerBillingPlanLabel, ownerCanManagePaidPlanInStripe } from '../../lib/subscriptionAccess';
 import { getClientSupportEmail } from '../../lib/supportEmail';
+import { ACCOUNT_DELETION_REASONS } from '../../lib/accountDeletionReasons';
+import { supabase } from '../../lib/supabase';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import FormInput from '../ui/FormInput';
@@ -67,12 +69,13 @@ interface SettingsTabProps {
     defaultReportRangeDays: number;
     notificationPreferences: NotificationPreferences;
   }) => Promise<void>;
-  onDeleteAccount: () => void;
-  deletingAccount: boolean;
   savingSettings: boolean;
   checkoutLoading: boolean;
   portalLoading: boolean;
   onCancelSubscription: () => Promise<void>;
+  showToast: (title: string, message: string, variant?: 'success' | 'error' | 'info') => void;
+  onAccountDeleted: () => Promise<void>;
+  previewMode?: boolean;
 }
 
 export default function SettingsTab({
@@ -81,12 +84,13 @@ export default function SettingsTab({
   onSubscribe,
   onManageSubscription,
   onUpdateCompanySettings,
-  onDeleteAccount,
-  deletingAccount,
   savingSettings,
   checkoutLoading,
   portalLoading,
   onCancelSubscription,
+  showToast,
+  onAccountDeleted,
+  previewMode = false,
 }: SettingsTabProps) {
   const supportAddr = getClientSupportEmail();
   const [companyName, setCompanyName] = useState(company.name || '');
@@ -122,6 +126,59 @@ export default function SettingsTab({
   const [requireVerifiedEmail, setRequireVerifiedEmail] = useState(
     company.notificationPreferences?.enterprise?.security?.requireVerifiedEmail ?? true,
   );
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteComment, setDeleteComment] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const confirmDeleteAccount = async () => {
+    if (previewMode) {
+      showToast('Preview mode', 'Account deletion is disabled in preview mode.', 'info');
+      return;
+    }
+    if (!deleteReason) {
+      showToast('Missing reason', 'Please select why you are leaving.', 'error');
+      return;
+    }
+    if (deleteReason === 'Other (please specify)' && deleteComment.trim().length < 3) {
+      showToast('More detail needed', 'Please add a short note for Other.', 'error');
+      return;
+    }
+    setDeletingAccount(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      showToast('Session expired', 'Sign in again and retry.', 'error');
+      setDeletingAccount(false);
+      return;
+    }
+    const res = await fetch('/api/account/delete', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reason: deleteReason,
+        comment: deleteComment.trim() || undefined,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(
+        'Delete failed',
+        typeof data.error === 'string' ? data.error : 'Unable to delete account, contact support',
+        'error',
+      );
+      setDeletingAccount(false);
+      return;
+    }
+    setDeleteModalOpen(false);
+    await onAccountDeleted();
+    setDeletingAccount(false);
+  };
 
   const handleSaveSettings = () => {
     const allowedIps = allowedIpsText
@@ -492,12 +549,83 @@ export default function SettingsTab({
                 Permanently delete this account, cancel Stripe subscriptions, and remove all company data from Pest Trace.
               </p>
             </div>
-            <Button variant="danger" onClick={onDeleteAccount} disabled={deletingAccount}>
-              {deletingAccount ? 'Deleting...' : 'Delete account'}
+            <Button variant="danger" onClick={() => setDeleteModalOpen(true)} disabled={deletingAccount}>
+              Delete account
             </Button>
           </div>
         </section>
       </Card>
+
+      {deleteModalOpen ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onClick={() => !deletingAccount && setDeleteModalOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' && !deletingAccount) setDeleteModalOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+            data-testid="delete-account-modal"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-red-200 bg-white p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="delete-account-title" className="text-xl font-bold text-red-950">
+              Delete account
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Why are you leaving? This helps us prioritise compliance improvements.
+            </p>
+            <div className="mt-4 space-y-3">
+              {ACCOUNT_DELETION_REASONS.map((r) => (
+                <label key={r} className="flex cursor-pointer items-start gap-2 text-sm text-slate-800">
+                  <input
+                    type="radio"
+                    name="delete-reason"
+                    className="mt-1"
+                    checked={deleteReason === r}
+                    onChange={() => setDeleteReason(r)}
+                  />
+                  <span>{r}</span>
+                </label>
+              ))}
+            </div>
+            <label htmlFor="delete-comment" className="mt-4 block text-sm font-medium text-slate-700">
+              Additional comments <span className="text-slate-400">(optional)</span>
+            </label>
+            <textarea
+              id="delete-comment"
+              data-testid="delete-account-comment"
+              value={deleteComment}
+              onChange={(e) => setDeleteComment(e.target.value)}
+              rows={3}
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900"
+              placeholder="Anything specific we should know?"
+            />
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={deletingAccount}
+                onClick={() => setDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                disabled={deletingAccount || !deleteReason}
+                onClick={() => void confirmDeleteAccount()}
+              >
+                {deletingAccount ? 'Deleting…' : 'Confirm delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -88,6 +88,16 @@ function getStripe() {
   return new Stripe(key, { apiVersion: '2024-06-20' });
 }
 
+function stripeCustomerFromEvent(event: Stripe.Event): string | null {
+  try {
+    const obj = event.data.object as { customer?: string | string[] | null };
+    const c = obj?.customer;
+    return typeof c === 'string' ? c : null;
+  } catch {
+    return null;
+  }
+}
+
 const getWebhookSecret = () => {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret || secret.includes('whsec_...')) {
@@ -316,10 +326,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    try {
+      await prisma.backgroundJobRun.upsert({
+        where: { jobName: 'stripe_webhook' },
+        create: {
+          jobName: 'stripe_webhook',
+          lastFinishedAt: new Date(),
+          status: 'ok',
+          detail: { eventType: event.type, eventId: event.id },
+        },
+        update: {
+          lastFinishedAt: new Date(),
+          status: 'ok',
+          detail: { eventType: event.type, eventId: event.id },
+        },
+      });
+    } catch {
+      /* non-fatal bookkeeping */
+    }
+
     return res.status(200).json({ received: true });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     logger.error(`Webhook processing failed: ${errorMessage}`);
+    try {
+      await prisma.webhookError.create({
+        data: {
+          eventType: event.type,
+          stripeEventId: event.id,
+          errorMessage,
+          payload: { stripeCustomerId: stripeCustomerFromEvent(event) },
+        },
+      });
+    } catch {
+      /* ignore persistence failures */
+    }
     return res.status(500).json({ error: 'Internal server error processing webhook' });
   }
 }

@@ -193,3 +193,88 @@ model IntelligenceAuditLog {
   @@map("intelligence_audit_log")
   @@schema("public")
 }
+
+/// Captured server-side exceptions for super-admin maintenance.
+model ErrorLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  message   String   @map("message") @db.Text
+  stack     String?  @map("stack") @db.Text
+  context   Json?    @map("context")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt], map: "error_logs_created_at_idx")
+  @@map("error_logs")
+  @@schema("public")
+}
+
+model WebhookError {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  provider       String    @default("stripe") @map("provider")
+  eventType      String?   @map("event_type")
+  stripeEventId  String?   @map("stripe_event_id")
+  payload        Json?     @map("payload")
+  errorMessage   String    @map("error_message") @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  retriedAt      DateTime? @map("retried_at") @db.Timestamptz(6)
+
+  @@index([createdAt], map: "webhook_errors_created_at_idx")
+  @@map("webhook_errors")
+  @@schema("public")
+}
+
+/// Public suggestion form (landing page). Inserts via API / Prisma bypass RLS.
+model Suggestion {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  name       String?  @map("name")
+  email      String?  @map("email")
+  suggestion String   @map("suggestion") @db.Text
+  category   String   @default("Other") @map("category")
+  ipHash     String   @map("ip_hash")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([ipHash, createdAt], map: "suggestions_ip_created_idx")
+  @@map("suggestions")
+  @@schema("public")
+}
+
+model DeletionFeedback {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  userId    String   @map("user_id")
+  userEmail String?  @map("user_email")
+  reason    String   @map("reason") @db.Text
+  comment   String?  @map("comment") @db.Text
+  deletedAt DateTime @default(now()) @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([deletedAt], map: "deletion_feedback_deleted_at_idx")
+  @@map("deletion_feedback")
+  @@schema("public")
+}
+
+/// Server-side offline sync backlog (optional); cleared from maintenance tools.
+model OfflineQueueRow {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  payload   Json     @map("payload")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("offline_queue")
+  @@schema("public")
+}
+
+model BackgroundJobRun {
+  jobName        String    @id @map("job_name")
+  lastFinishedAt DateTime? @map("last_finished_at") @db.Timestamptz(6)
+  status         String?   @map("status")
+  detail         Json?     @map("detail")
+
+  @@map("background_job_runs")
+  @@schema("public")
+}
+
+/// Placeholder aggregate table for chemical usage rows (may stay empty until full chemical logging ships).
+model ChemicalLogRow {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("chemical_logs")
+  @@schema("public")
+}

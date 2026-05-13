@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import LandingFooter from '../components/landing/LandingFooter';
+import SuggestionsSection from '../components/landing/SuggestionsSection';
 import {
   featureCards,
   pricingPlans,
@@ -337,6 +338,8 @@ export default function Home() {
           </div>
         </FadeIn>
       </section>
+
+      <SuggestionsSection />
 
       <LandingFooter />
     </div>
