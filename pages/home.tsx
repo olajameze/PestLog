@@ -1,6 +1,7 @@
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { GetServerSideProps } from 'next';
 import { motion } from 'framer-motion';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import LandingFooter from '../components/landing/LandingFooter';
@@ -13,6 +14,11 @@ import {
   testimonials,
 } from '../components/landing/content';
 import { PRICING_TRIAL_FOOTNOTE } from '../lib/marketingPlanFeatures';
+import { buildLandingPricingFromRequest, type LandingPricingProps } from '../lib/geoCurrency';
+
+export const getServerSideProps: GetServerSideProps<LandingPricingProps> = async ({ req }) => ({
+  props: buildLandingPricingFromRequest(req.headers),
+});
 
 // --- Animation Helpers ---
 const FadeIn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
@@ -105,7 +111,7 @@ const ProductVisual = ({ type }: { type: string }) => {
   return null;
 };
 
-export default function Home() {
+export default function Home({ pricingAmountLabels, pricingFxNote }: LandingPricingProps) {
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
       <Head>
@@ -287,14 +293,14 @@ export default function Home() {
             <p className="text-lg text-slate-500 sm:text-xl">Choose a plan that fits your business and scale as you grow. All plans include a 7-day free trial — no contracts, no risk.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {pricingPlans.map((plan) => (
+            {pricingPlans.map((plan, idx) => (
               <FadeIn key={plan.name} delay={plan.isPopular ? 0.1 : 0}>
                 <div className={`h-full rounded-[2rem] border bg-white p-6 sm:p-10 ${plan.isPopular ? 'relative border-emerald-500 ring-4 ring-emerald-500/5' : 'border-slate-200'}`}>
                   {plan.isPopular && <span className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1 rounded-full text-sm font-bold tracking-wide">MOST POPULAR</span>}
                   <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                   <p className="mb-4 text-sm font-medium leading-relaxed text-slate-500">{plan.bestFor}</p>
                   <div className="mb-6">
-                    <span className="text-4xl font-black sm:text-5xl">£{plan.price}</span>
+                    <span className="text-4xl font-black sm:text-5xl">{pricingAmountLabels[idx] ?? `£${plan.price}`}</span>
                     <span className="text-slate-400 text-sm">{plan.cadence}</span>
                   </div>
                   <Link
@@ -315,7 +321,10 @@ export default function Home() {
               </FadeIn>
             ))}
           </div>
-          <p className="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-slate-500">{PRICING_TRIAL_FOOTNOTE}</p>
+          <p className="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-slate-500">
+            {PRICING_TRIAL_FOOTNOTE}
+            {pricingFxNote ? ` ${pricingFxNote}` : ''}
+          </p>
         </div>
       </section>
 
