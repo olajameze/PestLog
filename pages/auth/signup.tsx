@@ -234,6 +234,7 @@ export default function SignUp({ initialRole, initialInviteEmail }: SignUpPagePr
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${data.session.access_token}`,
         },
         body: JSON.stringify({ email: normalizedEmail, fullName, businessName }),
       });

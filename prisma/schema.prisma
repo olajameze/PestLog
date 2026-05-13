@@ -237,6 +237,19 @@ model Suggestion {
   @@schema("public")
 }
 
+/// Business admins who completed OTP signup — for marketing follow-up (super-admin dashboard).
+model SignupMarketingLead {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
+  email        String   @unique @map("email")
+  fullName     String?  @map("full_name")
+  businessName String?  @map("business_name")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt], map: "signup_marketing_lead_created_at_idx")
+  @@map("signup_marketing_lead")
+  @@schema("public")
+}
+
 model DeletionFeedback {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("id")
   userId    String   @map("user_id")

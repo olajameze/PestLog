@@ -10,6 +10,7 @@ interface ButtonProps {
   type?: 'button' | 'submit';
   className?: string;
   ariaLabel?: string;
+  'data-testid'?: string;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
@@ -22,6 +23,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   type = 'button',
   className = '',
   ariaLabel,
+  'data-testid': dataTestId,
 }: ButtonProps, ref) {
   const baseClasses = [
     'inline-flex items-center justify-center gap-2 text-center font-medium whitespace-normal break-words disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus-visible:ring-2 active:scale-[0.98] transition-[transform,box-shadow,background-color,border-color,color] duration-200',
@@ -44,6 +46,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
       disabled={disabled}
       onClick={onClick}
       aria-label={ariaLabel}
+      data-testid={dataTestId}
       className={`btn btn-${variant} ${size} ${baseClasses.join(' ')} ${variantClasses[variant]} ${className}`}
     >
       {children}

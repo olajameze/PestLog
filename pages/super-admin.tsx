@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import Button from '../components/ui/Button';
@@ -64,6 +64,13 @@ type AuditEntry = {
   new_values?: { action?: string; role?: string; bannedUntil?: string | null } | null;
 };
 
+type MarketingLeadRow = {
+  email: string;
+  fullName: string | null;
+  businessName: string | null;
+  createdAt: string;
+};
+
 export default function SuperAdminPage({
   initialUsers,
   initialError,
@@ -86,7 +93,10 @@ export default function SuperAdminPage({
   const [historyByUserId, setHistoryByUserId] = useState<Record<string, AuditEntry[]>>({});
   const [historyOpenByUserId, setHistoryOpenByUserId] = useState<Record<string, boolean>>({});
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'users' | 'intelligence'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'intelligence' | 'marketing'>('users');
+  const [marketingLeads, setMarketingLeads] = useState<MarketingLeadRow[]>([]);
+  const [marketingLoading, setMarketingLoading] = useState(false);
+  const [marketingError, setMarketingError] = useState('');
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   const totals = useMemo(() => {
@@ -200,6 +210,34 @@ export default function SuperAdminPage({
     }
   };
 
+  const loadMarketingSignups = useCallback(async () => {
+    setMarketingLoading(true);
+    setMarketingError('');
+    try {
+      const response = await fetch('/api/super-admin/marketing-signups');
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace('/auth/super-admin');
+          return;
+        }
+        const body = await response.json().catch(() => ({ error: 'Failed to load marketing signups' }));
+        setMarketingError(typeof body.error === 'string' ? body.error : 'Failed to load marketing signups');
+        setMarketingLeads([]);
+        return;
+      }
+      const body = await response.json();
+      setMarketingLeads(Array.isArray(body.leads) ? body.leads : []);
+    } finally {
+      setMarketingLoading(false);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    if (activeTab === 'marketing') {
+      void loadMarketingSignups();
+    }
+  }, [activeTab, loadMarketingSignups]);
+
   return (
     <div className="min-h-screen bg-offwhite px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl min-w-0 space-y-6">
@@ -214,6 +252,13 @@ export default function SuperAdminPage({
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => void loadUsers()} disabled={loading}>
                 {loading ? 'Refreshing…' : 'Refresh users'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push('/super-admin/maintenance')}
+              >
+                Maintenance tools
               </Button>
               <Button variant="danger" size="sm" onClick={handleLogout}>Sign out</Button>
             </div>
@@ -241,11 +286,79 @@ export default function SuperAdminPage({
             >
               PestTrace Intelligence
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('marketing')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                activeTab === 'marketing'
+                  ? 'bg-violet-700 text-white'
+                  : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200'
+              }`}
+            >
+              Marketing signups
+            </button>
           </div>
         </div>
 
         {activeTab === 'intelligence' ? (
           <PestTraceIntelligencePanel />
+        ) : null}
+
+        {activeTab === 'marketing' ? (
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-navy">Business admin marketing list</h2>
+                <p className="mt-1 text-sm text-zinc-600">
+                  Emails captured when a business owner completes OTP signup (welcome step). Use only in line with your privacy policy and UK GDPR/ePrivacy rules for marketing.
+                </p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => void loadMarketingSignups()} disabled={marketingLoading}>
+                {marketingLoading ? 'Refreshing…' : 'Refresh'}
+              </Button>
+            </div>
+            {marketingError ? (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{marketingError}</div>
+            ) : null}
+            <div className="mt-6 overflow-x-auto rounded-xl border border-zinc-100">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead className="bg-zinc-50 text-zinc-500">
+                  <tr>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Name</th>
+                    <th className="px-4 py-3">Business</th>
+                    <th className="px-4 py-3">Captured</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {marketingLoading && marketingLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">
+                        Loading…
+                      </td>
+                    </tr>
+                  ) : marketingLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">
+                        No signups recorded yet. Entries appear after new admins verify their email during registration.
+                      </td>
+                    </tr>
+                  ) : (
+                    marketingLeads.map((row) => (
+                      <tr key={row.email} className="border-t border-zinc-100">
+                        <td className="break-all px-4 py-3 text-zinc-800">{row.email}</td>
+                        <td className="px-4 py-3 text-zinc-700">{row.fullName ?? '—'}</td>
+                        <td className="max-w-[14rem] break-words px-4 py-3 text-zinc-700">{row.businessName ?? '—'}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-zinc-700">
+                          {new Date(row.createdAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : null}
 
         {activeTab === 'users' ? (

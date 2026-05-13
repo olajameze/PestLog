@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Button from '../ui/Button';
 
 const CATEGORIES = [
   { value: 'Chemical tracking', label: 'Chemical tracking' },
@@ -144,14 +145,14 @@ export default function SuggestionsSection() {
                 {error}
               </div>
             ) : null}
-            <button
-              type="submit"
-              data-testid="suggestion-submit"
-              disabled={submitting}
-              className="w-full rounded-xl bg-emerald-600 px-6 py-4 text-lg font-bold text-white shadow-lg transition hover:bg-emerald-700 disabled:opacity-60"
-            >
-              {submitting ? 'Sending…' : 'Submit suggestion'}
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <Button type="submit" data-testid="suggestion-submit" disabled={submitting} variant="success">
+                {submitting ? 'Sending…' : 'Submit suggestion'}
+              </Button>
+              <p className="text-sm text-slate-500">
+                We read every message — optional email only if you want a reply about roadmap fit.
+              </p>
+            </div>
           </form>
         )}
       </div>
