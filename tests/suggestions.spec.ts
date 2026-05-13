@@ -1,4 +1,9 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type TestInfo } from '@playwright/test';
+
+/** Synthetic IPs so parallel workers and reruns do not share the 3/hour quota keyed by ip_hash (loopback collapses to one bucket). */
+function workerSuggestionForwardedIp(testInfo: TestInfo) {
+  return `203.0.113.${50 + testInfo.workerIndex}`;
+}
 
 test.describe('Landing suggestions form', () => {
   test('section and fields render', async ({ page }) => {
@@ -17,7 +22,17 @@ test.describe('Landing suggestions form', () => {
     expect(String((body as { error?: string }).error).toLowerCase()).toMatch(/10/);
   });
 
-  test('valid submission shows thank-you state', async ({ page }) => {
+  test('valid submission shows thank-you state', async ({ page }, testInfo) => {
+    const forwarded = workerSuggestionForwardedIp(testInfo);
+    await page.route('**/api/suggestions', async (route) => {
+      await route.continue({
+        headers: {
+          ...route.request().headers(),
+          'x-forwarded-for': forwarded,
+        },
+      });
+    });
+
     await page.goto('/home');
     await page.getByTestId('landing-suggestions-section').scrollIntoViewIfNeeded();
     const text = `Playwright compliance idea ${Date.now()} — need printable audit trail export.`;
@@ -37,7 +52,8 @@ test.describe('Suggestions API rate limit', () => {
 
   test('fourth POST from same IP in one hour returns 429', async ({ request }) => {
     const ipOctet = 10 + Math.floor(Math.random() * 200);
-    const forwarded = `198.51.100.${ipOctet}`;
+    /** Separate subnet from worker IPs in `workerSuggestionForwardedIp` (203.0.113.*). */
+    const forwarded = `198.18.0.${ipOctet}`;
     const headers = { 'x-forwarded-for': forwarded };
     const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const base = {

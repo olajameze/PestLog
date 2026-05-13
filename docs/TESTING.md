@@ -9,7 +9,11 @@ npx playwright test tests/suggestions.spec.ts
 npx playwright test tests/account-deletion.spec.ts
 ```
 
-The config (`playwright.config.ts`) starts `npm run build && npm start` on port **3001** unless `reuseExistingServer` applies (non-CI). The spawned server inherits the parent **`process.env`** (merged with `PORT`, `NODE_ENV=test`, etc.) so Supabase/Stripe keys needed by API routes remain available. Next.js still loads `.env.local` when present. Web server timeout defaults to **420s** to allow production builds.
+The config (`playwright.config.ts`) starts `npm run build && npm start`, waits until **`http://127.0.0.1:3001/`** returns **2xx**, then runs tests. Port **3001** is set via `PORT` in the spawned env.
+
+By default the suite **always starts its own server** (`reuseExistingServer` is off) so you do not get `ECONNREFUSED` when nothing is listening. To reuse an already-running dev/prod server on 3001 (faster reruns), set **`PLAYWRIGHT_REUSE_SERVER=1`** before `npm run e2e`.
+
+The spawned server inherits the parent **`process.env`** (merged with `PORT`, etc.) so Supabase/Stripe keys needed by API routes remain available. Next.js still loads `.env.local` when present. Web server timeout defaults to **420s** to allow production builds.
 
 ## Global setup
 
@@ -32,6 +36,12 @@ Without these, maintenance tests that require login are **skipped**.
 | Variable | Purpose |
 |----------|---------|
 | `PLAYWRIGHT_MAINTENANCE_MOCK_DB_FAILURE=1` | Snapshot marks DB metrics failed (error banner). |
+
+### Smoke signup (`tests/e2e.spec.ts`)
+
+| Variable | Purpose |
+|----------|---------|
+| `PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN` | Domain for generated admin signup emails (default `pesttrace.test`). If Supabase Auth rejects the address (“email … is invalid”), set this to a domain allowed by your project so the OTP step can run; otherwise the test still passes with a note and continues to API 401 checks. |
 
 ### Playwright diagnostics
 

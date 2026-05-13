@@ -15,9 +15,10 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run build && npm start',
-    port: 3001,
+    url: 'http://127.0.0.1:3001/',
     timeout: 420000,
-    reuseExistingServer: !process.env.CI,
+    /** Only reuse if you already have `npm start` on 3001 (faster local reruns). Default: always boot so tests never hit ECONNREFUSED. */
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === '1',
     env: {
       ...process.env,
       PORT: '3001',

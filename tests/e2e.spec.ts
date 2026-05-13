@@ -5,13 +5,16 @@ test.describe('Pest Trace E2E smoke', () => {
     page,
     request,
   }) => {
-  await page.goto('/');
-  await expect(page).toHaveURL(/\/auth\/signin/);
+    await page.goto('/');
+    // `/` is the landing page (same module as `/home`); it does not redirect to sign-in.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Stay Audit-Ready/i);
 
     await page.goto('/auth/signin');
     await expect(page.locator('body')).toBeVisible();
 
-    const baseEmail = `playwright+${Date.now()}@example.com`;
+    const signupDomain =
+      process.env.PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN?.trim() || 'pesttrace.test';
+    const baseEmail = `playwright.${Date.now()}@${signupDomain}`;
 
     await page.goto('/auth/signup');
     await expect(page.locator('text=Create your account')).toBeVisible();
@@ -46,6 +49,12 @@ test.describe('Pest Trace E2E smoke', () => {
           type: 'note',
           description:
             'Admin signup did not reach OTP: browser could not reach Supabase. For full signup coverage, ensure NEXT_PUBLIC_SUPABASE_* URLs are reachable from the test environment.',
+        });
+      } else if (/invalid/i.test(msg) && /email/i.test(msg)) {
+        test.info().annotations.push({
+          type: 'note',
+          description:
+            `Supabase rejected the signup email (${msg}). Set PLAYWRIGHT_SIGNUP_EMAIL_DOMAIN to a domain allowed by your Auth settings for full OTP coverage.`,
         });
       } else {
         throw new Error(`Unexpected sign-up error: ${msg}`);
