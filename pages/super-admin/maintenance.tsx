@@ -272,13 +272,14 @@ export default function SuperAdminMaintenancePage({ initialSnapshot }: { initial
                 Failed to load error logs – please try again
               </span>
             ) : null}
-            <a
+            <Link
               className="text-sm font-semibold text-blue-600 underline"
               href="/api/super-admin/maintenance/error-log-export"
               data-testid="maintenance-download-errors"
+              prefetch={false}
             >
               Download JSON
-            </a>
+            </Link>
           </div>
           <ul className="mt-4 space-y-2 text-sm">
             {errs.items.length === 0 ? (
