@@ -33,6 +33,12 @@ Without these, maintenance tests that require login are **skipped**.
 |----------|---------|
 | `PLAYWRIGHT_MAINTENANCE_MOCK_DB_FAILURE=1` | Snapshot marks DB metrics failed (error banner). |
 
+### Playwright diagnostics
+
+| Variable | Purpose |
+|----------|---------|
+| `PLAYWRIGHT_TEST=1` | Set on the Playwright-spawned Next server so `/api/suggestions` may include `_debug` on 500 responses during troubleshooting. |
+
 ### Account deletion UI / destructive E2E
 
 | Variable | Purpose |

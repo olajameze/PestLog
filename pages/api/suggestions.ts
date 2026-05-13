@@ -12,7 +12,7 @@ const CATEGORIES = new Set([
 ]);
 
 function testDebug(payload: Record<string, unknown>) {
-  return process.env.NODE_ENV === 'test' ? payload : {};
+  return process.env.PLAYWRIGHT_TEST === '1' ? payload : {};
 }
 
 function hashIp(ip: string): string {
@@ -66,11 +66,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const hourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
   try {
-    const { count: recentCount, error: recentError } = await admin
+    const { data: recentRows, error: recentError } = await admin
       .from('suggestions')
-      .select('*', { count: 'exact', head: true })
+      .select('id')
       .eq('ip_hash', ipHash)
-      .gte('created_at', hourAgoIso);
+      .gte('created_at', hourAgoIso)
+      .limit(4);
 
     if (recentError) {
       await logServerExceptionToDb(
@@ -84,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    if ((recentCount ?? 0) >= 3) {
+    if ((recentRows?.length ?? 0) >= 3) {
       return res.status(429).json({ error: 'Too many requests, please wait an hour' });
     }
 

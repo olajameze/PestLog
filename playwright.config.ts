@@ -21,8 +21,8 @@ export default defineConfig({
     env: {
       ...process.env,
       PORT: '3001',
-      NODE_ENV: 'test',
       NODE_TLS_REJECT_UNAUTHORIZED: '0',
+      PLAYWRIGHT_TEST: '1',
       PLAYWRIGHT_MAINTENANCE_MOCK_DB_FAILURE: process.env.PLAYWRIGHT_MAINTENANCE_MOCK_DB_FAILURE ?? '',
     },
   },
