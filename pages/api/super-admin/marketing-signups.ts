@@ -34,7 +34,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })),
     });
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     console.error('marketing-signups list failed', e);
-    return res.status(500).json({ error: 'Unable to load marketing signups' });
+    const hint =
+      /signup_marketing_lead|does not exist|relation/i.test(msg)
+        ? 'The signup_marketing_lead table may be missing — run `npx prisma migrate deploy` on this database.'
+        : 'Check server logs for details.';
+    return res.status(500).json({
+      error: 'Unable to load marketing signups',
+      hint,
+      ...(process.env.NODE_ENV !== 'production' ? { details: msg } : {}),
+    });
   }
 }

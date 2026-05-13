@@ -334,6 +334,63 @@ ${message}`;
   });
 }
 
+/** Destination for landing-page suggestion alerts (defaults to support inbox). */
+export function getSuggestionsNotifyEmail(): string {
+  const override = process.env.SUGGESTIONS_NOTIFY_EMAIL?.trim();
+  return override && override.includes('@') ? override : supportEmail;
+}
+
+/**
+ * Notifies operators when someone submits a suggestion on the marketing site.
+ * Idempotent per suggestion body + category + submitter fingerprint within 24h.
+ */
+export async function sendSuggestionNotification(params: {
+  name?: string | null;
+  submitterEmail?: string | null;
+  suggestion: string;
+  category: string;
+}): Promise<{ id: string } | undefined> {
+  const suggestion = params.suggestion.trim();
+  const category = params.category.trim();
+  const name = params.name?.trim() ?? '';
+  const email = params.submitterEmail?.trim() ?? '';
+  const notifyTo = getSuggestionsNotifyEmail();
+  const idempotencyPayload = `${email.toLowerCase()}\n${category}\n${suggestion}`;
+  const idempotencyKey = `suggestion/${createHash('sha256').update(idempotencyPayload).digest('hex').slice(0, 48)}`;
+
+  const safeSubject = `New suggestion: ${category.replace(/[\r\n]+/g, ' ').trim().slice(0, 60)}`;
+
+  const inner = `
+    <p><strong>New product suggestion</strong> from the PestTrace landing page.</p>
+    ${name ? `<p><strong>Name:</strong> ${escapeHtml(name)}</p>` : '<p><strong>Name:</strong> <em>Not provided</em></p>'}
+    ${
+      email
+        ? `<p><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>`
+        : '<p><strong>Email:</strong> <em>Not provided</em></p>'
+    }
+    <p><strong>Category:</strong> ${escapeHtml(category)}</p>
+    <p><strong>Suggestion:</strong></p>
+    <p style="white-space:pre-wrap;border-left:3px solid #e4e4e7;padding-left:12px;margin:0;">${escapeHtml(suggestion)}</p>
+  `;
+  const text = `New suggestion from the PestTrace landing page.
+
+Name: ${name || '(not provided)'}
+Email: ${email || '(not provided)'}
+Category: ${category}
+
+Suggestion:
+${suggestion}`;
+
+  return sendMail({
+    to: [notifyTo],
+    subject: safeSubject,
+    html: brandEmailHtml(safeSubject, inner),
+    text,
+    ...(email ? { replyTo: email } : {}),
+    idempotencyKey,
+  });
+}
+
 export async function sendTechnicianInviteEmail(params: {
   email: string;
   technicianName?: string;

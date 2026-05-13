@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createHash } from 'crypto';
 import { getSupabaseAdmin } from '../../lib/supabase-admin';
 import { logServerExceptionToDb } from '../../lib/server/errorLogger';
+import { sendSuggestionNotification } from '../../lib/email';
 
 const CATEGORIES = new Set([
   'Chemical tracking',
@@ -107,6 +108,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: 'Please try again later',
         ...testDebug({ _debug: insertError.message }),
       });
+    }
+
+    if (process.env.RESEND_API_KEY) {
+      try {
+        await sendSuggestionNotification({
+          name: typeof body.name === 'string' ? body.name.trim() || null : null,
+          submitterEmail: email,
+          suggestion,
+          category,
+        });
+      } catch (notifyErr) {
+        console.error('[suggestions] notify email failed', notifyErr);
+        await logServerExceptionToDb(
+          'Suggestion saved but notify email failed',
+          notifyErr instanceof Error ? notifyErr.stack : undefined,
+          { message: notifyErr instanceof Error ? notifyErr.message : String(notifyErr) },
+        );
+      }
     }
 
     return res.status(200).json({ ok: true });

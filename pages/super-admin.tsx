@@ -221,7 +221,10 @@ export default function SuperAdminPage({
           return;
         }
         const body = await response.json().catch(() => ({ error: 'Failed to load marketing signups' }));
-        setMarketingError(typeof body.error === 'string' ? body.error : 'Failed to load marketing signups');
+        const errMsg = typeof body.error === 'string' ? body.error : 'Failed to load marketing signups';
+        const hint = typeof body.hint === 'string' ? body.hint : '';
+        const details = typeof body.details === 'string' ? body.details : '';
+        setMarketingError([errMsg, hint, details].filter(Boolean).join(' — '));
         setMarketingLeads([]);
         return;
       }
@@ -350,7 +353,7 @@ export default function SuperAdminPage({
                         <td className="px-4 py-3 text-zinc-700">{row.fullName ?? '—'}</td>
                         <td className="max-w-[14rem] break-words px-4 py-3 text-zinc-700">{row.businessName ?? '—'}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-zinc-700">
-                          {new Date(row.createdAt).toLocaleString()}
+                          <span suppressHydrationWarning>{new Date(row.createdAt).toLocaleString()}</span>
                         </td>
                       </tr>
                     ))
@@ -464,15 +467,19 @@ export default function SuperAdminPage({
                     </td>
                     <td className="px-4 py-3 text-zinc-700">{formatPlanLabel(user.billingPlan)}</td>
                     <td className="max-w-[14rem] break-words px-4 py-3 text-xs text-zinc-700">
-                      {formatSubscriptionLabel(user)}
+                      <span suppressHydrationWarning>{formatSubscriptionLabel(user)}</span>
                     </td>
                     <td className="px-4 py-3 text-zinc-700">{isDisabled ? 'Disabled' : 'Active'}</td>
                     <td className="px-4 py-3 text-zinc-700">{user.emailConfirmedAt ? 'Yes' : 'No'}</td>
                     <td className="px-4 py-3 text-zinc-700">
-                      {user.createdAt ? new Date(user.createdAt).toLocaleString() : '—'}
+                      <span suppressHydrationWarning>
+                        {user.createdAt ? new Date(user.createdAt).toLocaleString() : '—'}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-zinc-700">
-                      {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleString() : '—'}
+                      <span suppressHydrationWarning>
+                        {user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleString() : '—'}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex min-w-[240px] flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -551,7 +558,9 @@ export default function SuperAdminPage({
                                 {entry.action} · {(entry.new_values?.action ?? 'update').replaceAll('_', ' ')}
                               </p>
                               <p className="mt-1 text-zinc-600">
-                                {new Date(entry.created_at).toLocaleString()}
+                                <span suppressHydrationWarning>
+                                  {new Date(entry.created_at).toLocaleString()}
+                                </span>
                                 {entry.new_values?.role ? ` · role=${entry.new_values.role}` : ''}
                               </p>
                             </div>
