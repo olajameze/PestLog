@@ -5,7 +5,7 @@ const STEPS: Step[] = [
   {
     target: '.dashboard-header',
     content: 'Welcome to Pest Trace! This dashboard shows your technicians, recent logbook entries, and key compliance metrics.',
-    placement: 'bottom',
+    placement: 'top',
   },
   {
     target: '.logbook-form',
@@ -73,7 +73,7 @@ export default function OnboardingTour() {
   const targetElement = document.querySelector(step.target);
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-[10000] flex items-start justify-center p-4 pt-8 bg-black/50">
       <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto relative animate-in fade-in zoom-in duration-200">
         {/* Tour Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between p-6 border-b border-gray-200 bg-white/95 backdrop-blur-sm rounded-t-3xl">

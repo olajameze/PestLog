@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "node -e \"const { spawnSync } = require('child_process'); spawnSync('npx', ['--yes','kill-port','3000','3001'], { stdio: 'ignore', shell: true });\" && npm run dev:raw",
+    "dev:raw": "next dev",
+    "dev:clean": "node -e \"const { spawnSync } = require('child_process'); spawnSync('npx', ['--yes','kill-port','3000','3001'], { stdio: 'ignore', shell: true });\" && npm run dev:raw",
     "dev:webpack": "next dev --webpack",
     "build": "next build",
     "build:migrate": "prisma migrate deploy && next build",

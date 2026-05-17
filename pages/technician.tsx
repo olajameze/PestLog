@@ -1,12 +1,14 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import Sidebar from '../components/sidebar';
 import { useToast } from '../components/ui/ToastProvider';
 import Button from '../components/ui/Button';
 import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
 import { isValidUkPostcode } from '../lib/ukPostcode';
+import { usePermissions } from '../hooks/usePermissions';
 
 type TechnicianProfile = {
   id: string;
@@ -143,6 +145,8 @@ export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
+  const { canSwitchToTechnician } = usePermissions();
+  const canReturnToAdminDashboard = canSwitchToTechnician();
   const accessDeniedTarget = typeof router.query.accessDenied === 'string' ? router.query.accessDenied : '';
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TechnicianProfile | null>(null);
@@ -898,6 +902,17 @@ export default function TechnicianPage() {
             <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full mb-4"></div>
             <p className="text-sm text-gray-600">Signed in as {profile.name} ({profile.email})</p>
             <p className="text-sm text-gray-500">Company: {profile.companyName}</p>
+            {canReturnToAdminDashboard ? (
+              <div className="mt-4">
+                <Link
+                  href="/dashboard"
+                  data-testid="back-to-admin-dashboard-link"
+                  className="inline-flex items-center rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
+                >
+                  Back to admin dashboard
+                </Link>
+              </div>
+            ) : null}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">

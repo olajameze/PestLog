@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'next/router';
 import Sidebar from '../components/sidebar';
@@ -22,6 +23,7 @@ import {
 import { formatTechnicianLimit, getTechnicianLimit } from '../lib/planLimits';
 import { canUseEnterprisePreview, trialFullDaysRemaining } from '../lib/trialEnterprisePreview';
 import { parseApiBody } from '../lib/api/parseApiBody';
+import { usePermissions } from '../hooks/usePermissions';
 
 const DashboardEnhancements = dynamic(() => import('../components/dashboard/DashboardEnhancements'));
 const OnboardingTour = dynamic(() => import('../components/onboarding/OnboardingTour'), { ssr: false });
@@ -300,6 +302,8 @@ export default function Dashboard() {
   const router = useRouter();
   const { showToast } = useToast();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
+  const { loading: permissionsLoading, canSwitchToTechnician } = usePermissions();
+  const canAdminUseTechnicianView = canSwitchToTechnician();
 
   const isPro = company
     ? checkPlan(company.plan ?? 'trial', ['pro', 'business', 'enterprise']) || company.subscriptionStatus === 'active'
@@ -598,6 +602,18 @@ export default function Dashboard() {
     tabQuery === 'technicians' || tabQuery === 'logbook' || tabQuery === 'settings'
       ? tabQuery
       : activeTab;
+
+  useEffect(() => {
+    if (permissionsLoading || typeof window === 'undefined') return;
+    if (!canAdminUseTechnicianView) return;
+    if (window.localStorage.getItem('admin_tech_message_shown') === 'true') return;
+    showToast(
+      'Technician access enabled',
+      "As a business admin, you can also log your own technician reports. Use the 'Log reports as technician' link in your dashboard.",
+      'info',
+    );
+    window.localStorage.setItem('admin_tech_message_shown', 'true');
+  }, [canAdminUseTechnicianView, permissionsLoading, showToast]);
 
   const handleSignOut = async () => {
     if (isPreviewMode) {
@@ -1038,6 +1054,17 @@ if (!user || companyLoadState === 'loading') return (
                     ? 'Record pest control treatments and maintain compliance records'
                     : 'Manage account and billing preferences'}
                 </p>
+                {canAdminUseTechnicianView ? (
+                  <div className="mt-4">
+                    <Link
+                      href="/technician"
+                      data-testid="admin-log-reports-link"
+                      className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    >
+                      Log reports as technician
+                    </Link>
+                  </div>
+                ) : null}
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.2em] text-emerald-700">Plan</p>

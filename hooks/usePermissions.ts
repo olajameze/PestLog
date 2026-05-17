@@ -7,7 +7,7 @@ type Profile = {
   plan?: unknown;
 };
 
-export function usePermissions(): Permissions & { loading: boolean } {
+export function usePermissions(): Permissions & { loading: boolean; canSwitchToTechnician: () => boolean } {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,6 +45,13 @@ export function usePermissions(): Permissions & { loading: boolean } {
   }, []);
 
   const permissions = useMemo(() => buildPermissions(profile?.role, profile?.plan), [profile]);
-  return { ...permissions, loading };
+  const canSwitchToTechnician = useMemo(
+    () => () =>
+      (permissions.role === 'admin' || permissions.role === 'manager') &&
+      (permissions.plan === 'pro' || permissions.plan === 'business' || permissions.plan === 'enterprise'),
+    [permissions.plan, permissions.role],
+  );
+
+  return { ...permissions, loading, canSwitchToTechnician };
 }
 
