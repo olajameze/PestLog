@@ -68,8 +68,8 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
         <div className="flex h-full flex-col justify-between">
           <div>
             <div className="border-b border-zinc-200 px-5 py-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 items-center gap-2">
                   <Image
                     src="/pest-trace.png"
                     alt="Pest Trace logo"
@@ -78,13 +78,13 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
                     className="h-9 w-9 object-contain"
                     priority
                   />
-                  <h2 className="text-3xl font-semibold text-navy">Pest Trace</h2>
+                  <h2 className="truncate text-2xl font-semibold leading-tight text-navy">Pest Trace</h2>
                 </div>
                 <Button
                   variant="danger"
                   size="sm"
                   onClick={onSignOut}
-                  className="self-start"
+                  className="self-start shrink-0"
                   data-testid="sidebar-signout-top"
                 >
                   Sign Out
