@@ -113,7 +113,7 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
                 variant="danger"
                 size="sm"
                 onClick={onSignOut}
-                className="mt-2 w-full"
+                className="mt-2 self-start"
                 data-testid="sidebar-signout-top"
               >
                 Sign Out
