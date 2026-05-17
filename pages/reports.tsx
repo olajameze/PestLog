@@ -11,6 +11,7 @@ import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAcce
 import { isActiveTrial } from '../lib/trialEnterprisePreview';
 import IntelligenceGeoHeatmap from '../components/super-admin/IntelligenceGeoHeatmap';
 import { buildHeatmapPointsFromReportEntries } from '../lib/intelligence/ukPostcodeGeo';
+import { useLocale } from '../lib/hooks/useLocale';
 
 type Company = {
   id: string;
@@ -84,17 +85,22 @@ function entryNeedsFollowUp(entry: ReportEntry): boolean {
   );
 }
 
-function formatPeriodLabel(startDate?: string, endDate?: string): string {
+function formatPeriodLabel(
+  startDate: string | undefined,
+  endDate: string | undefined,
+  formatDate: (value: string | number | Date) => string,
+  t: (key: string, replacements?: Record<string, string>) => string,
+): string {
   if (startDate && endDate) {
-    return `${new Date(startDate).toLocaleDateString()} — ${new Date(endDate).toLocaleDateString()}`;
+    return `${formatDate(startDate)} — ${formatDate(endDate)}`;
   }
   if (startDate) {
-    return `From ${new Date(startDate).toLocaleDateString()}`;
+    return t('reports.fromDate', { date: formatDate(startDate) });
   }
   if (endDate) {
-    return `Up to ${new Date(endDate).toLocaleDateString()}`;
+    return t('reports.upToDate', { date: formatDate(endDate) });
   }
-  return 'All dates';
+  return t('reports.allDates');
 }
 
 function parseRoomForms(rooms?: Array<string | { name: string; note?: string }>): RoomForm[] {
@@ -366,6 +372,15 @@ function EnterprisePerformanceMetrics({
 export default function ReportsPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const {
+    country,
+    complianceNotice,
+    formatCurrency,
+    formatDate,
+    formatDateTimeWithZone,
+    formatTimeWithZone,
+    t,
+  } = useLocale();
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const [company, setCompany] = useState<Company | null>(null);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -1289,7 +1304,7 @@ export default function ReportsPage() {
       doc.setFontSize(10);
       doc.text('Compliance Report • Pest Trace', margin, 24);
       doc.setFontSize(10);
-      doc.text(`Period: ${formatPeriodLabel(startDate, endDate)}`, pageWidth - margin, 14, { align: 'right' });
+      doc.text(`Period: ${formatPeriodLabel(startDate, endDate, formatDate, t)}`, pageWidth - margin, 14, { align: 'right' });
       const technicianName = technicians.find((t) => t.id === selectedTechnician)?.name || 'All technicians';
       doc.text(`Technician: ${technicianName}`, pageWidth - margin, 24, { align: 'right' });
       y = 36;
@@ -1303,7 +1318,7 @@ export default function ReportsPage() {
         doc.line(margin, pageHeight - 18, pageWidth - margin, pageHeight - 18);
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, pageHeight - 10);
+        doc.text(`Generated: ${formatDate(new Date())}`, margin, pageHeight - 10);
         doc.text(`Page ${pageIndex} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
       }
     };
@@ -1365,7 +1380,7 @@ export default function ReportsPage() {
       let entryY = y + 10;
       doc.setFontSize(12);
       doc.setTextColor(17, 24, 39);
-      doc.text(`${new Date(entry.date).toLocaleDateString()} · ${entry.clientName}`, margin + 6, entryY);
+      doc.text(`${formatDateTimeWithZone(entry.date)} · ${entry.clientName}`, margin + 6, entryY);
       entryY += 8;
 
       doc.setFontSize(10);
@@ -1424,7 +1439,10 @@ export default function ReportsPage() {
       report.certifications.forEach((cert) => {
         ensureSpace(24);
         const certName = cert.fileUrl.split('/').pop() || cert.fileUrl;
-        const certLines = doc.splitTextToSize(`Uploaded: ${new Date(cert.uploadedAt).toLocaleDateString()} · Expiry: ${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}`, captionWidth);
+        const certLines = doc.splitTextToSize(
+          `Uploaded: ${formatDateTimeWithZone(cert.uploadedAt)} · Expiry: ${cert.expiryDate ? formatDateTimeWithZone(cert.expiryDate) : t('reports.noExpiry')}`,
+          captionWidth,
+        );
         const certLineHeight = doc.getTextDimensions(certLines).h;
         doc.text(certLines, margin + 6, y);
         y += certLineHeight;
@@ -1470,9 +1488,9 @@ export default function ReportsPage() {
       <div className="min-w-0 max-w-6xl space-y-6">
         <div className="bg-white rounded-2xl shadow-md p-6">
           <div className="text-center mb-6">
-            <h1 className="text-3xl font-bold text-navy mb-3">Compliance Reports</h1>
+            <h1 className="text-3xl font-bold text-navy mb-3">{t('reports.pageTitle')}</h1>
             <div className="mx-auto h-1 w-16 bg-primary-500 rounded-full mb-4"></div>
-            <p className="text-sm text-gray-600">Generate and review compliance reports for technician work and certifications.</p>
+            <p className="text-sm text-gray-600">{t('reports.pageSubtitle')}</p>
           </div>
         </div>
         {overdueBanner ? (
@@ -1703,15 +1721,17 @@ export default function ReportsPage() {
           <div className="bg-white rounded-xl shadow-md p-6 sm:p-8 space-y-6">
             <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <div className="flex-1 text-center">
-                <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-2">{isOwner ? 'Company Report Results' : 'My Report Results'}</h2>
-                <p className="text-sm text-slate-600">Review your logged jobs by client name or address. Export as PDF for compliance.</p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-navy mb-2">
+                  {isOwner ? t('reports.resultsTitleOwner') : t('reports.resultsTitleTech')}
+                </h2>
+                <p className="text-sm text-slate-600">{t('reports.resultsSubtitle')}</p>
               </div>
               <button
                 type="button"
                 onClick={downloadPdf}
                 className="btn btn-success hover-lift w-full px-5 py-3 sm:w-auto"
               >
-                Download PDF
+                {t('reports.downloadPdf')}
               </button>
             </div>
 
@@ -1719,32 +1739,38 @@ export default function ReportsPage() {
             <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4 sm:p-6">
               <div className="grid gap-2 sm:grid-cols-3 text-sm sm:text-base">
                 <div>
-                  <p className="text-gray-600">Company</p>
+                  <p className="text-gray-600">{t('reports.company')}</p>
                   <p className="font-semibold text-navy">{report.companyName}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Technician</p>
+                  <p className="text-gray-600">{t('reports.technician')}</p>
                   <p className="font-semibold text-navy">{technicians.find((t) => t.id === selectedTechnician)?.name || ''}</p>
                 </div>
                 <div>
-                  <p className="text-gray-600">Period</p>
-                  <p className="font-semibold text-navy">{formatPeriodLabel(startDate, endDate)}</p>
+                  <p className="text-gray-600">{t('reports.period')}</p>
+                  <p className="font-semibold text-navy">{formatPeriodLabel(startDate, endDate, formatDate, t)}</p>
                 </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Jobs</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.jobs')}</p>
                   <p className="mt-2 text-xl font-semibold text-slate-900">{visibleEntries.length}</p>
                 </div>
                 <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Photos</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.photos')}</p>
                   <p className="mt-2 text-xl font-semibold text-slate-900">{visibleEntries.reduce((count, entry) => count + parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length, 0)}</p>
                 </div>
                 <div className="rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
-                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Certifications</p>
+                  <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.certifications')}</p>
                   <p className="mt-2 text-xl font-semibold text-slate-900">{report.certifications.length}</p>
                 </div>
               </div>
+            </div>
+            <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <p className="text-xs uppercase tracking-[0.24em] text-violet-700">{t('reports.complianceNoticeTitle')}</p>
+              <p className="mt-2 text-sm font-medium text-violet-900">
+                {complianceNotice}{country === 'EU' ? '' : ` (${country})`}
+              </p>
             </div>
 
             {(plan === 'business' || plan === 'enterprise' || reportsTrialPreview) ? (
@@ -1851,7 +1877,9 @@ export default function ReportsPage() {
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
                       <h4 className="text-lg font-semibold text-emerald-900">Revenue & Efficiency (Business Plan)</h4>
                       <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                        <p className="text-sm text-emerald-800">Avg Customer Lifetime Value: <span className="font-bold">{'£'}{analytics.clvScore || '1,240'}</span></p>
+                        <p className="text-sm text-emerald-800">
+                          Avg Customer Lifetime Value: <span className="font-bold">{formatCurrency(analytics.clvScore ?? 1240)}</span>
+                        </p>
                         <p className="text-sm text-emerald-800">CLV/CAC Ratio: <span className="font-bold">{analytics.cacRatio || '3.2'}x</span></p>
                       </div>
                     </div>
@@ -1977,12 +2005,17 @@ export default function ReportsPage() {
                           ) : null}
                           <h4 className="text-lg font-semibold text-navy">{entry.clientName}</h4>
                           <p className="text-sm text-gray-600">{entry.address}</p>
-                          <p className="text-xs sm:text-sm text-gray-500 mt-1">{new Date(entry.date).toLocaleDateString()}</p>
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                            {t('reports.date')}: {formatDate(entry.date)}
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-500">
+                            {t('reports.time')}: {formatTimeWithZone(entry.date)}
+                          </p>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                           <span className="inline-flex max-w-full rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 break-words">{entry.treatment}</span>
                           <span className={`inline-flex max-w-full rounded-full border px-3 py-1 text-sm font-medium break-words ${entry.status?.trim().toLowerCase() === 'open' || !entry.status ? 'border-amber-200 bg-amber-100 text-amber-800' : 'border-emerald-200 bg-emerald-100 text-emerald-800'}`}>
-                            {entry.status?.trim() ? entry.status : 'Open'}
+                            {entry.status?.trim() ? entry.status : t('reports.open')}
                           </span>
                           <button
                             type="button"
@@ -2004,40 +2037,40 @@ export default function ReportsPage() {
                       <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm text-gray-600">
                         {entry.followUpDate && (
                           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
-                            <p className="text-xs uppercase tracking-[0.24em] text-amber-700">Follow-up Date</p>
-                            <p className="mt-1 font-semibold text-amber-900">{new Date(entry.followUpDate).toLocaleDateString()}</p>
+                            <p className="text-xs uppercase tracking-[0.24em] text-amber-700">{t('reports.followUpDate')}</p>
+                            <p className="mt-1 font-semibold text-amber-900">{formatDateTimeWithZone(entry.followUpDate)}</p>
                           </div>
                         )}
                         {entry.rooms && (
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Rooms</p>
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.rooms')}</p>
                             <p className="mt-1 font-semibold text-slate-900">{formatRoomSummary(entry.rooms) || 'No rooms added'}</p>
                           </div>
                         )}
                         {entry.baitBoxesPlaced && (
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Bait Boxes</p>
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.baitBoxes')}</p>
                             <p className="mt-1 font-semibold text-slate-900">{entry.baitBoxesPlaced}</p>
                           </div>
                         )}
                         {entry.poisonUsed && (
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Poison Used</p>
+                            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.poisonUsed')}</p>
                             <p className="mt-1 font-semibold text-slate-900">{entry.poisonUsed}</p>
                           </div>
                         )}
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-3 text-sm text-gray-600">
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Notes</p>
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.notes')}</p>
                           <p className="mt-1 font-semibold text-slate-900">{entry.notes ? entry.notes.slice(0, 90) : 'No additional notes'}</p>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Photos</p>
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.photos')}</p>
                           <p className="mt-1 font-semibold text-slate-900">{parsePhotoUrls(entry.photoUrl, entry.photoUrls, entry.photos).length}</p>
                         </div>
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Signature</p>
+                          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{t('reports.signature')}</p>
                           <p className="mt-1 font-semibold text-slate-900">{entry.signature ? 'Captured' : 'Not captured'}</p>
                         </div>
                       </div>
@@ -2177,7 +2210,7 @@ export default function ReportsPage() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-xl sm:text-2xl font-bold text-navy">🕒 Client Timeline</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-navy">🕒 {t('reports.timeline')}</h3>
               {clientTimeline.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
                   Timeline appears when report entries are available.
@@ -2190,9 +2223,9 @@ export default function ReportsPage() {
                       <div className="mt-3 space-y-2">
                         {timeline.items.slice(0, 4).map((item) => (
                           <div key={item.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                            <p className="text-xs text-slate-500">{new Date(item.date).toLocaleDateString()}</p>
+                            <p className="text-xs text-slate-500">{formatDateTimeWithZone(item.date)}</p>
                             <p className="text-sm font-medium text-slate-800">{item.treatment}</p>
-                            {item.status ? <p className="text-xs text-slate-600">Status: {item.status}</p> : null}
+                            {item.status ? <p className="text-xs text-slate-600">{t('reports.status')}: {item.status}</p> : null}
                           </div>
                         ))}
                       </div>
@@ -2204,7 +2237,7 @@ export default function ReportsPage() {
 
             {/* Certifications Section */}
             <div className="space-y-4">
-              <h3 className="text-xl sm:text-2xl font-bold text-navy">📜 Certifications ({report.certifications.length})</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-navy">📜 {t('reports.certifications')} ({report.certifications.length})</h3>
               {report.certifications.length === 0 ? (
                 <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center text-gray-500">
                   No certifications available for this technician.
@@ -2216,9 +2249,9 @@ export default function ReportsPage() {
                     return (
                       <div key={cert.id} className="rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm hover-lift transition-shadow">
                         <p className="text-sm text-gray-600">Uploaded</p>
-                        <p className="font-semibold text-gray-900">{new Date(cert.uploadedAt).toLocaleDateString()}</p>
+                        <p className="font-semibold text-gray-900">{formatDateTimeWithZone(cert.uploadedAt)}</p>
                         <p className="mt-3 text-sm text-gray-600">Expiry</p>
-                        <p className="font-semibold text-gray-900">{cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No expiry'}</p>
+                        <p className="font-semibold text-gray-900">{cert.expiryDate ? formatDateTimeWithZone(cert.expiryDate) : t('reports.noExpiry')}</p>
                         <div className="mt-4 flex flex-wrap gap-3">
                           <a
                             href={buildCertDownloadUrl(cert.fileUrl)}
