@@ -886,7 +886,6 @@ export default function PestTraceIntelligencePanel() {
                   >
                     <RadialBar
                       dataKey="count"
-                      nameKey="name"
                       background={{ fill: '#f4f4f5' }}
                       cornerRadius={6}
                       label={{ position: 'insideStart', fill: '#fff', fontSize: 11, fontWeight: 600 }}
