@@ -152,14 +152,25 @@ function DonutLabel({
   outerRadius,
   percent,
 }: {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  innerRadius: number;
-  outerRadius: number;
-  percent: number;
+  cx?: number;
+  cy?: number;
+  midAngle?: number;
+  innerRadius?: number;
+  outerRadius?: number;
+  percent?: number;
 }) {
-  if (percent < 0.04) return null; // skip tiny slices
+  // Guard against undefined props that Recharts may pass in edge cases.
+  if (
+    cx == null ||
+    cy == null ||
+    midAngle == null ||
+    innerRadius == null ||
+    outerRadius == null ||
+    percent == null ||
+    percent < 0.04
+  ) {
+    return null;
+  }
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
