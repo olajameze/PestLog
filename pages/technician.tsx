@@ -9,6 +9,7 @@ import Button from '../components/ui/Button';
 import { getGraceDaysLeft, hasSubscriptionAccess } from '../lib/subscriptionAccess';
 import { isValidUkPostcode } from '../lib/ukPostcode';
 import { usePermissions } from '../hooks/usePermissions';
+import { useLocale } from '../lib/hooks/useLocale';
 
 type TechnicianProfile = {
   id: string;
@@ -135,6 +136,65 @@ const PROPERTY_TYPE_OPTIONS = [
 const ENABLE_VOICE_NOTES = process.env.NEXT_PUBLIC_ENABLE_VOICE_NOTES === 'true';
 const ENABLE_PHOTO_ANNOTATION = process.env.NEXT_PUBLIC_ENABLE_PHOTO_ANNOTATION === 'true';
 
+/**
+ * Per-country configuration for the postcode / ZIP / PIN field.
+ * - label:       what the user sees on the form
+ * - placeholder: example value shown inside the input
+ * - required:    whether the field must be filled before submission
+ * - validate:    returns true when the value is acceptable
+ */
+type PostcodeConfig = {
+  label: string;
+  placeholder: string;
+  required: boolean;
+  validate: (value: string) => boolean;
+};
+
+const POSTCODE_CONFIG: Record<string, PostcodeConfig> = {
+  GB: {
+    label: 'Postcode',
+    placeholder: 'e.g. SW1A 1AA',
+    required: true,
+    validate: isValidUkPostcode,
+  },
+  US: {
+    label: 'ZIP Code',
+    placeholder: 'e.g. 90210',
+    required: false,
+    validate: (v) => /^\d{5}(-\d{4})?$/.test(v),
+  },
+  CA: {
+    label: 'Postal Code',
+    placeholder: 'e.g. M5V 3L9',
+    required: false,
+    validate: (v) => /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(v),
+  },
+  IN: {
+    label: 'PIN Code',
+    placeholder: 'e.g. 110001',
+    required: false,
+    validate: (v) => /^\d{6}$/.test(v),
+  },
+  AU: {
+    label: 'Postcode',
+    placeholder: 'e.g. 2000',
+    required: false,
+    validate: (v) => /^\d{4}$/.test(v),
+  },
+};
+
+/** Returns the postcode config for the given country, falling back to a generic config. */
+function getPostcodeConfig(country: string): PostcodeConfig {
+  return (
+    POSTCODE_CONFIG[country] ?? {
+      label: 'Postcode / ZIP',
+      placeholder: '',
+      required: false,
+      validate: () => true,
+    }
+  );
+}
+
 function propertyTypeLabel(value: string | null | undefined): string {
   if (!value) return '';
   const hit = PROPERTY_TYPE_OPTIONS.find((o) => o.value === value);
@@ -144,6 +204,8 @@ function propertyTypeLabel(value: string | null | undefined): string {
 export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { country } = useLocale();
+  const postcodeConfig = getPostcodeConfig(country);
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const { canSwitchToTechnician } = usePermissions();
   const canReturnToAdminDashboard = canSwitchToTechnician();
@@ -628,12 +690,14 @@ export default function TechnicianPage() {
     if (!profile) return;
 
     const pc = postcode.trim();
-    if (!pc) {
-      showToast('Missing postcode', 'UK postcode is required for every logbook entry.', 'error');
+
+    if (postcodeConfig.required && !pc) {
+      showToast(`Missing ${postcodeConfig.label}`, `${postcodeConfig.label} is required for every logbook entry.`, 'error');
       return;
     }
-    if (!isValidUkPostcode(pc)) {
-      showToast('Invalid postcode', 'Enter a valid UK postcode.', 'error');
+
+    if (pc && !postcodeConfig.validate(pc)) {
+      showToast(`Invalid ${postcodeConfig.label}`, `Please enter a valid ${postcodeConfig.label}.`, 'error');
       return;
     }
 
@@ -980,20 +1044,21 @@ export default function TechnicianPage() {
               />
             </div>
 
-            {/* Postcode & property type (required for intelligence + analytics) */}
+            {/* Postcode / ZIP / PIN — label and validation adapt to the technician's country */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="form-group">
                 <label htmlFor="technician-entry-postcode" className="form-label">
-                  Postcode (UK) <span className="text-red-500">*</span>
+                  {postcodeConfig.label}
+                  {postcodeConfig.required && <span className="text-red-500"> *</span>}
                 </label>
                 <input
                   id="technician-entry-postcode"
                   type="text"
                   value={postcode}
                   onChange={(e) => setPostcode(e.target.value)}
-                  required
+                  required={postcodeConfig.required}
                   autoComplete="postal-code"
-                  placeholder="e.g. SW1A 1AA"
+                  placeholder={postcodeConfig.placeholder}
                   className="form-input"
                 />
               </div>
