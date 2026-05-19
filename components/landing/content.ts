@@ -62,7 +62,7 @@ export const pricingPlans = [
 export const trustMicrocopy = [
   '7-day free trial',
   'Cancel from the app — no long-term contract',
-  'CRRU-minded workflows for UK pest control',
+  'Built for pest control businesses worldwide',
 ];
 
 export const regulationUrgency = {

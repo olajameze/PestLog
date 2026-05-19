@@ -115,8 +115,8 @@ export default function Home({ pricingAmountLabels, pricingFxNote }: LandingPric
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
       <Head>
-        <title>PestTrace – Pest Control Compliance Software UK</title>
-        <meta name="description" content="Audit-ready job tracking for UK pest control. Meet CRRU standards, track technicians in real-time, and generate instant reports." />
+        <title>PestTrace – Pest Control Compliance Software</title>
+        <meta name="description" content="Audit-ready job tracking for pest control businesses worldwide. Track technicians in real-time, store certifications, and generate instant compliance reports." />
       </Head>
 
       <PWAInstallPrompt />
@@ -177,7 +177,7 @@ export default function Home({ pricingAmountLabels, pricingFxNote }: LandingPric
             Stay Audit-Ready. Prove Every Job. Eliminate Paperwork.
           </h1>
           <p className="mx-auto mb-12 max-w-2xl text-lg leading-relaxed text-slate-500 sm:text-xl md:text-2xl">
-            PestTrace is the compliance and job tracking platform built for UK pest control businesses. Log jobs, store certifications, and generate audit-ready reports — all in one place.
+            PestTrace is the compliance and job tracking platform built for pest control businesses. Log jobs, store certifications, and generate audit-ready reports — all in one place.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
             <Link href="/auth/signup" className="rounded-2xl bg-emerald-500 px-6 py-4 text-lg font-bold text-white shadow-xl shadow-emerald-200 transition-all hover:-translate-y-1 hover:bg-emerald-600 sm:px-10 sm:py-5 sm:text-xl">
@@ -188,7 +188,7 @@ export default function Home({ pricingAmountLabels, pricingFxNote }: LandingPric
             </a>
           </div>
           <div className="mt-6 text-sm font-medium text-slate-500">
-            ✔ 7-day free trial • ✔ No contracts • ✔ Built for UK compliance
+            ✔ 7-day free trial • ✔ No contracts • ✔ Works for pest control businesses worldwide
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm font-medium text-slate-400 sm:gap-6">
             {trustMicrocopy.map(item => <span key={item} className="flex items-center gap-1.5"><span className="text-emerald-500">✓</span> {item}</span>)}
