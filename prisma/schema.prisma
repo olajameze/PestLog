@@ -15,6 +15,9 @@ model Company {
   address                 String?        @map("address")
   website                 String?        @map("website")
   vatNumber               String?        @map("vatNumber")
+  /** ISO 3166-1 alpha-2 country code set by the company owner (e.g. "IN", "GB", "US").
+   *  Used as the authoritative locale source for all technicians in this company. */
+  country                 String?        @map("country")
   requireSignature        Boolean?       @default(false) @map("requireSignature")
   requirePhotos           Boolean?       @default(false) @map("requirePhotos")
   defaultReportRangeDays  Int?           @default(30) @map("defaultReportRangeDays")

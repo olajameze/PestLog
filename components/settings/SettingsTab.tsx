@@ -36,6 +36,8 @@ type Company = {
   address?: string | null;
   website?: string | null;
   vatNumber?: string | null;
+  /** ISO 3166-1 alpha-2 country code — authoritative locale source for all technicians. */
+  country?: string | null;
   requireSignature: boolean;
   requirePhotos: boolean;
   defaultReportRangeDays?: number | null;
@@ -64,6 +66,7 @@ interface SettingsTabProps {
     address?: string;
     website?: string;
     vatNumber?: string;
+    country?: string;
     requireSignature: boolean;
     requirePhotos: boolean;
     defaultReportRangeDays: number;
@@ -98,6 +101,7 @@ export default function SettingsTab({
   const [address, setAddress] = useState(company.address || '');
   const [website, setWebsite] = useState(company.website || '');
   const [vatNumber, setVatNumber] = useState(company.vatNumber || '');
+  const [country, setCountry] = useState(company.country || '');
   const [requireSignature, setRequireSignature] = useState(company.requireSignature ?? false);
   const [requirePhotos, setRequirePhotos] = useState(company.requirePhotos ?? false);
   const [defaultReportRangeDays, setDefaultReportRangeDays] = useState(company.defaultReportRangeDays ?? 30);
@@ -192,6 +196,7 @@ export default function SettingsTab({
       address: address.trim() || undefined,
       website: website.trim() || undefined,
       vatNumber: vatNumber.trim() || undefined,
+      country: country.trim() || undefined,
       requireSignature,
       requirePhotos,
       defaultReportRangeDays,
@@ -309,6 +314,32 @@ export default function SettingsTab({
             value={vatNumber}
             onChange={(e) => setVatNumber(e.target.value)}
           />
+          <div className="form-group">
+            <label htmlFor="settings-country" className="form-label">
+              Country
+            </label>
+            <select
+              id="settings-country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="form-select w-full"
+            >
+              <option value="">Not set (auto-detect from browser)</option>
+              <option value="GB">United Kingdom</option>
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
+              <option value="IN">India</option>
+              <option value="FR">France</option>
+              <option value="DE">Germany</option>
+              <option value="ES">Spain</option>
+              <option value="IT">Italy</option>
+            </select>
+            <p className="mt-1 text-xs text-slate-500">
+              Setting this ensures your technicians always see the correct postcode / PIN / ZIP field
+              regardless of their browser language settings.
+            </p>
+          </div>
           <FormInput
             label="Default report range (days)"
             id="settings-default-report-range"

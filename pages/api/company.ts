@@ -89,6 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           address: true,
           website: true,
           vatNumber: true,
+          country: true,
           requireSignature: true,
           requirePhotos: true,
           defaultReportRangeDays: true,
@@ -113,6 +114,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 address: true,
                 website: true,
                 vatNumber: true,
+                country: true,
                 requireSignature: true,
                 requirePhotos: true,
                 defaultReportRangeDays: true,
@@ -159,6 +161,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         address,
         website,
         vatNumber,
+        country,
         requireSignature,
         requirePhotos,
         defaultReportRangeDays,
@@ -211,6 +214,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           typeof vatNumber === 'string' && vatNumber.trim().length > 0
             ? vatNumber.trim()
             : undefined,
+        country:
+          typeof country === 'string' && country.trim().length > 0 ? country.trim() : undefined,
         requireSignature: typeof requireSignature === 'boolean' ? requireSignature : false,
         requirePhotos: typeof requirePhotos === 'boolean' ? requirePhotos : false,
         defaultReportRangeDays: rangeDays,
@@ -247,6 +252,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         address,
         website,
         vatNumber,
+        country,
         requireSignature,
         requirePhotos,
         defaultReportRangeDays,
@@ -292,6 +298,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (address !== undefined) updateData.address = address ? address.trim() : null;
       if (website !== undefined) updateData.website = website ? website.trim() : null;
       if (vatNumber !== undefined) updateData.vatNumber = vatNumber ? vatNumber.trim() : null;
+      // country: empty string clears the value (reverts to browser detection)
+      if (country !== undefined) updateData.country = country ? country.trim() : null;
       if (typeof requireSignature === 'boolean') updateData.requireSignature = requireSignature;
       if (typeof requirePhotos === 'boolean') updateData.requirePhotos = requirePhotos;
       if (typeof defaultReportRangeDays === 'number') updateData.defaultReportRangeDays = defaultReportRangeDays;
@@ -313,6 +321,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           address: true,
           website: true,
           vatNumber: true,
+          country: true,
           requireSignature: true,
           requirePhotos: true,
           defaultReportRangeDays: true,

@@ -17,6 +17,8 @@ type TechnicianProfile = {
   email: string;
   companyId: string;
   companyName: string;
+  /** ISO 3166-1 alpha-2 country code set by the company owner, or null if unset. */
+  companyCountry: string | null;
 };
 
 type LogbookEntry = {
@@ -217,7 +219,12 @@ export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { country, countryConfident } = useLocale();
-  const postcodeConfig = getPostcodeConfig(country, countryConfident);
+  // Company country from the database takes priority over browser detection.
+  // This eliminates mis-detection caused by browser language preferences
+  // that don't reflect where the technician is actually located.
+  const effectiveCountry = profile?.companyCountry ?? country;
+  const effectiveConfident = profile?.companyCountry != null ? true : countryConfident;
+  const postcodeConfig = getPostcodeConfig(effectiveCountry, effectiveConfident);
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const { canSwitchToTechnician } = usePermissions();
   const canReturnToAdminDashboard = canSwitchToTechnician();
@@ -428,6 +435,7 @@ export default function TechnicianPage() {
           email: 'john@preview.local',
           companyId: 'preview-company',
           companyName: 'Pest Trace Preview Co.',
+          companyCountry: null,
         });
         setLoading(false);
         return;

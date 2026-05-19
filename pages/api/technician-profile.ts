@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     where: technicianEmailWhere(normalizeAuthEmail(user.email)),
     include: {
       company: {
-        select: { name: true },
+        select: { name: true, country: true },
       },
     },
   });
@@ -38,6 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: technician.email,
       companyId: technician.companyId,
       companyName: technician.company.name,
+      // Used as the authoritative locale source on the technician logbook form,
+      // replacing unreliable browser locale/timezone detection.
+      companyCountry: technician.company.country ?? null,
     },
   });
 }

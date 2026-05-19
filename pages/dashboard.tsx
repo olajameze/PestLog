@@ -41,6 +41,7 @@ interface Company {
   address?: string | null;
   website?: string | null;
   vatNumber?: string | null;
+  country?: string | null;
   requireSignature: boolean;
   requirePhotos: boolean;
   defaultReportRangeDays?: number | null;
@@ -752,6 +753,7 @@ export default function Dashboard() {
     address?: string;
     website?: string;
     vatNumber?: string;
+    country?: string;
     requireSignature: boolean;
     requirePhotos: boolean;
     defaultReportRangeDays: number;
