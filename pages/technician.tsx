@@ -427,6 +427,7 @@ export default function TechnicianPage() {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
     const loadProfile = async () => {
       if (isPreviewMode) {
         setProfile({
@@ -486,7 +487,7 @@ export default function TechnicianPage() {
     };
 
     loadProfile();
-  }, [isPreviewMode, router]);
+  }, [isPreviewMode, router, router.isReady]);
 
   useEffect(() => {
     const loadEntries = async () => {

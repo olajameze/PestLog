@@ -417,6 +417,7 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (!router.isReady) return;
     const getUser = async () => {
       setCompanyLoadState('loading');
       if (isPreviewMode) {
@@ -581,7 +582,7 @@ export default function Dashboard() {
       }
     };
     getUser();
-  }, [isPreviewMode, router, showToast, router.query.session_id, router.query.upgradedPlan, refreshKey]);
+  }, [isPreviewMode, router, router.isReady, showToast, router.query.session_id, router.query.upgradedPlan, refreshKey]);
 
   const showTrialEndingModal = useMemo(() => {
     if (trialEndingUiDismissed) return false;
