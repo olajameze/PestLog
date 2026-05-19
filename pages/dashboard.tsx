@@ -1023,6 +1023,7 @@ if (!user || companyLoadState === 'loading') return (
           activeTab={currentTab as string} 
           onTabChange={(tab: string) => setActiveTab(tab as Tab)} 
           onSignOut={handleSignOut}
+          previewMode={isPreviewMode}
         />
         <main className="min-w-0 flex-1 p-4 pt-24 sm:p-6 sm:pt-24 lg:p-8 lg:pt-24">
           <ErrorBoundary>

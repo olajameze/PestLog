@@ -9,9 +9,11 @@ interface SidebarProps {
   onTabChange?: (tab: string) => void;
   onSignOut?: () => void;
   role?: 'owner' | 'technician';
+  /** When true (dev preview mode) appends &preview=1 to all internal nav links. */
+  previewMode?: boolean;
 }
 
-export default function Sidebar({ activeTab = 'technicians', onTabChange, onSignOut, role = 'owner' }: SidebarProps) {
+export default function Sidebar({ activeTab = 'technicians', onTabChange, onSignOut, role = 'owner', previewMode = false }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileNavRef = useRef<HTMLElement>(null);
 
@@ -26,15 +28,16 @@ export default function Sidebar({ activeTab = 'technicians', onTabChange, onSign
     return () => document.removeEventListener('keydown', handleEscape);
   }, [mobileOpen]);
 
+  const pq = previewMode ? '&preview=1' : '';
   const ownerTabs = [
-    { id: 'technicians', label: 'Dashboard', href: '/dashboard?tab=technicians', icon: DashboardIcon },
-    { id: 'logbook', label: 'Logbook', href: '/dashboard?tab=logbook', icon: LogbookIcon },
-    { id: 'reports', label: 'Reports', href: '/reports', icon: ReportsIcon },
-    { id: 'settings', label: 'Settings', href: '/dashboard?tab=settings', icon: SettingsIcon },
+    { id: 'technicians', label: 'Dashboard', href: `/dashboard?tab=technicians${pq}`, icon: DashboardIcon },
+    { id: 'logbook', label: 'Logbook', href: `/dashboard?tab=logbook${pq}`, icon: LogbookIcon },
+    { id: 'reports', label: 'Reports', href: `/reports${previewMode ? '?preview=1' : ''}`, icon: ReportsIcon },
+    { id: 'settings', label: 'Settings', href: `/dashboard?tab=settings${pq}`, icon: SettingsIcon },
   ];
   const technicianTabs = [
-    { id: 'logbook', label: 'Logbook', href: '/technician', icon: LogbookIcon },
-    { id: 'reports', label: 'Reports', href: '/reports', icon: ReportsIcon },
+    { id: 'logbook', label: 'Logbook', href: `/technician${previewMode ? '?preview=1' : ''}`, icon: LogbookIcon },
+    { id: 'reports', label: 'Reports', href: `/reports${previewMode ? '?preview=1' : ''}`, icon: ReportsIcon },
   ];
   const tabs = role === 'technician' ? technicianTabs : ownerTabs;
 
