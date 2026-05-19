@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { resolveLocaleConfig } from '../lib/i18n/config';
+import { resolveCountryWithConfidence, resolveLocaleConfig } from '../lib/i18n/config';
 import {
   formatLocalizedCurrency,
   formatLocalizedDate,
@@ -109,6 +109,82 @@ test.describe('Multi-country report localization', () => {
     expect(date).toBe('2026-05-17');
     expect(currency).toContain('$');
   });
+
+  // ── Country detection confidence tests ─────────────────────────────────────
+
+  test('Asia/Calcutta (deprecated alias) detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['en'], 'Asia/Calcutta');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Asia/Kolkata detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['en'], 'Asia/Kolkata');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('en-IN locale region tag detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['en-IN'], 'UTC');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Tamil locale tag (ta-IN) detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['ta-IN'], 'Asia/Kolkata');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Language-only Tamil tag (ta) detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['ta'], 'UTC');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Telugu locale (te) detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['te'], 'UTC');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Kannada locale (kn) detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['kn-IN'], 'UTC');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Marathi locale (mr) detects India confidently', () => {
+    const result = resolveCountryWithConfidence(['mr'], 'Asia/Kolkata');
+    expect(result.country).toBe('IN');
+    expect(result.confident).toBe(true);
+  });
+
+  test('Unknown locale (en, no timezone) falls back to GB but NOT confidently', () => {
+    const result = resolveCountryWithConfidence(['en'], undefined);
+    expect(result.country).toBe('GB');
+    expect(result.confident).toBe(false);
+  });
+
+  test('Unknown locale with neutral UTC timezone is not confidently GB', () => {
+    const result = resolveCountryWithConfidence(['en'], 'UTC');
+    expect(result.country).toBe('GB');
+    expect(result.confident).toBe(false);
+  });
+
+  test('en-GB locale detects GB confidently', () => {
+    const result = resolveCountryWithConfidence(['en-GB'], 'Europe/London');
+    expect(result.country).toBe('GB');
+    expect(result.confident).toBe(true);
+  });
+
+  test('en-US locale detects US confidently', () => {
+    const result = resolveCountryWithConfidence(['en-US'], 'America/New_York');
+    expect(result.country).toBe('US');
+    expect(result.confident).toBe(true);
+  });
+
+  // ── UTC timestamp conversion ────────────────────────────────────────────────
 
   test('UTC timestamp converts to local timezone output', () => {
     const usConfig = resolveLocaleConfig(['en-US'], 'America/New_York');

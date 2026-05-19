@@ -183,16 +183,28 @@ const POSTCODE_CONFIG: Record<string, PostcodeConfig> = {
   },
 };
 
-/** Returns the postcode config for the given country, falling back to a generic config. */
-function getPostcodeConfig(country: string): PostcodeConfig {
-  return (
-    POSTCODE_CONFIG[country] ?? {
-      label: 'Postcode / ZIP',
-      placeholder: '',
-      required: false,
-      validate: () => true,
-    }
-  );
+const PERMISSIVE_POSTCODE_CONFIG: PostcodeConfig = {
+  label: 'Postcode / ZIP',
+  placeholder: '',
+  required: false,
+  validate: () => true,
+};
+
+/**
+ * Returns the postcode config for the given country.
+ *
+ * The `confident` flag must come from resolveCountryWithConfidence (via
+ * useLocale). When confident is false it means the country was not
+ * explicitly detected — only a fallback default. In that case we never
+ * apply country-specific mandatory rules, so an undetected user is never
+ * blocked by UK postcode requirements.
+ */
+function getPostcodeConfig(country: string, confident: boolean): PostcodeConfig {
+  // Only enforce strict GB rules when we are sure the user is in GB.
+  if (country === 'GB' && !confident) {
+    return PERMISSIVE_POSTCODE_CONFIG;
+  }
+  return POSTCODE_CONFIG[country] ?? PERMISSIVE_POSTCODE_CONFIG;
 }
 
 function propertyTypeLabel(value: string | null | undefined): string {
@@ -204,8 +216,8 @@ function propertyTypeLabel(value: string | null | undefined): string {
 export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const { country } = useLocale();
-  const postcodeConfig = getPostcodeConfig(country);
+  const { country, countryConfident } = useLocale();
+  const postcodeConfig = getPostcodeConfig(country, countryConfident);
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const { canSwitchToTechnician } = usePermissions();
   const canReturnToAdminDashboard = canSwitchToTechnician();

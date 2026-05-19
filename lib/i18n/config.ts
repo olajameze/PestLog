@@ -142,6 +142,20 @@ const DIRECT_REGION_MAP: Record<string, CountryCode> = {
   GB: 'GB',
 };
 
+/**
+ * Both IANA timezone names used for India.
+ * Asia/Calcutta is the deprecated alias still reported by many older Android
+ * devices and browsers, so we must check both.
+ */
+const INDIA_TIMEZONES = new Set(['Asia/Kolkata', 'Asia/Calcutta']);
+
+/**
+ * Language prefix codes for major Indian languages.
+ * Covers Hindi, Marathi, Bengali, Tamil, Telugu, Kannada, Malayalam,
+ * Gujarati, and Punjabi — not just Hindi (hi) as before.
+ */
+const INDIAN_LANGUAGE_PREFIXES = ['hi', 'mr', 'bn', 'ta', 'te', 'kn', 'ml', 'gu', 'pa'];
+
 function extractRegion(locale: string): string | null {
   const normalized = locale.replace('_', '-');
   const parts = normalized.split('-');
@@ -149,26 +163,60 @@ function extractRegion(locale: string): string | null {
   return parts[1].toUpperCase();
 }
 
+/**
+ * Resolves a country code from browser locale preferences and timezone.
+ *
+ * Kept for backward compatibility — use resolveCountryWithConfidence when
+ * you need to know whether the result was explicitly matched or fell back.
+ */
 export function resolveCountryFromPreferences(preferredLocales: string[], timeZone?: string): CountryCode {
+  return resolveCountryWithConfidence(preferredLocales, timeZone).country;
+}
+
+/**
+ * Resolves a country code and signals whether the match was explicit.
+ *
+ * - confident: true  → a locale region tag, language prefix, or timezone
+ *                       unambiguously matched a supported country.
+ * - confident: false → nothing matched; the country is a generic fallback.
+ *                      Callers must NOT apply country-specific mandatory
+ *                      rules (e.g. required UK postcode) in this case.
+ */
+export function resolveCountryWithConfidence(
+  preferredLocales: string[],
+  timeZone?: string,
+): { country: CountryCode; confident: boolean } {
+  // 1. Check the region subtag of every locale in the list (e.g. "en-IN" → "IN").
   for (const locale of preferredLocales) {
     const region = extractRegion(locale);
     if (!region) continue;
     const direct = DIRECT_REGION_MAP[region];
-    if (direct) return direct;
-    if (EU_REGION_CODES.has(region)) return 'EU';
+    if (direct) return { country: direct, confident: true };
+    if (EU_REGION_CODES.has(region)) return { country: 'EU', confident: true };
   }
 
-  const firstLocale = preferredLocales[0]?.toLowerCase() ?? '';
-  if (firstLocale.startsWith('fr')) return 'FR';
-  if (firstLocale.startsWith('de')) return 'DE';
-  if (firstLocale.startsWith('es')) return 'ES';
-  if (firstLocale.startsWith('it')) return 'IT';
-  if (firstLocale.startsWith('hi')) return 'IN';
+  // 2. Check the language prefix of every locale (covers language-only tags like "ta"
+  //    and language-region tags where the region wasn't in DIRECT_REGION_MAP).
+  for (const locale of preferredLocales) {
+    const lower = locale.toLowerCase();
+    if (lower.startsWith('fr')) return { country: 'FR', confident: true };
+    if (lower.startsWith('de')) return { country: 'DE', confident: true };
+    if (lower.startsWith('es')) return { country: 'ES', confident: true };
+    if (lower.startsWith('it')) return { country: 'IT', confident: true };
+    if (INDIAN_LANGUAGE_PREFIXES.some((p) => lower.startsWith(p))) {
+      return { country: 'IN', confident: true };
+    }
+  }
 
-  if (timeZone === 'Asia/Kolkata') return 'IN';
-  if (timeZone?.startsWith('Europe/')) return 'EU';
+  // 3. Fall back to timezone (catches users whose locale isn't region-tagged
+  //    but whose device timezone is correctly set).
+  if (timeZone && INDIA_TIMEZONES.has(timeZone)) return { country: 'IN', confident: true };
+  if (timeZone?.startsWith('Europe/')) return { country: 'EU', confident: true };
+  if (timeZone?.startsWith('America/')) return { country: 'US', confident: true };
 
-  return 'GB';
+  // 4. Nothing matched — return GB as the UI default, but mark it unconfident
+  //    so callers can avoid applying GB-specific mandatory rules.
+  return { country: 'GB', confident: false };
 }
 
 export function getLocaleConfig(country: CountryCode): LocaleConfig {

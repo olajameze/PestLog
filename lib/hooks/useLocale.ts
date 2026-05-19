@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   getMessages,
+  resolveCountryWithConfidence,
   resolveLocaleConfig,
   type CountryCode,
   type DatePattern,
@@ -17,6 +18,13 @@ import {
 type UseLocaleResult = {
   locale: SupportedLocale;
   country: CountryCode;
+  /**
+   * True when the country was explicitly matched from the browser's locale
+   * region tag, language prefix, or timezone — as opposed to falling back
+   * to the default. Callers must NOT enforce country-specific mandatory
+   * rules (e.g. required UK postcode) when this is false.
+   */
+  countryConfident: boolean;
   timeZone: string;
   currency: 'USD' | 'CAD' | 'EUR' | 'INR' | 'GBP';
   hour12: boolean;
@@ -66,6 +74,10 @@ export function useLocale(): UseLocaleResult {
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
+  const { confident: countryConfident } = resolveCountryWithConfidence(
+    browser.locales,
+    browser.timeZone,
+  );
   const config = resolveLocaleConfig(browser.locales, browser.timeZone);
   const messages = getMessages(config.locale);
 
@@ -73,6 +85,7 @@ export function useLocale(): UseLocaleResult {
     () => ({
       locale: config.locale,
       country: config.country,
+      countryConfident,
       timeZone: browser.timeZone,
       currency: config.currency,
       hour12: config.hour12,
@@ -119,6 +132,7 @@ export function useLocale(): UseLocaleResult {
       config.hour12,
       config.locale,
       config.complianceNotice,
+      countryConfident,
       messages,
     ],
   );
