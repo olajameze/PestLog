@@ -219,18 +219,18 @@ export default function TechnicianPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { country, countryConfident } = useLocale();
-  // Company country from the database takes priority over browser detection.
-  // This eliminates mis-detection caused by browser language preferences
-  // that don't reflect where the technician is actually located.
-  const effectiveCountry = profile?.companyCountry ?? country;
-  const effectiveConfident = profile?.companyCountry != null ? true : countryConfident;
-  const postcodeConfig = getPostcodeConfig(effectiveCountry, effectiveConfident);
   const isPreviewMode = process.env.NODE_ENV === 'development' && router.query.preview === '1';
   const { canSwitchToTechnician } = usePermissions();
   const canReturnToAdminDashboard = canSwitchToTechnician();
   const accessDeniedTarget = typeof router.query.accessDenied === 'string' ? router.query.accessDenied : '';
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<TechnicianProfile | null>(null);
+  // Company country from the database takes priority over browser detection.
+  // This eliminates mis-detection caused by browser language preferences
+  // that don't reflect where the technician is actually located.
+  const effectiveCountry = profile?.companyCountry ?? country;
+  const effectiveConfident = profile?.companyCountry != null ? true : countryConfident;
+  const postcodeConfig = getPostcodeConfig(effectiveCountry, effectiveConfident);
   const [entries, setEntries] = useState<LogbookEntry[]>([]);
   const [visibleEntries, setVisibleEntries] = useState(20);
   const [date, setDate] = useState('');
