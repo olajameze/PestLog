@@ -135,7 +135,7 @@ export default function PWAInstallPrompt() {
   if (isInstalled || !isVisible) {
     if (!updateAvailable) return null;
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-[55] px-3 pb-safe" role="status" aria-live="polite">
+      <div className="fixed left-0 right-0 top-0 z-[55] px-3 pt-safe pt-3" role="status" aria-live="polite">
         <div className="mx-auto mb-2 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="font-medium">A new version of Pest Trace is ready.</p>
@@ -153,7 +153,7 @@ export default function PWAInstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[55] transform transition-transform duration-300">
+    <div className="fixed left-0 right-0 top-0 z-[55] pt-safe transform transition-transform duration-300">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-900 dark:to-blue-800 text-white shadow-2xl">
         {updateAvailable ? (
           <div className="border-b border-white/20 bg-blue-800/40 px-4 py-2 text-center text-sm text-blue-50">

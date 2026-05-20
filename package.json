@@ -9,7 +9,7 @@
     "dev:clean": "node -e \"const { spawnSync } = require('child_process'); spawnSync('npx', ['--yes','kill-port','3000','3001'], { stdio: 'ignore', shell: true });\" && npm run dev:raw",
     "dev:webpack": "next dev --webpack",
     "build": "next build",
-    "build:migrate": "prisma migrate deploy && next build",
+    "build:migrate": "prisma migrate deploy && prisma db execute --file prisma/sql/sync_company_columns.sql && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",

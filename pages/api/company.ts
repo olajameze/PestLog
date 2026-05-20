@@ -6,6 +6,44 @@ import { getRequestIp, isIpAllowed, parseEnterpriseSettings } from '../../lib/en
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 
+type CompanyResponseShape = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  website: string | null;
+  vatNumber: string | null;
+  country: string | null;
+  requireSignature: boolean;
+  requirePhotos: boolean;
+  defaultReportRangeDays: number;
+  notificationPreferences: Prisma.JsonValue | null;
+  stripeCustomerId: string | null;
+  subscriptionStatus: string | null;
+  trialEndsAt: Date | string | null;
+  plan: string | null;
+};
+
+const COMPANY_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  phone: true,
+  address: true,
+  website: true,
+  vatNumber: true,
+  country: true,
+  requireSignature: true,
+  requirePhotos: true,
+  defaultReportRangeDays: true,
+  notificationPreferences: true,
+  stripeCustomerId: true,
+  subscriptionStatus: true,
+  trialEndsAt: true,
+  plan: true,
+} as const;
+
 /** Walk nested Prisma/pg-adapter errors so 23502 responses name the failing column. */
 function extractPostgresViolation(err: unknown):
   | { detail?: string; column?: string; constraint?: string; code?: string }
@@ -39,6 +77,83 @@ function extractPostgresViolation(err: unknown):
     }
   }
   return acc.detail || acc.column || acc.constraint || acc.code ? acc : undefined;
+}
+
+function isSchemaDriftError(error: unknown): boolean {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = String((error as { code?: unknown }).code ?? '');
+    if (code === 'P2021' || code === 'P2022') return true;
+  }
+  const pgViolation = extractPostgresViolation(error);
+  if (pgViolation?.code === '42703' || pgViolation?.code === '42P01') return true;
+  const message = String(error);
+  return (
+    message.includes('does not exist') ||
+    message.includes('Unknown field') ||
+    message.includes('column') ||
+    message.includes('relation')
+  );
+}
+
+function asStringOrNull(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asBoolean(value: unknown, fallback = false): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function asNumber(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return fallback;
+}
+
+function normalizeCompanyRecord(row: Record<string, unknown>): CompanyResponseShape | null {
+  const id = asStringOrNull(row.id);
+  const email = asStringOrNull(row.email);
+  if (!id || !email) return null;
+  return {
+    id,
+    name: asStringOrNull(row.name),
+    email,
+    phone: asStringOrNull(row.phone),
+    address: asStringOrNull(row.address),
+    website: asStringOrNull(row.website),
+    vatNumber: asStringOrNull(row.vatNumber),
+    country: asStringOrNull(row.country),
+    requireSignature: asBoolean(row.requireSignature, false),
+    requirePhotos: asBoolean(row.requirePhotos, false),
+    defaultReportRangeDays: asNumber(row.defaultReportRangeDays, 30),
+    notificationPreferences:
+      row.notificationPreferences && typeof row.notificationPreferences === 'object'
+        ? (row.notificationPreferences as Prisma.JsonValue)
+        : null,
+    stripeCustomerId: asStringOrNull(row.stripeCustomerId),
+    subscriptionStatus: asStringOrNull(row.subscriptionStatus),
+    trialEndsAt:
+      row.trialEndsAt instanceof Date || typeof row.trialEndsAt === 'string' ? row.trialEndsAt : null,
+    plan: asStringOrNull(row.plan),
+  };
+}
+
+async function fetchCompanyRawFallback(ownerEmail: string): Promise<CompanyResponseShape | null> {
+  const companyRows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
+    SELECT *
+    FROM "public"."Company"
+    WHERE lower("email") = lower(${ownerEmail})
+    LIMIT 1
+  `;
+  const directMatch = companyRows[0] ? normalizeCompanyRecord(companyRows[0]) : null;
+  if (directMatch) return directMatch;
+
+  const technicianCompanyRows = await prisma.$queryRaw<Array<Record<string, unknown>>>`
+    SELECT c.*
+    FROM "public"."Technician" t
+    INNER JOIN "public"."Company" c ON c.id = t."companyId"
+    WHERE lower(t.email) = lower(${ownerEmail})
+    LIMIT 1
+  `;
+  return technicianCompanyRows[0] ? normalizeCompanyRecord(technicianCompanyRows[0]) : null;
 }
 
 function notificationPreferencesSafe(raw: unknown): Prisma.InputJsonValue | undefined {
@@ -79,57 +194,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ownerEmail = normalizeAuthEmail(user.email);
 
     if (req.method === 'GET') {
-      let company = await prisma.company.findUnique({
-        where: { email: ownerEmail },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          address: true,
-          website: true,
-          vatNumber: true,
-          country: true,
-          requireSignature: true,
-          requirePhotos: true,
-          defaultReportRangeDays: true,
-          notificationPreferences: true,
-          stripeCustomerId: true,
-          subscriptionStatus: true,
-          trialEndsAt: true,
-          plan: true,
-        },
-      });
+      let company: CompanyResponseShape | null = null;
+      try {
+        const ownerCompany = await prisma.company.findUnique({
+          where: { email: ownerEmail },
+          select: COMPANY_SELECT,
+        });
+        company = ownerCompany
+          ? normalizeCompanyRecord(ownerCompany as unknown as Record<string, unknown>)
+          : null;
 
-      if (!company) {
-        const technicianWithCompany = await prisma.technician.findFirst({
-          where: technicianEmailWhere(ownerEmail),
-          include: {
-            company: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                phone: true,
-                address: true,
-                website: true,
-                vatNumber: true,
-                country: true,
-                requireSignature: true,
-                requirePhotos: true,
-                defaultReportRangeDays: true,
-                notificationPreferences: true,
-                stripeCustomerId: true,
-                subscriptionStatus: true,
-                trialEndsAt: true,
-                plan: true,
+        if (!company) {
+          const technicianWithCompany = await prisma.technician.findFirst({
+            where: technicianEmailWhere(ownerEmail),
+            include: {
+              company: {
+                select: COMPANY_SELECT,
               },
             },
-          },
-        });
-        if (technicianWithCompany?.company) {
-          company = technicianWithCompany.company;
+          });
+          if (technicianWithCompany?.company) {
+            company = normalizeCompanyRecord(
+              technicianWithCompany.company as unknown as Record<string, unknown>,
+            );
+          }
         }
+      } catch (error) {
+        if (!isSchemaDriftError(error)) {
+          throw error;
+        }
+        console.warn('[company] Falling back to raw company query due to schema drift:', String(error));
+        company = await fetchCompanyRawFallback(ownerEmail);
       }
 
       if (!company) {
