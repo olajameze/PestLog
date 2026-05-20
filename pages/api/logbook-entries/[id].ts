@@ -6,7 +6,7 @@ import { hasSubscriptionAccess } from '../../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
 import { deleteIntelligenceForLogbookEntry, scheduleIntelligenceIngest } from '../../../lib/intelligence/ingestLogbookEntry';
-import { isValidUkPostcode, normalizeUkPostcode } from '../../../lib/ukPostcode';
+import { getPostalCodeConfig } from '../../../lib/postalCode';
 
 type CompanyForAccess = {
   id: string;
@@ -14,6 +14,7 @@ type CompanyForAccess = {
   trialEndsAt: Date | null;
   paymentGraceEndsAt: Date | null;
   plan: string | null;
+  country: string | null;
 };
 
 async function resolveCompanyForEntryAccess(userEmail: string): Promise<CompanyForAccess | null> {
@@ -26,6 +27,7 @@ async function resolveCompanyForEntryAccess(userEmail: string): Promise<CompanyF
       trialEndsAt: true,
       paymentGraceEndsAt: true,
       plan: true,
+      country: true,
     },
   });
   if (asOwner) return asOwner;
@@ -41,6 +43,7 @@ async function resolveCompanyForEntryAccess(userEmail: string): Promise<CompanyF
           trialEndsAt: true,
           paymentGraceEndsAt: true,
           plan: true,
+          country: true,
         },
       },
     },
@@ -112,15 +115,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    const postcodeConfig = getPostalCodeConfig(company.country);
     let normalizedPostcode: string | null | undefined;
     if (postcode !== undefined) {
       if (postcode === null || (typeof postcode === 'string' && postcode.trim().length === 0)) {
         normalizedPostcode = null;
       } else if (typeof postcode === 'string') {
-        if (!isValidUkPostcode(postcode)) {
-          return res.status(400).json({ error: 'Invalid UK postcode' });
+        if (!postcodeConfig.validate(postcode.trim())) {
+          return res.status(400).json({ error: `Invalid ${postcodeConfig.label}` });
         }
-        normalizedPostcode = normalizeUkPostcode(postcode);
+        normalizedPostcode = postcodeConfig.normalize(postcode);
       }
     }
 

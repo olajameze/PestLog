@@ -7,7 +7,7 @@ import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
-import { isValidUkPostcode, normalizeUkPostcode } from '../../lib/ukPostcode';
+import { getPostalCodeConfig } from '../../lib/postalCode';
 
 const TECH_PROPERTY_TYPES = new Set([
   'residential_house',
@@ -101,6 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             plan: true,
             subscriptionStatus: true,
             trialEndsAt: true,
+            country: true,
           },
         },
       },
@@ -162,12 +163,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
+      const postcodeConfig = getPostalCodeConfig(technician.company.country);
       const postcodeStr = typeof postcode === 'string' ? postcode.trim() : '';
-      if (!postcodeStr) {
-        return res.status(400).json({ error: 'Postcode is required' });
+      if (!postcodeStr && postcodeConfig.required) {
+        return res.status(400).json({ error: `${postcodeConfig.label} is required` });
       }
-      if (!isValidUkPostcode(postcodeStr)) {
-        return res.status(400).json({ error: 'Enter a valid UK postcode' });
+      if (postcodeStr && !postcodeConfig.validate(postcodeStr)) {
+        return res.status(400).json({ error: `Enter a valid ${postcodeConfig.label}` });
       }
 
       const propertyTypeStr = typeof propertyType === 'string' ? propertyType.trim() : '';
@@ -198,7 +200,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             date: new Date(date),
             clientName: typeof clientName === 'string' ? clientName.trim() : clientName,
             address: typeof address === 'string' ? address.trim() : address,
-            postcode: normalizeUkPostcode(postcodeStr),
+            postcode: postcodeStr ? postcodeConfig.normalize(postcodeStr) : null,
             propertyType: propertyTypeStr,
             treatment: typeof treatment === 'string' ? treatment.trim() : treatment,
             notes: typeof notes === 'string' ? notes.trim() : notes,

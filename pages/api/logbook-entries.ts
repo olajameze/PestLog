@@ -10,7 +10,7 @@ import { hasSubscriptionAccess } from '../../lib/subscriptionAccess';
 import { scheduleIntelligenceIngest } from '../../lib/intelligence/ingestLogbookEntry';
 import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
-import { isValidUkPostcode, normalizeUkPostcode } from '../../lib/ukPostcode';
+import { getPostalCodeConfig } from '../../lib/postalCode';
 function tryParseJson(value: unknown) {
   if (typeof value !== 'string') return value;
   try {
@@ -178,14 +178,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
-      let normalizedPostcode: string | null = null;
-      if (typeof postcode === 'string' && postcode.trim().length > 0) {
-        if (!isValidUkPostcode(postcode)) {
-          return res.status(400).json({ error: 'Invalid UK postcode' });
-        }
-        normalizedPostcode = normalizeUkPostcode(postcode);
-      }
-
       const normalizedPropertyType =
         typeof propertyType === 'string' && propertyType.trim().length > 0 ? propertyType.trim() : null;
 
@@ -199,11 +191,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           plan: true,
           subscriptionStatus: true,
           trialEndsAt: true,
+          country: true,
         },
       });
       if (!company) return res.status(403).json({ error: 'Forbidden' });
       if (!hasSubscriptionAccess(company)) {
         return res.status(403).json({ error: 'Trial expired. Upgrade required to continue using Pest Trace.' });
+      }
+      const postcodeConfig = getPostalCodeConfig(company.country);
+
+      let normalizedPostcode: string | null = null;
+      if (typeof postcode === 'string' && postcode.trim().length > 0) {
+        if (!postcodeConfig.validate(postcode.trim())) {
+          return res.status(400).json({ error: `Invalid ${postcodeConfig.label}` });
+        }
+        normalizedPostcode = postcodeConfig.normalize(postcode);
       }
 
       const technicians = await prisma.technician.findMany({
