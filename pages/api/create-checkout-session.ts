@@ -7,6 +7,7 @@ import { normalizeAuthEmail } from '../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../lib/auth/technicianGate';
 import { resolveSiteOriginForApiRequest } from '../../lib/siteOrigin';
 import { reconcileCompanyBillingFromStripe } from '../../lib/stripe/reconcileCompanyBilling';
+import { resolveCheckoutTrialAlignment } from '../../lib/stripe/checkoutTrial';
 import { sendSubscriptionUpgradeEmail } from './subscription';
 
 function getStripe() {
@@ -174,6 +175,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           plan: selectedPlan,
         });
       }
+      const priceTrialDays = pricePreview.recurring?.trial_period_days;
+      if (priceTrialDays != null && priceTrialDays > 0) {
+        logger.warn(
+          `Stripe price ${priceId} has price-level trial_period_days=${priceTrialDays}. Remove it in the Dashboard to avoid conflicting with app trial_end.`,
+        );
+      }
     } catch (e) {
       const fe = extractStripeFields(e);
       if (fe.code === 'resource_missing') {
@@ -269,6 +276,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ url: directUpgradeUrl, upgradedInPlace: true });
     }
 
+    const trialAlignment = resolveCheckoutTrialAlignment(company.trialEndsAt);
+    const subscriptionData = {
+      metadata: {
+        companyId: company.id,
+        plan: selectedPlan,
+      },
+      ...(trialAlignment.trialEndUnix != null ? { trial_end: trialAlignment.trialEndUnix } : {}),
+    };
+
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       metadata: {
@@ -282,18 +298,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       ],
       mode: 'subscription',
-      subscription_data: {
-        metadata: {
-          companyId: company.id,
-          plan: selectedPlan,
-        },
-      },
+      payment_method_collection: 'always',
+      subscription_data: subscriptionData,
       success_url: successReturnUrl,
       cancel_url: `${origin}/upgrade`,
       client_reference_id: `${company.id}:${selectedPlan}`,
+      ...(trialAlignment.shouldDeferFirstCharge && trialAlignment.trialEndsAt
+        ? {
+            custom_text: {
+              submit: {
+                message: `Your card will be saved now. Billing starts on ${trialAlignment.trialEndsAt.toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}.`,
+              },
+            },
+          }
+        : {}),
     });
 
-    return res.status(200).json({ url: session.url });
+    return res.status(200).json({
+      url: session.url,
+      ...(trialAlignment.shouldDeferFirstCharge ? { billingDeferredUntil: trialAlignment.trialEndsAt?.toISOString() } : {}),
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const fe = extractStripeFields(error);

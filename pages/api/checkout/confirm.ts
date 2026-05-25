@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { prisma } from '../../../lib/prisma';
 import { normalizeAuthEmail } from '../../../lib/auth/userSession';
 import { technicianEmailWhere } from '../../../lib/auth/technicianGate';
+import { reconcileCompanyBillingFromStripe } from '../../../lib/stripe/reconcileCompanyBilling';
 
 type Plan = 'pro' | 'business' | 'enterprise';
 
@@ -91,21 +92,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? session.customer
         : (session.customer as Stripe.Customer | null)?.id;
 
-    // Always mark as active after successful Checkout; Stripe may report `trialing` during price trial.
-    const status = 'active';
-
-    const updated = await prisma.company.update({
+    await prisma.company.update({
       where: { id: company.id },
       data: {
         ...(stripeCustomerId ? { stripeCustomerId } : {}),
         plan: resolvedPlan,
-        subscriptionStatus: status,
-        trialEndsAt: null,
       },
-      select: { plan: true, subscriptionStatus: true },
     });
 
-    return res.status(200).json({ ok: true, plan: updated.plan, status: updated.subscriptionStatus });
+    await reconcileCompanyBillingFromStripe(company.id);
+
+    const updated = await prisma.company.findUnique({
+      where: { id: company.id },
+      select: { plan: true, subscriptionStatus: true, subscriptionPeriodEndAt: true },
+    });
+
+    return res.status(200).json({
+      ok: true,
+      plan: updated?.plan,
+      status: updated?.subscriptionStatus,
+      subscriptionPeriodEndAt: updated?.subscriptionPeriodEndAt?.toISOString() ?? null,
+    });
   } catch (e) {
     return res.status(500).json({ error: `Failed to confirm checkout: ${e instanceof Error ? e.message : String(e)}` });
   }

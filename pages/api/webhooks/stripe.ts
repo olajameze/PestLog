@@ -162,33 +162,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        const stripeCustomerId = session.customer as string;
+        const stripeCustomerId =
+          typeof session.customer === 'string' ? session.customer : null;
         const clientReferenceId = session.client_reference_id;
 
         // client_reference_id was set in create-checkout-session.ts as "companyId:plan"
-        if (clientReferenceId) {
+        if (clientReferenceId && stripeCustomerId) {
           const [companyId, plan] = clientReferenceId.split(':');
-          // Ensure plan is one of the valid types, defaulting to 'pro' if not recognized
-          const validPlans = ['free', 'pro', 'business', 'enterprise'] as const;
-          const resolvedPlan = validPlans.find(p => p === plan) ?? 'pro';
+          const validPlans = ['pro', 'business', 'enterprise'] as const;
+          const resolvedPlan = validPlans.find((p) => p === plan) ?? 'pro';
 
           await prisma.company.update({
             where: { id: companyId },
             data: {
               stripeCustomerId,
               plan: resolvedPlan,
-              subscriptionStatus: 'active',
-              // Force clear trial dates upon successful checkout completion
-              trialEndsAt: null,
-              paymentFailedAt: null,
-              paymentGraceEndsAt: null,
-              nonPaymentCanceledAt: null,
-              subscriptionCancelAtPeriodEnd: false,
-              subscriptionPeriodEndAt: null,
             },
           });
-          
-          // Trigger the upgrade notification email defined in pages/api/subscription.ts
+
+          await reconcileCompanyBillingFromStripe(companyId);
+
           await sendSubscriptionUpgradeEmail(companyId, resolvedPlan);
         }
         break;
@@ -285,6 +278,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const stripeCustomerId = invoice.customer as string | null;
         if (!stripeCustomerId) break;
         await clearGraceMetadata(stripeCustomerId);
+
+        const company = await prisma.company.findUnique({
+          where: { stripeCustomerId },
+          select: { id: true },
+        });
+        if (company?.id) {
+          await reconcileCompanyBillingFromStripe(company.id);
+        }
+
+        if (invoice.billing_reason === 'subscription_cycle') {
+          logger.info(
+            `Post-trial subscription invoice paid: customer=${stripeCustomerId} invoice=${invoice.id}`,
+          );
+        }
         break;
       }
 
